@@ -1,0 +1,29 @@
+name: Refresh Dashboard Metrics
+
+on:
+  schedule:
+    # 영업시간 15분 간격 (UTC 기준)
+    # KST 08:00~20:00 = UTC 23:00~11:00
+    - cron: '*/15 23 * * 0-5'    # UTC 23시 (KST 08시)
+    - cron: '*/15 0-11 * * 1-6'  # UTC 00~11시 (KST 09~20시)
+  workflow_dispatch: # 수동 실행
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Fetch Airtable data
+        run: npx tsx scripts/fetch-airtable.ts
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+      - name: Compute metrics & push to KV
+        run: npx tsx scripts/compute-and-push.ts
+        env:
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
