@@ -9,6 +9,7 @@ import LeadTimeChart from './lead-time-chart';
 import ChannelChart from './channel-chart';
 import HourlyChart from './hourly-chart';
 import TrendChart from './trend-chart';
+import NavTabs from './nav-tabs';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
@@ -89,18 +90,19 @@ export default function Dashboard() {
               : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
           </div>
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-2">
+          <NavTabs />
           <button
             onClick={fetchData}
             className="text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
           >
             새로고침
           </button>
-          {lastUpdated && (
-            <div className="text-[10px] text-gray-300 mt-1">갱신: {lastUpdated}</div>
-          )}
         </div>
       </div>
+      {lastUpdated && (
+        <div className="text-[10px] text-gray-300 text-right -mt-4">갱신: {lastUpdated}</div>
+      )}
 
       <LeadStatusCard data={metrics.리드} />
       <ActionStatusCard data={metrics.액션} />
