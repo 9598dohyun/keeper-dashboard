@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import NavTabs from '../components/nav-tabs';
 
 /* ── 탭 정의 ── */
@@ -763,19 +763,112 @@ function CallTab() {
   );
 }
 
+/* ── 텍스트 하이라이트 ── */
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let idx = lower.indexOf(q, last);
+  while (idx !== -1) {
+    if (idx > last) parts.push(text.substring(last, idx));
+    parts.push(
+      <mark key={idx} className="bg-yellow-200 text-gray-900 font-semibold px-0.5 rounded">
+        {text.substring(idx, idx + q.length)}
+      </mark>
+    );
+    last = idx + q.length;
+    idx = lower.indexOf(q, last);
+  }
+  if (last < text.length) parts.push(text.substring(last));
+  return <>{parts}</>;
+}
+
+function highlightNode(node: React.ReactNode, query: string): React.ReactNode {
+  if (!query) return node;
+  if (typeof node === 'string') return <Highlight text={node} query={query} />;
+  if (typeof node === 'number') return <Highlight text={String(node)} query={query} />;
+  if (Array.isArray(node)) return node.map((child, i) => <span key={i}>{highlightNode(child, query)}</span>);
+  if (node && typeof node === 'object' && 'props' in node) {
+    const el = node as React.ReactElement<Record<string, unknown>>;
+    if (el.props.children != null) {
+      return { ...el, props: { ...el.props, children: highlightNode(el.props.children as React.ReactNode, query) } };
+    }
+  }
+  return node;
+}
+
+function nodeContainsText(node: React.ReactNode, query: string): boolean {
+  if (!node) return false;
+  if (typeof node === 'string') return node.toLowerCase().includes(query);
+  if (typeof node === 'number') return String(node).toLowerCase().includes(query);
+  if (Array.isArray(node)) return node.some((c) => nodeContainsText(c, query));
+  if (typeof node === 'object' && 'props' in node) {
+    const el = node as React.ReactElement<Record<string, unknown>>;
+    return nodeContainsText(el.props.children as React.ReactNode, query);
+  }
+  return false;
+}
+
+/* ── 검색용 래퍼 ── */
+function SearchableSection({ children, query }: { children: React.ReactNode; query: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  if (!query) return <>{children}</>;
+  return <div ref={ref}>{highlightNode(children, query)}</div>;
+}
+
 /* ── 메인 컴포넌트 ── */
 export default function GuideContent() {
   const [activeTab, setActiveTab] = useState<TabId>('ops');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const tabContent: Record<TabId, React.ReactNode> = useMemo(() => ({
-    ops: <OpsTab />,
-    price: <PriceTab />,
-    spec: <SpecTab />,
-    cs: <CsTab />,
-    at: <AtTab />,
-    call: <CallTab />,
+  useEffect(() => {
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(search.trim().toLowerCase());
+    }, 200);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [search]);
+
+  const isSearching = debouncedSearch.length > 0;
+
+  const tabContent: Record<TabId, { label: string; node: React.ReactNode }> = useMemo(() => ({
+    ops: { label: '내부운영룰', node: <OpsTab /> },
+    price: { label: '가격·결제', node: <PriceTab /> },
+    spec: { label: '제품스펙', node: <SpecTab /> },
+    cs: { label: '고객응대', node: <CsTab /> },
+    at: { label: '에어테이블', node: <AtTab /> },
+    call: { label: '전화상담', node: <CallTab /> },
   }), []);
+
+  // 검색 시 매칭되는 탭 찾기
+  const matchingTabs = useMemo(() => {
+    if (!isSearching) return null;
+    const matches: TabId[] = [];
+    for (const [id, { node }] of Object.entries(tabContent)) {
+      if (nodeContainsText(node, debouncedSearch)) {
+        matches.push(id as TabId);
+      }
+    }
+    return matches;
+  }, [isSearching, debouncedSearch, tabContent]);
+
+  const totalMatches = matchingTabs?.length ?? 0;
+
+  // 검색 시 첫 하이라이트로 스크롤
+  useEffect(() => {
+    if (!isSearching || !contentRef.current) return;
+    const timer = setTimeout(() => {
+      const firstMark = contentRef.current?.querySelector('mark');
+      if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [debouncedSearch, isSearching]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
@@ -798,27 +891,49 @@ export default function GuideContent() {
           placeholder="검색어 입력 (예: 할인, 부재중, 법인)"
           className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
         />
+        {isSearching && (
+          <div className="text-center text-xs text-gray-400 mt-1">
+            {totalMatches > 0 ? `${totalMatches}개 탭에서 발견` : '검색 결과 없음'}
+          </div>
+        )}
       </div>
 
-      {/* 탭 바 */}
-      <div className="flex overflow-x-auto gap-1 -mx-4 px-4 scrollbar-hide">
-        {TAB_DEFS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors ${
-              activeTab === tab.id
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* 탭 바 — 검색 중에는 매칭 탭만 표시 */}
+      {!isSearching && (
+        <div className="flex overflow-x-auto gap-1 -mx-4 px-4 scrollbar-hide">
+          {TAB_DEFS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`shrink-0 px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 탭 콘텐츠 */}
-      {tabContent[activeTab]}
+      <div ref={contentRef}>
+        {isSearching ? (
+          matchingTabs && matchingTabs.length > 0 ? (
+            matchingTabs.map((tabId) => (
+              <div key={tabId} className="mb-6">
+                <div className="text-xs font-bold text-rose-500 mb-2">{tabContent[tabId].label}</div>
+                <SearchableSection query={debouncedSearch}>
+                  {tabContent[tabId].node}
+                </SearchableSection>
+              </div>
+            ))
+          ) : null
+        ) : (
+          tabContent[activeTab].node
+        )}
+      </div>
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
         한화비전 키퍼 · 사바사 운영
