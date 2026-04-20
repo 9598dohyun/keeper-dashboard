@@ -38,7 +38,7 @@ function Tag({ color, children }: { color: 'red' | 'green' | 'yellow' | 'blue'; 
 
 function SectionCard({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <div id={id} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 scroll-mt-28">
+    <div id={id} data-section className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 scroll-mt-28">
       <h2 className="text-[15px] font-bold text-gray-900 mb-3">{title}</h2>
       {children}
     </div>
@@ -849,6 +849,21 @@ function clearHighlights(root: HTMLElement) {
     parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
     parent.normalize();
   });
+  // 숨겨진 섹션 복원
+  root.querySelectorAll<HTMLElement>('[data-section]').forEach((el) => {
+    el.style.display = '';
+  });
+}
+
+function hideSectionsWithoutMatch(root: HTMLElement, query: string) {
+  const q = query.toLowerCase();
+  root.querySelectorAll<HTMLElement>('[data-section]').forEach((section) => {
+    if (section.textContent?.toLowerCase().includes(q)) {
+      section.style.display = '';
+    } else {
+      section.style.display = 'none';
+    }
+  });
 }
 
 /* ── 메인 컴포넌트 ── */
@@ -905,11 +920,14 @@ export default function GuideContent() {
     }
     setMatchingTabs(matches);
 
-    // 매칭된 탭에 하이라이트 적용
+    // 매칭된 탭에 하이라이트 + 비매칭 섹션 숨김
     requestAnimationFrame(() => {
       for (const tabId of matches) {
         const el = tabRefs.current[tabId];
-        if (el) highlightDOM(el, debouncedSearch);
+        if (el) {
+          highlightDOM(el, debouncedSearch);
+          hideSectionsWithoutMatch(el, debouncedSearch);
+        }
       }
       // 첫 하이라이트로 스크롤
       setTimeout(() => {
