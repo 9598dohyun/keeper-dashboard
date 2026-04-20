@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import NavTabs from '../components/nav-tabs';
 
 /* ── 탭 정의 ── */
@@ -790,10 +790,10 @@ function highlightNode(node: React.ReactNode, query: string): React.ReactNode {
   if (typeof node === 'string') return <Highlight text={node} query={query} />;
   if (typeof node === 'number') return <Highlight text={String(node)} query={query} />;
   if (Array.isArray(node)) return node.map((child, i) => <span key={i}>{highlightNode(child, query)}</span>);
-  if (node && typeof node === 'object' && 'props' in node) {
-    const el = node as React.ReactElement<Record<string, unknown>>;
+  if (React.isValidElement(node)) {
+    const el = node as React.ReactElement<{ children?: React.ReactNode }>;
     if (el.props.children != null) {
-      return { ...el, props: { ...el.props, children: highlightNode(el.props.children as React.ReactNode, query) } };
+      return React.cloneElement(el, {}, highlightNode(el.props.children, query));
     }
   }
   return node;
@@ -804,9 +804,9 @@ function nodeContainsText(node: React.ReactNode, query: string): boolean {
   if (typeof node === 'string') return node.toLowerCase().includes(query);
   if (typeof node === 'number') return String(node).toLowerCase().includes(query);
   if (Array.isArray(node)) return node.some((c) => nodeContainsText(c, query));
-  if (typeof node === 'object' && 'props' in node) {
-    const el = node as React.ReactElement<Record<string, unknown>>;
-    return nodeContainsText(el.props.children as React.ReactNode, query);
+  if (React.isValidElement(node)) {
+    const el = node as React.ReactElement<{ children?: React.ReactNode }>;
+    return nodeContainsText(el.props.children, query);
   }
   return false;
 }
