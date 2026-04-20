@@ -811,23 +811,64 @@ function nodeContainsText(node: React.ReactNode, query: string): boolean {
   return false;
 }
 
-/* ── 검색용 래퍼 ── */
-function SearchableSection({ children, query }: { children: React.ReactNode; query: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+/* ── DOM 기반 하이라이트 ── */
+function highlightDOM(root: HTMLElement, query: string) {
+  if (!query) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
 
-  if (!query) return <>{children}</>;
-  return <div ref={ref}>{highlightNode(children, query)}</div>;
+  const q = query.toLowerCase();
+  for (const textNode of textNodes) {
+    const text = textNode.textContent ?? '';
+    const lower = text.toLowerCase();
+    if (!lower.includes(q)) continue;
+
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    let idx = lower.indexOf(q, last);
+    while (idx !== -1) {
+      if (idx > last) frag.appendChild(document.createTextNode(text.substring(last, idx)));
+      const mark = document.createElement('mark');
+      mark.className = 'bg-yellow-200 text-gray-900 font-semibold px-0.5 rounded';
+      mark.textContent = text.substring(idx, idx + q.length);
+      frag.appendChild(mark);
+      last = idx + q.length;
+      idx = lower.indexOf(q, last);
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.substring(last)));
+    textNode.parentNode?.replaceChild(frag, textNode);
+  }
 }
 
-/* ── 탭별 하이라이트 래퍼 ── */
+function clearHighlights(root: HTMLElement) {
+  const marks = root.querySelectorAll('mark');
+  marks.forEach((mark) => {
+    const parent = mark.parentNode;
+    if (!parent) return;
+    parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
+    parent.normalize();
+  });
+}
+
+/* ── 탭별 패널 ── */
 function TabPanel({ id, query, active, tabRef }: { id: string; query: string; active: boolean; tabRef: (el: HTMLDivElement | null) => void }) {
   const components: Record<string, React.ReactNode> = {
     ops: <OpsTab />, price: <PriceTab />, spec: <SpecTab />,
     cs: <CsTab />, at: <AtTab />, call: <CallTab />,
   };
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    clearHighlights(el);
+    if (query && active) highlightDOM(el, query);
+  }, [query, active]);
+
   return (
-    <div ref={tabRef} data-tab={id} style={active ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' as const }} aria-hidden={!active}>
-      {query && active ? <SearchableSection query={query}>{components[id]}</SearchableSection> : components[id]}
+    <div ref={(el) => { innerRef.current = el; tabRef(el); }} data-tab={id} style={active ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' as const }} aria-hidden={!active}>
+      {components[id]}
     </div>
   );
 }
