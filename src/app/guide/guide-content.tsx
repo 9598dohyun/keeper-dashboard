@@ -851,28 +851,6 @@ function clearHighlights(root: HTMLElement) {
   });
 }
 
-/* ── 탭별 패널 ── */
-function TabPanel({ id, query, active, tabRef }: { id: string; query: string; active: boolean; tabRef: (el: HTMLDivElement | null) => void }) {
-  const components: Record<string, React.ReactNode> = {
-    ops: <OpsTab />, price: <PriceTab />, spec: <SpecTab />,
-    cs: <CsTab />, at: <AtTab />, call: <CallTab />,
-  };
-  const innerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = innerRef.current;
-    if (!el) return;
-    clearHighlights(el);
-    if (query && active) highlightDOM(el, query);
-  }, [query, active]);
-
-  return (
-    <div ref={(el) => { innerRef.current = el; tabRef(el); }} data-tab={id} style={active ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' as const }} aria-hidden={!active}>
-      {components[id]}
-    </div>
-  );
-}
-
 /* ── 메인 컴포넌트 ── */
 export default function GuideContent() {
   const [activeTab, setActiveTab] = useState<TabId>('ops');
@@ -881,7 +859,16 @@ export default function GuideContent() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [mounted, setMounted] = useState(false);
   const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
+
+  const tabComponents: Record<TabId, React.ReactNode> = useMemo(() => ({
+    ops: <OpsTab />, price: <PriceTab />, spec: <SpecTab />,
+    cs: <CsTab />, at: <AtTab />, call: <CallTab />,
+  }), []);
+
+  // 모든 탭 마운트 완료 감지
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
@@ -893,12 +880,22 @@ export default function GuideContent() {
 
   const isSearching = debouncedSearch.length > 0;
 
-  // DOM 기반 검색: 렌더링된 텍스트에서 검색
+  // DOM 기반 검색 + 하이라이트 (모든 탭 DOM에서)
   useEffect(() => {
+    if (!mounted) return;
+
+    // 먼저 모든 탭의 기존 하이라이트 제거
+    for (const def of TAB_DEFS) {
+      const el = tabRefs.current[def.id];
+      if (el) clearHighlights(el);
+    }
+
     if (!isSearching) {
       setMatchingTabs(null);
       return;
     }
+
+    // 모든 탭 DOM에서 textContent 검색
     const matches: TabId[] = [];
     for (const def of TAB_DEFS) {
       const el = tabRefs.current[def.id];
@@ -907,22 +904,22 @@ export default function GuideContent() {
       }
     }
     setMatchingTabs(matches);
-  }, [isSearching, debouncedSearch]);
+
+    // 매칭된 탭에 하이라이트 적용
+    requestAnimationFrame(() => {
+      for (const tabId of matches) {
+        const el = tabRefs.current[tabId];
+        if (el) highlightDOM(el, debouncedSearch);
+      }
+      // 첫 하이라이트로 스크롤
+      setTimeout(() => {
+        const firstMark = contentRef.current?.querySelector('mark');
+        if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    });
+  }, [mounted, isSearching, debouncedSearch]);
 
   const totalMatches = matchingTabs?.length ?? 0;
-
-  // 검색 시 첫 하이라이트로 스크롤
-  useEffect(() => {
-    if (!isSearching || !contentRef.current) return;
-    const timer = setTimeout(() => {
-      const firstMark = contentRef.current?.querySelector('mark');
-      if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [debouncedSearch, isSearching, matchingTabs]);
-
-  // 표시할 탭 결정
-  const visibleTabs: TabId[] = isSearching ? (matchingTabs ?? []) : [activeTab];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
@@ -971,22 +968,26 @@ export default function GuideContent() {
         </div>
       )}
 
-      {/* 탭 콘텐츠 — 모든 탭을 항상 렌더링(비활성은 숨김), DOM textContent로 검색 */}
+      {/* 모든 탭을 항상 렌더링. 비활성은 숨김 처리 */}
       <div ref={contentRef} className="relative">
         {TAB_DEFS.map((tab) => {
-          const isVisible = visibleTabs.includes(tab.id);
+          const shouldShow = isSearching
+            ? (matchingTabs?.includes(tab.id) ?? false)
+            : tab.id === activeTab;
+
           return (
             <div key={tab.id}>
-              {isSearching && isVisible && (
-                <div className="text-xs font-bold text-rose-500 mb-2">{tab.label}</div>
+              {isSearching && shouldShow && (
+                <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
               )}
-              <TabPanel
-                id={tab.id}
-                query={isVisible ? debouncedSearch : ''}
-                active={isVisible}
-                tabRef={(el) => { tabRefs.current[tab.id] = el; }}
-              />
-              {isSearching && isVisible && <div className="mb-6" />}
+              <div
+                ref={(el) => { tabRefs.current[tab.id] = el; }}
+                data-tab={tab.id}
+                style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
+                aria-hidden={!shouldShow}
+              >
+                {tabComponents[tab.id]}
+              </div>
             </div>
           );
         })}
