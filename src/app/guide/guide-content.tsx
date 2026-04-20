@@ -819,6 +819,19 @@ function SearchableSection({ children, query }: { children: React.ReactNode; que
   return <div ref={ref}>{highlightNode(children, query)}</div>;
 }
 
+/* ── 탭별 하이라이트 래퍼 ── */
+function TabPanel({ id, query, active, tabRef }: { id: string; query: string; active: boolean; tabRef: (el: HTMLDivElement | null) => void }) {
+  const components: Record<string, React.ReactNode> = {
+    ops: <OpsTab />, price: <PriceTab />, spec: <SpecTab />,
+    cs: <CsTab />, at: <AtTab />, call: <CallTab />,
+  };
+  return (
+    <div ref={tabRef} data-tab={id} style={active ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' as const }} aria-hidden={!active}>
+      {query && active ? <SearchableSection query={query}>{components[id]}</SearchableSection> : components[id]}
+    </div>
+  );
+}
+
 /* ── 메인 컴포넌트 ── */
 export default function GuideContent() {
   const [activeTab, setActiveTab] = useState<TabId>('ops');
@@ -826,6 +839,8 @@ export default function GuideContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
@@ -837,26 +852,21 @@ export default function GuideContent() {
 
   const isSearching = debouncedSearch.length > 0;
 
-  const tabContent: Record<TabId, { label: string; node: React.ReactNode }> = useMemo(() => ({
-    ops: { label: '내부운영룰', node: <OpsTab /> },
-    price: { label: '가격·결제', node: <PriceTab /> },
-    spec: { label: '제품스펙', node: <SpecTab /> },
-    cs: { label: '고객응대', node: <CsTab /> },
-    at: { label: '에어테이블', node: <AtTab /> },
-    call: { label: '전화상담', node: <CallTab /> },
-  }), []);
-
-  // 검색 시 매칭되는 탭 찾기
-  const matchingTabs = useMemo(() => {
-    if (!isSearching) return null;
+  // DOM 기반 검색: 렌더링된 텍스트에서 검색
+  useEffect(() => {
+    if (!isSearching) {
+      setMatchingTabs(null);
+      return;
+    }
     const matches: TabId[] = [];
-    for (const [id, { node }] of Object.entries(tabContent)) {
-      if (nodeContainsText(node, debouncedSearch)) {
-        matches.push(id as TabId);
+    for (const def of TAB_DEFS) {
+      const el = tabRefs.current[def.id];
+      if (el && el.textContent?.toLowerCase().includes(debouncedSearch)) {
+        matches.push(def.id);
       }
     }
-    return matches;
-  }, [isSearching, debouncedSearch, tabContent]);
+    setMatchingTabs(matches);
+  }, [isSearching, debouncedSearch]);
 
   const totalMatches = matchingTabs?.length ?? 0;
 
@@ -866,9 +876,12 @@ export default function GuideContent() {
     const timer = setTimeout(() => {
       const firstMark = contentRef.current?.querySelector('mark');
       if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+    }, 150);
     return () => clearTimeout(timer);
-  }, [debouncedSearch, isSearching]);
+  }, [debouncedSearch, isSearching, matchingTabs]);
+
+  // 표시할 탭 결정
+  const visibleTabs: TabId[] = isSearching ? (matchingTabs ?? []) : [activeTab];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
@@ -898,7 +911,7 @@ export default function GuideContent() {
         )}
       </div>
 
-      {/* 탭 바 — 검색 중에는 매칭 탭만 표시 */}
+      {/* 탭 바 — 검색 중에는 숨김 */}
       {!isSearching && (
         <div className="flex overflow-x-auto gap-1 -mx-4 px-4 scrollbar-hide">
           {TAB_DEFS.map((tab) => (
@@ -917,22 +930,25 @@ export default function GuideContent() {
         </div>
       )}
 
-      {/* 탭 콘텐츠 */}
-      <div ref={contentRef}>
-        {isSearching ? (
-          matchingTabs && matchingTabs.length > 0 ? (
-            matchingTabs.map((tabId) => (
-              <div key={tabId} className="mb-6">
-                <div className="text-xs font-bold text-rose-500 mb-2">{tabContent[tabId].label}</div>
-                <SearchableSection query={debouncedSearch}>
-                  {tabContent[tabId].node}
-                </SearchableSection>
-              </div>
-            ))
-          ) : null
-        ) : (
-          tabContent[activeTab].node
-        )}
+      {/* 탭 콘텐츠 — 모든 탭을 항상 렌더링(비활성은 숨김), DOM textContent로 검색 */}
+      <div ref={contentRef} className="relative">
+        {TAB_DEFS.map((tab) => {
+          const isVisible = visibleTabs.includes(tab.id);
+          return (
+            <div key={tab.id}>
+              {isSearching && isVisible && (
+                <div className="text-xs font-bold text-rose-500 mb-2">{tab.label}</div>
+              )}
+              <TabPanel
+                id={tab.id}
+                query={isVisible ? debouncedSearch : ''}
+                active={isVisible}
+                tabRef={(el) => { tabRefs.current[tab.id] = el; }}
+              />
+              {isSearching && isVisible && <div className="mb-6" />}
+            </div>
+          );
+        })}
       </div>
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
