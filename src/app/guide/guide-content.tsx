@@ -1377,6 +1377,13 @@ export default function GuideContent() {
 
         {/* 우측: 탭 콘텐츠 */}
         <div className="flex-1 min-w-0">
+          {/* 모바일: 퀵가이드를 탭 콘텐츠 상단에 표시 */}
+          {currentQuickGuide && (
+            <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 scroll-mt-28">
+              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
+              {currentQuickGuide}
+            </div>
+          )}
           <div ref={contentRef} className="relative">
             {TAB_DEFS.map((tab) => {
               const shouldShow = isSearching
