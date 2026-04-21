@@ -107,6 +107,167 @@ function TemplateBox({ children }: { children: string }) {
   );
 }
 
+/* ── 좌측 상황별 퀵 가이드 ── */
+function QuickGuideItem({ emoji, title, children }: { emoji: string; title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-2 py-2.5 text-left text-[13px] font-semibold hover:bg-gray-50 px-2 rounded-md">
+        <span>{emoji}</span>
+        <span className="flex-1">{title}</span>
+        <span className={`text-gray-400 text-[11px] transition-transform ${open ? 'rotate-90' : ''}`}>▸</span>
+      </button>
+      {open && <div className="px-2 pb-3 text-[12px] text-gray-600 leading-5">{children}</div>}
+    </div>
+  );
+}
+
+function QuickGuideTag({ color, children }: { color: string; children: React.ReactNode }) {
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-100 text-blue-700',
+    red: 'bg-red-100 text-red-700',
+    green: 'bg-green-100 text-green-700',
+    amber: 'bg-amber-100 text-amber-700',
+    gray: 'bg-gray-100 text-gray-700',
+  };
+  return <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mr-1 ${colors[color] || colors.gray}`}>{children}</span>;
+}
+
+const QUICK_GUIDES: Record<string, React.ReactNode> = {
+  ops: (
+    <>
+      <QuickGuideItem emoji="🚨" title="아파트 설치 문의">
+        <p><strong>설치 불가</strong> → B2B 이관 (임채형 사원 경유)</p>
+        <p className="text-gray-400 mt-1">상업용과 구조 달라 추가비 과도</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🏭" title="&quot;국산 카메라인가요?&quot;">
+        <p><QuickGuideTag color="red">금지</QuickGuideTag> &quot;국산 카메라&quot; 안내 절대 금지</p>
+        <p className="mt-1">→ &quot;한화비전 자체 기술력, 베트남 제조 생산&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="📞" title="부재중 리드 대응">
+        <p>24시간 내 3회 시도(매회 문자) → 다음 날 오전/오후 각 1회 → 2~3일 뒤 마지막</p>
+        <p className="text-gray-400 mt-1">전화상담 탭 상세 참조</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🎙️" title="녹음 안 해도 되나요?">
+        <p><strong>3분 이상 모든 통화</strong> 전부 업로드 필수</p>
+        <p className="text-gray-400 mt-1">키퍼 어드민 직접 업로드 금지</p>
+      </QuickGuideItem>
+    </>
+  ),
+  price: (
+    <>
+      <QuickGuideItem emoji="💰" title="&quot;월 얼마예요?&quot;">
+        <p>4대 기준 <strong>월 44,000원</strong> (36개월 무이자, VAT포함)</p>
+        <p className="mt-1">총액 1,584,000원 → 36개월 후 <strong>내 것</strong></p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🏷️" title="&quot;할인 안 되나요?&quot;">
+        <p><QuickGuideTag color="blue">수량할인</QuickGuideTag> 9대↑ 5% / 16대↑ 10%</p>
+        <p><QuickGuideTag color="green">일시불</QuickGuideTag> 추가 5% (일시불에서만)</p>
+        <p className="mt-1">프로모션: 6~8대 범위 안내. 3대 이하 제시 금지</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="💳" title="&quot;결제 어떻게 해요?&quot;">
+        <p>할부: 삼성·현대·롯데 36개월 무이자</p>
+        <p>일시불: 카드 / 현금(세금계산서)</p>
+        <p className="text-gray-400 mt-1">결제 링크는 상담사가 생성하지 않음</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🖥️" title="&quot;모니터 포함인가요?&quot;">
+        <p><strong>모니터 별도</strong> → 고객이 준비</p>
+        <p className="text-red-500 mt-1">가격 안내 직후 반드시 안내</p>
+      </QuickGuideItem>
+    </>
+  ),
+  spec: (
+    <>
+      <QuickGuideItem emoji="📷" title="&quot;화소가 어떻게 되나요?&quot;">
+        <p><strong>400만 화소</strong> (2K급), 야간 적외선 30m</p>
+        <p className="mt-1">중국산 &quot;800만 화소&quot;와 차이: 센서 품질·보안 인증</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="💾" title="&quot;녹화 며칠 저장?&quot;">
+        <p><strong>약 4주</strong> (24시간 풀 녹화, 시간 조정 불가)</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🚪" title="&quot;움직임 감지 되나요?&quot;">
+        <p>카메라 움직임 감지 = <strong>녹화 검색 편의용</strong></p>
+        <p className="text-red-500">경비 알림은 도어센서만 가능</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🛡️" title="&quot;보험은 뭐가 있어요?&quot;">
+        <p>안심케어 1년 무료: 비품파손 300만 + 개인정보유출 500만</p>
+        <p className="text-gray-400 mt-1">분실·도난 보상 없음</p>
+      </QuickGuideItem>
+    </>
+  ),
+  vs: (
+    <>
+      <QuickGuideItem emoji="🔵" title="&quot;ADT캡스 알아보고 있어요&quot;">
+        <p>&quot;캡스도 3년 후 내 것이 되지만, <strong>망사용료가 매달 계속</strong> 나갑니다. 키퍼는 36개월 후 완전 0원이에요.&quot;</p>
+        <p className="mt-1">&quot;캡스 AI 기능은 대형·무인매장에 적합해요. 소규모 매장은 CCTV+도어센서면 충분합니다.&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🟢" title="&quot;세콤 알아보고 있어요&quot;">
+        <p>&quot;에스원도 3년 후 내 것이 되지만, <strong>망사용료 계속</strong>. 키퍼는 36개월 후 0원.&quot;</p>
+        <p className="mt-1">&quot;에스원 카메라 대부분 200만. 키퍼 400만으로 두 배 선명. 저장도 18일 vs 28일.&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🟠" title="&quot;KT 견적 받았는데요&quot;">
+        <p>&quot;KT 200만 4대 월 4만원, 키퍼도 4만원. 근데 <strong>키퍼는 사는 거고 KT는 빌리는 거</strong>예요.&quot;</p>
+        <p className="mt-1">&quot;저장도 KT 15일 vs 키퍼 28일.&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🔴" title="&quot;인터넷에서 싼 거 봤는데&quot;">
+        <p>&quot;처음엔 싸지만 수리 1년, 해킹 위험(미·영 정부 금지), 저장 1~2주. 화소도 숫자만 높아요.&quot;</p>
+      </QuickGuideItem>
+    </>
+  ),
+  cs: (
+    <>
+      <QuickGuideItem emoji="💸" title="&quot;너무 비싼데요&quot;">
+        <p>&quot;다른 곳은 렌탈이라 36개월 후에도 월비용이 나가요. 키퍼는 내 것이 되니 장기적으로 절반 이하입니다.&quot;</p>
+        <p className="text-gray-400 mt-1">가격 저항 대응 → 전화상담 탭 참조</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🚨" title="&quot;출동 서비스 있어요?&quot;">
+        <p><strong>출동 서비스 미제공</strong></p>
+        <p>→ 문열림 센서 알림 + 앱 내 112/119 버튼으로 안내</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="👴" title="IT 취약 고객 대응">
+        <p>전문 용어 최소화, &quot;핸드폰으로 바로 보실 수 있어요&quot;</p>
+        <p className="mt-1">앱 설치 = 설치기사가 도와드림</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🏗️" title="&quot;넓은 매장인데 가능?&quot;">
+        <p>녹화기~카메라 거리·층고·구조물 종류 → <strong>현장확인 필수</strong></p>
+        <p className="mt-1">복층 = 난공사 → 추가공사비 안내</p>
+      </QuickGuideItem>
+    </>
+  ),
+  at: (
+    <>
+      <QuickGuideItem emoji="📝" title="메모 뭘 써야 하나요?">
+        <p><strong>필수:</strong> 업종 + 카메라 대수 + 특이사항</p>
+        <p className="mt-1">예: &quot;카페 / 4대 / 테라스 있음 / 다음주 오픈&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🔄" title="중복 리드 처리">
+        <p>전화번호 뒷 8자리 기준 → <strong>마지막 유입 건을 살리고</strong> 나머지 실패 처리</p>
+        <p className="mt-1">과거 실패 건 재유입 = 부활 처리</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="📊" title="딜스테이지 변경 순서">
+        <p>상담예정 → 상담완료 → 회원가입 → 결제완료</p>
+      </QuickGuideItem>
+    </>
+  ),
+  call: (
+    <>
+      <QuickGuideItem emoji="📵" title="부재중 3회 후 어떡하죠?">
+        <p>다음 날 오전/오후 각 1회(매회 문자) → 2~3일 뒤 마지막 시도 후 실패 처리</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="💬" title="가격 저항 대응">
+        <p>&quot;월 4만원대면 하루 1,500원, 커피 한 잔 값으로 24시간 보안입니다.&quot;</p>
+        <p className="mt-1">&quot;36개월 후 완전히 내 것 — 렌탈과 다릅니다.&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🌙" title="야간 리드(21~23시) 대응">
+        <p>채팅 상담 중심 → 전화번호 확보 → 다음 날 오전 콜백</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="⏱️" title="리드 우선순위">
+        <p>① 전화예약(약속) → ② 실시간 유입 → ③ 전화예약(랜덤) → ④ 잔존 리드</p>
+      </QuickGuideItem>
+    </>
+  ),
+};
+
 /* ── 탭 콘텐츠 ── */
 function OpsTab() {
   return (
@@ -1097,8 +1258,10 @@ export default function GuideContent() {
 
   const totalMatches = matchingTabs?.length ?? 0;
 
+  const currentQuickGuide = isSearching ? null : QUICK_GUIDES[activeTab];
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
@@ -1144,29 +1307,44 @@ export default function GuideContent() {
         </div>
       )}
 
-      {/* 모든 탭을 항상 렌더링. 비활성은 숨김 처리 */}
-      <div ref={contentRef} className="relative">
-        {TAB_DEFS.map((tab) => {
-          const shouldShow = isSearching
-            ? (matchingTabs?.includes(tab.id) ?? false)
-            : tab.id === activeTab;
-
-          return (
-            <div key={tab.id}>
-              {isSearching && shouldShow && (
-                <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
-              )}
-              <div
-                ref={(el) => { tabRefs.current[tab.id] = el; }}
-                data-tab={tab.id}
-                style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
-                aria-hidden={!shouldShow}
-              >
-                {tabComponents[tab.id]}
-              </div>
+      {/* 2컬럼 레이아웃: 좌측 퀵 가이드 + 우측 상세 콘텐츠 */}
+      <div className="flex gap-5">
+        {/* 좌측: 상황별 퀵 가이드 (데스크톱에서만 표시) */}
+        {currentQuickGuide && (
+          <div className="hidden lg:block w-72 shrink-0">
+            <div className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
+              {currentQuickGuide}
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        {/* 우측: 기존 상세 콘텐츠 */}
+        <div className="flex-1 min-w-0">
+          <div ref={contentRef} className="relative">
+            {TAB_DEFS.map((tab) => {
+              const shouldShow = isSearching
+                ? (matchingTabs?.includes(tab.id) ?? false)
+                : tab.id === activeTab;
+
+              return (
+                <div key={tab.id}>
+                  {isSearching && shouldShow && (
+                    <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
+                  )}
+                  <div
+                    ref={(el) => { tabRefs.current[tab.id] = el; }}
+                    data-tab={tab.id}
+                    style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
+                    aria-hidden={!shouldShow}
+                  >
+                    {tabComponents[tab.id]}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
