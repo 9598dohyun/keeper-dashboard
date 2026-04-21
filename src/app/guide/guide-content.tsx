@@ -142,95 +142,126 @@ const QUICK_GUIDES: Record<string, React.ReactNode> = {
       </QuickGuideItem>
       <QuickGuideItem emoji="🏭" title="&quot;국산 카메라인가요?&quot;">
         <p><QuickGuideTag color="red">금지</QuickGuideTag> &quot;국산 카메라&quot; 안내 절대 금지</p>
-        <p className="mt-1">→ &quot;한화비전 자체 기술력, 베트남 제조 생산&quot;</p>
+        <p className="mt-1">→ &quot;한화비전 자체 기술력, 베트남 OEM 생산&quot;</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🏗️" title="&quot;인테리어 중인데 언제 설치?&quot;">
+        <p>공사 순서: <strong>전기→목공→CCTV→페인트</strong></p>
+        <p className="text-gray-400 mt-1">도면/사진 먼저 받고 대수 제안</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🛗" title="엘리베이터 있는 건물">
+        <p><QuickGuideTag color="red">필수</QuickGuideTag> 초반에 &quot;엘리베이터 있나요?&quot; 필수 질문</p>
+        <p className="mt-1">산안법 적용 → <strong>수백만원 추가 시공비 가능</strong> 사전 경고</p>
+        <p className="text-red-500 mt-1">사례: 결제 후 590만원 추가비 통보 → 대형 클레임</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="📞" title="부재중 리드 대응">
         <p>24시간 내 3회 시도(매회 문자) → 다음 날 오전/오후 각 1회 → 2~3일 뒤 마지막</p>
-        <p className="text-gray-400 mt-1">전화상담 탭 상세 참조</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="🎙️" title="녹음 안 해도 되나요?">
-        <p><strong>3분 이상 모든 통화</strong> 전부 업로드 필수</p>
-        <p className="text-gray-400 mt-1">키퍼 어드민 직접 업로드 금지</p>
       </QuickGuideItem>
     </>
   ),
   price: (
     <>
-      <QuickGuideItem emoji="💰" title="&quot;월 얼마예요?&quot;">
-        <p>4대 기준 <strong>월 44,000원</strong> (36개월 무이자, VAT포함)</p>
-        <p className="mt-1">총액 1,584,000원 → 36개월 후 <strong>내 것</strong></p>
+      <QuickGuideItem emoji="💰" title="&quot;얼마예요? 한 대당 / 월 얼마?&quot;">
+        <p>1대 <strong>월 11,000원</strong>(VAT포함) × 대수 = 월 납입금</p>
+        <p className="mt-1">4대 월 44,000원 / 총 1,584,000원 / 36개월 무이자</p>
+        <p className="text-gray-400 mt-1">반드시 VAT 포함으로 통일 안내</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🏷️" title="&quot;할인 안 되나요?&quot;">
+      <QuickGuideItem emoji="🏷️" title="&quot;할인 안 되나요? / 깎아주세요&quot;">
         <p><QuickGuideTag color="blue">수량할인</QuickGuideTag> 9대↑ 5% / 16대↑ 10%</p>
         <p><QuickGuideTag color="green">일시불</QuickGuideTag> 추가 5% (일시불에서만)</p>
-        <p className="mt-1">프로모션: 6~8대 범위 안내. 3대 이하 제시 금지</p>
+        <p className="mt-1"><strong>BP:</strong> 할인 대신 <strong>대수 최적화</strong>로 단가 유지</p>
+        <p className="text-gray-400 mt-1">&quot;화각 105도라 대수 줄여도 커버 가능&quot;</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="💳" title="&quot;결제 어떻게 해요?&quot;">
-        <p>할부: 삼성·현대·롯데 36개월 무이자</p>
-        <p>일시불: 카드 / 현금(세금계산서)</p>
-        <p className="text-gray-400 mt-1">결제 링크는 상담사가 생성하지 않음</p>
+      <QuickGuideItem emoji="🏢" title="&quot;법인인데 할부 되나요?&quot;">
+        <p><QuickGuideTag color="red">주의</QuickGuideTag> <strong>법인은 일시불만</strong> / 개인사업자 할부 가능</p>
+        <p className="text-gray-400 mt-1">초반에 법인/개인 확인 필수</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🖥️" title="&quot;모니터 포함인가요?&quot;">
+      <QuickGuideItem emoji="🖥️" title="&quot;모니터 포함이에요?&quot;">
         <p><strong>모니터 별도</strong> → 고객이 준비</p>
-        <p className="text-red-500 mt-1">가격 안내 직후 반드시 안내</p>
+        <p className="text-red-500 mt-1">🚨 가격 안내 직후 반드시 안내 (클레임 다수)</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="💸" title="예산 초과 고객 대응">
+        <p>&quot;키퍼 정가 판매라 가격 조정 불가&quot; 솔직 안내</p>
+        <p className="mt-1">→ 대수 최적화 제안 or &quot;현장에서 추가/감소 조정 가능&quot;</p>
       </QuickGuideItem>
     </>
   ),
   spec: (
     <>
-      <QuickGuideItem emoji="📷" title="&quot;화소가 어떻게 되나요?&quot;">
-        <p><strong>400만 화소</strong> (2K급), 야간 적외선 30m</p>
-        <p className="mt-1">중국산 &quot;800만 화소&quot;와 차이: 센서 품질·보안 인증</p>
+      <QuickGuideItem emoji="📷" title="기본 스펙 멘트 (암기 필수)">
+        <p><strong>&quot;400만 화소 QHD · 30일 저장 · 105도 광각 · 야간보정&quot;</strong></p>
+        <p className="text-gray-400 mt-1">이 4종 세트를 모든 상담에서 기본 안내</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="💾" title="&quot;녹화 며칠 저장?&quot;">
-        <p><strong>약 4주</strong> (24시간 풀 녹화, 시간 조정 불가)</p>
+      <QuickGuideItem emoji="🔢" title="&quot;500만 화소가 더 좋지 않아요?&quot;">
+        <p><strong>BP:</strong> &quot;500만 화소는 마케팅 용어. 4:3 vs 16:9 비율 차이일 뿐&quot;</p>
+        <p className="mt-1">&quot;화소 높으면 저장 용량 많이 먹어 <strong>저장 1~2주밖에 안 됨</strong>&quot;</p>
+        <p className="mt-1">→ 키퍼 400만 + 30일 저장이 실익이 더 큼</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🚪" title="&quot;움직임 감지 되나요?&quot;">
+      <QuickGuideItem emoji="🚪" title="&quot;움직임 감지 / 알람 되나요?&quot;">
         <p>카메라 움직임 감지 = <strong>녹화 검색 편의용</strong></p>
-        <p className="text-red-500">경비 알림은 도어센서만 가능</p>
+        <p className="text-red-500">경비 알림은 도어센서만. 출동 서비스 없음</p>
+        <p className="text-gray-400 mt-1">S1 알람(월 5.5만) / 세콤 출동과 혼동 주의</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🛡️" title="&quot;보험은 뭐가 있어요?&quot;">
-        <p>안심케어 1년 무료: 비품파손 300만 + 개인정보유출 500만</p>
-        <p className="text-gray-400 mt-1">분실·도난 보상 없음</p>
+      <QuickGuideItem emoji="📹" title="&quot;몇 대 필요해요?&quot;">
+        <p>평수·구조·출입구 질문 후 제안</p>
+        <p className="mt-1"><strong>BP:</strong> &quot;방 4개? 외부도? → 4대 딱 맞습니다&quot;</p>
+        <p className="text-gray-400 mt-1">3대 이하는 프로모션 안내 금지</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="👤" title="&quot;직원 출퇴근 관리도 돼요?&quot;">
+        <p><strong>월 500원 (곧 무료화 예정)</strong>, 출퇴근 자동 계산</p>
+        <p className="text-gray-400 mt-1">매장형(카페·식당·미용실) 고객 관심 높음 → 선제 안내</p>
       </QuickGuideItem>
     </>
   ),
   vs: (
     <>
-      <QuickGuideItem emoji="🔵" title="&quot;ADT캡스 알아보고 있어요&quot;">
-        <p>&quot;캡스도 3년 후 내 것이 되지만, <strong>망사용료가 매달 계속</strong> 나갑니다. 키퍼는 36개월 후 완전 0원이에요.&quot;</p>
-        <p className="mt-1">&quot;캡스 AI 기능은 대형·무인매장에 적합해요. 소규모 매장은 CCTV+도어센서면 충분합니다.&quot;</p>
+      <QuickGuideItem emoji="⭐" title="원샷 포지션 멘트 (암기)">
+        <p>&quot;캡스·세콤은 <strong>경비 출동</strong>이 본업이라 월 10만 원 이상 계속,</p>
+        <p>S1·KT는 <strong>렌탈</strong>이라 3년 뒤 카메라 가져갑니다.</p>
+        <p>중국산은 A/S 1년이고 해킹 이슈도 걱정되죠.</p>
+        <p>키퍼는 <strong>한화비전이 직접 만든 CCTV를 36개월 할부로 사시는 것</strong>이라</p>
+        <p>3년 뒤엔 고객님 소유고 추가 비용도 없습니다.</p>
+        <p>저장 30일, 400만 QHD, A/S 3년 무상 — 이게 차이입니다.&quot;</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🟢" title="&quot;세콤 알아보고 있어요&quot;">
-        <p>&quot;에스원도 3년 후 내 것이 되지만, <strong>망사용료 계속</strong>. 키퍼는 36개월 후 0원.&quot;</p>
-        <p className="mt-1">&quot;에스원 카메라 대부분 200만. 키퍼 400만으로 두 배 선명. 저장도 18일 vs 28일.&quot;</p>
+      <QuickGuideItem emoji="🔵" title="&quot;캡스/세콤 알아보고 있어요&quot;">
+        <p>&quot;경비 출동이 본업이라 <strong>월 10만+ 영구</strong>. 키퍼는 CCTV 구매라 3년이면 끝&quot;</p>
+        <p className="mt-1">&quot;캡스 AI 기능은 대형·무인매장용. 소규모는 CCTV+도어센서면 충분&quot;</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🟠" title="&quot;KT 견적 받았는데요&quot;">
-        <p>&quot;KT 200만 4대 월 4만원, 키퍼도 4만원. 근데 <strong>키퍼는 사는 거고 KT는 빌리는 거</strong>예요.&quot;</p>
-        <p className="mt-1">&quot;저장도 KT 15일 vs 키퍼 28일.&quot;</p>
+      <QuickGuideItem emoji="🟠" title="&quot;S1/KT 견적 받았는데요&quot;">
+        <p>&quot;3년 뒤 카메라 가져갑니다. 키퍼는 3년 뒤 <strong>고객님 소유 + 월 0원</strong>&quot;</p>
+        <p className="mt-1">&quot;S1 저장 17~20일, KT 15일 → 키퍼 <strong>30일</strong>&quot;</p>
+        <p className="mt-1"><strong>양도:</strong> &quot;가게 팔 때 권리금에 카메라값 포함 가능&quot; (렌탈은 불가)</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🔴" title="&quot;인터넷에서 싼 거 봤는데&quot;">
-        <p>&quot;처음엔 싸지만 수리 1년, 해킹 위험(미·영 정부 금지), 저장 1~2주. 화소도 숫자만 높아요.&quot;</p>
+        <p>&quot;화소 숫자만 크고 저장 1~2주. A/S 1년, 해킹 위험(미·영 정부 금지)&quot;</p>
+        <p className="mt-1"><strong>BP:</strong> &quot;화소 높으면 저장 용량만 잡아먹어 저장기간 오히려 짧아짐&quot;</p>
       </QuickGuideItem>
     </>
   ),
   cs: (
     <>
-      <QuickGuideItem emoji="💸" title="&quot;너무 비싼데요&quot;">
-        <p>&quot;다른 곳은 렌탈이라 36개월 후에도 월비용이 나가요. 키퍼는 내 것이 되니 장기적으로 절반 이하입니다.&quot;</p>
-        <p className="text-gray-400 mt-1">가격 저항 대응 → 전화상담 탭 참조</p>
+      <QuickGuideItem emoji="🔐" title="&quot;선결제가 좀 의심되는데…&quot;">
+        <p><strong>BP:</strong> &quot;한화비전 공식 서비스입니다. 앱스토어에서 '키퍼' 검색해보세요&quot;</p>
+        <p className="text-gray-400 mt-1">보이스피싱 의심 고객 증가 → 공식성 강조 필수</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🚨" title="&quot;출동 서비스 있어요?&quot;">
-        <p><strong>출동 서비스 미제공</strong></p>
-        <p>→ 문열림 센서 알림 + 앱 내 112/119 버튼으로 안내</p>
+      <QuickGuideItem emoji="📋" title="&quot;3년 뒤엔 어떻게 되나요?&quot;">
+        <p>&quot;36개월 완납 후 <strong>고객님 소유</strong>. 렌탈 아닙니다&quot;</p>
+        <p className="mt-1">A/S: 3년 무상 → 3~5년 출장비 8만원 + 부품 유상</p>
+        <p className="mt-1"><strong>양도:</strong> 가게 매매 시 권리금에 포함 가능</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="👴" title="IT 취약 고객 대응">
-        <p>전문 용어 최소화, &quot;핸드폰으로 바로 보실 수 있어요&quot;</p>
-        <p className="mt-1">앱 설치 = 설치기사가 도와드림</p>
+      <QuickGuideItem emoji="🚨" title="클레임 발생 시 (3단계)">
+        <p>① <strong>감정 수용:</strong> &quot;충분히 화나실 수 있습니다&quot;</p>
+        <p>② <strong>원인 인정:</strong> &quot;커뮤니케이션 전달 오류였습니다&quot;</p>
+        <p>③ <strong>해결 약속:</strong> &quot;내부 검토 후 방향 연락드리겠습니다&quot;</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🏗️" title="&quot;넓은 매장인데 가능?&quot;">
-        <p>녹화기~카메라 거리·층고·구조물 종류 → <strong>현장확인 필수</strong></p>
-        <p className="mt-1">복층 = 난공사 → 추가공사비 안내</p>
+      <QuickGuideItem emoji="👴" title="IT 취약 고객 (고령)">
+        <p><strong>BP:</strong> 카카오톡 알림톡 결제 링크 제공</p>
+        <p>&quot;핸드폰 링크 클릭하면 바로 결제 화면&quot;</p>
+        <p className="mt-1">&quot;주말에도 연락 주셔도 괜찮습니다&quot; 접근성 확보</p>
+      </QuickGuideItem>
+      <QuickGuideItem emoji="🏗️" title="&quot;넓은 매장 / 복층인데 가능?&quot;">
+        <p>녹화기~카메라 거리·층고·구조물 → <strong>현장확인 필수</strong></p>
+        <p className="mt-1">복층 = 난공사 → 추가공사비 사전 안내</p>
+        <p className="text-gray-400 mt-1">8대↑ 실사 필수 / 4대↓ 사진·도면 가능</p>
       </QuickGuideItem>
     </>
   ),
@@ -251,18 +282,25 @@ const QUICK_GUIDES: Record<string, React.ReactNode> = {
   ),
   call: (
     <>
+      <QuickGuideItem emoji="⏱️" title="리드 우선순위">
+        <p>① 전화예약(약속) → ② 실시간 유입 → ③ 전화예약(랜덤) → ④ 잔존 리드</p>
+        <p className="text-gray-400 mt-1">실시간 9-11시 / 16:30-19시 = 온도감 유지 핵심</p>
+      </QuickGuideItem>
       <QuickGuideItem emoji="📵" title="부재중 3회 후 어떡하죠?">
         <p>다음 날 오전/오후 각 1회(매회 문자) → 2~3일 뒤 마지막 시도 후 실패 처리</p>
+        <p className="text-gray-400 mt-1">모든 시도에 문자 필수</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="💬" title="가격 저항 대응">
         <p>&quot;월 4만원대면 하루 1,500원, 커피 한 잔 값으로 24시간 보안입니다.&quot;</p>
-        <p className="mt-1">&quot;36개월 후 완전히 내 것 — 렌탈과 다릅니다.&quot;</p>
+        <p className="mt-1">&quot;다른 곳은 렌탈이라 36개월 후에도 월비용. 키퍼는 <strong>내 것</strong>&quot;</p>
+        <p className="mt-1"><strong>BP:</strong> 대수 최적화 제안 → &quot;화각 105도라 줄여도 커버 가능&quot;</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🌙" title="야간 리드(21~23시) 대응">
         <p>채팅 상담 중심 → 전화번호 확보 → 다음 날 오전 콜백</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="⏱️" title="리드 우선순위">
-        <p>① 전화예약(약속) → ② 실시간 유입 → ③ 전화예약(랜덤) → ④ 잔존 리드</p>
+      <QuickGuideItem emoji="📝" title="인수인계 메모 필수">
+        <p>CRM에 &quot;다음 담당자 인수 필수: OOO 재연락&quot; 기록</p>
+        <p className="text-red-500 mt-1">미기록 시 동일 고객 반복 질문 → 신뢰 손상</p>
       </QuickGuideItem>
     </>
   ),
