@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MetricsResult, TrendEntry } from '@/lib/types';
 import LeadStatusCard from './lead-status-card';
 import ActionStatusCard from './action-status-card';
@@ -10,6 +10,7 @@ import ChannelChart from './channel-chart';
 import HourlyChart from './hourly-chart';
 import TrendChart from './trend-chart';
 import NavTabs from './nav-tabs';
+import { ChevronDown } from 'lucide-react';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
@@ -17,12 +18,36 @@ export default function Dashboard() {
   const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateOpen, setDateOpen] = useState(false);
+  const dateRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = async () => {
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dateRef.current && !dateRef.current.contains(e.target as Node)) {
+        setDateOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const fetchDates = async () => {
+    try {
+      const res = await fetch('/api/metrics?type=dates');
+      const json = await res.json();
+      if (json.dates) setAvailableDates(json.dates);
+    } catch {}
+  };
+
+  const fetchData = async (date?: string | null) => {
     setLoading(true);
     try {
+      const dailyUrl = date ? `/api/metrics?date=${date}` : '/api/metrics';
       const [dailyRes, trendRes] = await Promise.all([
-        fetch('/api/metrics'),
+        fetch(dailyUrl),
         fetch('/api/metrics?type=trend'),
       ]);
       const dailyJson = await dailyRes.json();
@@ -30,7 +55,7 @@ export default function Dashboard() {
 
       if (dailyJson.data) {
         setMetrics(dailyJson.data);
-        setMeta(dailyJson.meta);
+        setMeta(dailyJson.meta || null);
       }
       if (trendJson.data) {
         setTrend(trendJson.data);
@@ -42,10 +67,25 @@ export default function Dashboard() {
     setLoading(false);
   };
 
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setDateOpen(false);
+    fetchData(date);
+  };
+
+  const handleLatest = () => {
+    setSelectedDate(null);
+    setDateOpen(false);
+    fetchData(null);
+  };
+
   useEffect(() => {
+    fetchDates();
     fetchData();
-    // 5분마다 자동 새로고침
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    // 5분마다 자동 새로고침 (최신 보기 중일 때만)
+    const interval = setInterval(() => {
+      if (!selectedDate) fetchData();
+    }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -63,7 +103,7 @@ export default function Dashboard() {
         <div className="text-gray-400 text-lg">{error || '데이터가 없습니다'}</div>
         <div className="text-sm text-gray-300">GitHub Actions로 데이터를 갱신해주세요</div>
         <button
-          onClick={fetchData}
+          onClick={() => fetchData(selectedDate)}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
         >
           다시 시도
@@ -91,9 +131,39 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 날짜 선택 드롭다운 */}
+          <div className="relative" ref={dateRef}>
+            <button
+              onClick={() => setDateOpen(!dateOpen)}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              {selectedDate || '오늘'}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {dateOpen && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                <button
+                  onClick={handleLatest}
+                  className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${!selectedDate ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                >
+                  오늘 (최신)
+                </button>
+                <div className="border-t border-gray-100" />
+                {availableDates.map(d => (
+                  <button
+                    key={d}
+                    onClick={() => handleDateSelect(d)}
+                    className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedDate === d ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <NavTabs />
           <button
-            onClick={fetchData}
+            onClick={() => fetchData(selectedDate)}
             className="text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
           >
             새로고침

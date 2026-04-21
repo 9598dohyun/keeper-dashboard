@@ -22,18 +22,20 @@ npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
 
 ## Architecture
 
-한화비전 키퍼 인바운드 SDR 실시간 대시보드. 에어테이블 CRM 데이터를 15분 간격으로 수집하여 전환율·소진율·부재율 등 KPI를 표시한다.
+한화비전 키퍼 인바운드 SDR 대시보드. 에어테이블 CRM 데이터를 12시간 단위(07:59, 19:59 KST)로 수집하여 전환율·소진율·부재율 등 KPI를 표시한다.
 
 ### Data Pipeline
 
 ```
-GitHub Actions (15분 cron, 영업시간)
+GitHub Actions (12시간 단위 cron: KST 07:59, 19:59)
   → scripts/fetch-airtable.ts: Airtable API → data/피추천인.json + data/이력관리.json
   → scripts/compute-and-push.ts: computeRange() → Upstash KV에 결과 저장
 
 Next.js (Vercel)
   → /api/metrics (route.ts): KV에서 캐시된 결과 읽기 (<100ms)
-  → Dashboard 컴포넌트: 5분마다 자동 폴링
+  → /api/metrics?type=dates: 사용 가능한 날짜 목록 반환
+  → /api/metrics?date=YYYY-MM-DD: 특정 날짜 데이터 조회
+  → Dashboard 컴포넌트: 날짜 선택 드롭다운으로 과거 데이터 조회 가능
 ```
 
 ### Metrics Engine (`src/lib/metrics/`)
@@ -60,6 +62,69 @@ Next.js (Vercel)
 
 - **피추천인** (`tbl45D05oiu3wffTT`): 리드 마스터. 계산에 쓰는 필드만 fetch (개인정보 제외)
 - **이력관리** (`tblEPutPIjLYcm0Lp`): 상태 변경 이벤트 로그
+
+## File Index
+
+### scripts/ — 데이터 파이프라인 (GitHub Actions에서 실행)
+
+| 파일 | 역할 |
+|------|------|
+| `fetch-airtable.ts` | Airtable API → data/피추천인.json + data/이력관리.json (개인정보 제외) |
+| `compute-and-push.ts` | JSON → 지표 계산 → Vercel KV 저장 (일간 7일TTL + 14일 추이 + 메타) |
+
+### src/lib/ — 핵심 로직
+
+| 파일 | 역할 |
+|------|------|
+| `types.ts` | 전체 TypeScript 인터페이스 (MetricsResult, AirtableLead, TrendEntry 등) |
+| `utils.ts` | Tailwind CSS 클래스 병합 유틸 |
+| `metrics/index.ts` | **메트릭 계산 엔진** — `computeRange()`, `buildHistByLead()` |
+| `metrics/biz-date.ts` | 영업일 계산 (전날 20:00~당일 20:00 KST), 날짜 포맷팅 |
+| `metrics/lead-status.ts` | 리드 상태 판정 — 성공/실패/활성 분류, 처리 날짜 계산 |
+| `metrics/actions.ts` | 상태변경 이벤트 분석 — 컨택/부재중/첫접촉 시간 판정 |
+| `metrics/lead-time.ts` | 리드타임 통계 — 중앙값/평균/버킷별 분포 |
+| `metrics/channel.ts` | 유입 채널 정규화 — 전체유입경로/진입경로 필드 추출 |
+
+### src/app/api/ — 백엔드 API
+
+| 파일 | 역할 |
+|------|------|
+| `metrics/route.ts` | GET /api/metrics — KV 조회 (type=dates/trend/daily, ?date=YYYY-MM-DD) |
+
+### src/app/components/ — 대시보드 UI
+
+| 파일 | 역할 |
+|------|------|
+| `dashboard.tsx` | **메인 컴포넌트** — 데이터 페칭, 날짜 선택 드롭다운, 하위 컴포넌트 조합 |
+| `lead-status-card.tsx` | 리드 현황 카드 — 전날잔존/오늘신규(고유·중복)/오늘잔존 |
+| `action-status-card.tsx` | 액션 현황 카드 — 컨택/성공/실패/부재중 건수 |
+| `kpi-gauges.tsx` | KPI 게이지 — 전환율/소진율/부재율 + 계산식(분자/분모) |
+| `lead-time-chart.tsx` | 리드타임 분포 바 차트 — 6개 버킷별 건수 |
+| `channel-chart.tsx` | 채널별 신규 리드 Top 10 가로 바 차트 |
+| `hourly-chart.tsx` | 시간대별(0~23시) 유입/성공/실패 분포 |
+| `trend-chart.tsx` | 14일 추이 라인 차트 — 전환율/소진율/부재율 + 건수 추이 |
+| `metric-card.tsx` | 범용 메트릭 카드 (제목/값/부제/색상) |
+| `nav-tabs.tsx` | 페이지 네비게이션 — "상담 가이드" / "대시보드" 링크 |
+
+### src/app/ — 페이지
+
+| 파일 | 역할 |
+|------|------|
+| `layout.tsx` | 루트 레이아웃 — 메타데이터, 글꼴, 전역 CSS |
+| `page.tsx` | `/` 홈 — 상담 가이드 렌더링 |
+| `dashboard/page.tsx` | `/dashboard` — Dashboard 컴포넌트 래퍼 |
+| `guide/page.tsx` | `/guide` — 가이드 페이지 래퍼 |
+| `guide/guide-content.tsx` | 상담 가이드 콘텐츠 — 7개 탭(운영룰, 가격, 스펙, 경쟁사, 응대, 에어테이블, 전화상담) |
+
+### src/components/ui/ — shadcn 기반 UI 프리미티브
+
+| 파일 | 역할 |
+|------|------|
+| `badge.tsx` | 배지 (variant: default/secondary/destructive) |
+| `button.tsx` | 버튼 (variant/size 조합) |
+| `card.tsx` | 카드 (Card/CardHeader/CardTitle/CardContent/CardFooter) |
+| `select.tsx` | Select 드롭다운 (base-ui 기반) |
+| `separator.tsx` | 구분선 (가로/세로) |
 
 ## Key Constraints
 

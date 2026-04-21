@@ -7,6 +7,17 @@ export async function GET(request: Request) {
   const type = searchParams.get('type') || 'daily';
 
   try {
+    // 사용 가능한 날짜 목록 반환
+    if (type === 'dates') {
+      const keys: string[] = await kv.keys('metrics:daily:*');
+      const dates = keys
+        .map(k => k.replace('metrics:daily:', ''))
+        .filter(d => d !== 'latest' && /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .reverse();
+      return NextResponse.json({ dates });
+    }
+
     if (type === 'trend') {
       const trend = await kv.get('metrics:trend:14d');
       return NextResponse.json({ data: trend, type: 'trend' });
