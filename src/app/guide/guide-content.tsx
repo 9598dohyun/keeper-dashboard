@@ -1317,100 +1317,105 @@ export default function GuideContent() {
   const totalMatches = matchingTabs?.length ?? 0;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold">키퍼 CCTV 상담 가이드</h1>
-          <p className="text-xs text-gray-400">한화비전 KEEPER · 상담사 업무 매뉴얼</p>
-        </div>
-        <NavTabs />
-      </div>
-
-      {/* 검색 */}
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="검색어 입력 (예: 할인, 부재중, 법인)"
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-        />
-        {isSearching && (
-          <div className="text-center text-xs text-gray-400 mt-1">
-            {totalMatches > 0 ? `${totalMatches}개 탭에서 발견` : '검색 결과 없음'}
+    <div className="px-4 py-6">
+      {/* 헤더·검색·탭바: 중앙 max-w-2xl */}
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold">키퍼 CCTV 상담 가이드</h1>
+            <p className="text-xs text-gray-400">한화비전 KEEPER · 상담사 업무 매뉴얼</p>
           </div>
-        )}
-      </div>
-
-      {/* 탭 바 — 검색 중에는 숨김 */}
-      {!isSearching && (
-        <div className="flex overflow-x-auto gap-1 -mx-4 px-4 scrollbar-hide">
-          {TAB_DEFS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <NavTabs />
         </div>
-      )}
 
-      {/* 2컬럼 레이아웃: 좌측 퀵 가이드 사이드바 + 우측 탭 콘텐츠 */}
-      <div className="flex gap-5">
-        {/* 좌측: 상황별 퀵 가이드 (항상 표시, 검색에도 포함) */}
-        {currentQuickGuide && (
-          <div className="hidden lg:block w-72 shrink-0">
-            <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
-              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
-              {currentQuickGuide}
-            </div>
-          </div>
-        )}
-
-        {/* 우측: 탭 콘텐츠 */}
-        <div className="flex-1 min-w-0">
-          {/* 모바일: 퀵가이드를 탭 콘텐츠 상단에 표시 */}
-          {currentQuickGuide && (
-            <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 scroll-mt-28">
-              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
-              {currentQuickGuide}
+        {/* 검색 */}
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="검색어 입력 (예: 할인, 부재중, 법인)"
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+          />
+          {isSearching && (
+            <div className="text-center text-xs text-gray-400 mt-1">
+              {totalMatches > 0 ? `${totalMatches}개 탭에서 발견` : '검색 결과 없음'}
             </div>
           )}
-          <div ref={contentRef} className="relative">
-            {TAB_DEFS.map((tab) => {
-              const shouldShow = isSearching
-                ? (matchingTabs?.includes(tab.id) ?? false)
-                : tab.id === activeTab;
+        </div>
 
-              return (
-                <div key={tab.id}>
-                  {isSearching && shouldShow && (
-                    <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
-                  )}
-                  <div
-                    ref={(el) => { tabRefs.current[tab.id] = el; }}
-                    data-tab={tab.id}
-                    style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
-                    aria-hidden={!shouldShow}
-                  >
-                    {tabComponents[tab.id]}
+        {/* 탭 바 — 검색 중에는 숨김 */}
+        {!isSearching && (
+          <div className="flex overflow-x-auto gap-1 -mx-4 px-4 scrollbar-hide">
+            {TAB_DEFS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 본문: 좌측 퀵가이드 사이드바 + 중앙 탭 콘텐츠 */}
+      <div className="max-w-5xl mx-auto mt-4">
+        <div className="flex gap-5 justify-center">
+          {/* 좌측: 퀵 가이드 사이드바 (데스크톱만) */}
+          {currentQuickGuide && (
+            <div className="hidden lg:block w-72 shrink-0">
+              <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
+                <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
+                {currentQuickGuide}
+              </div>
+            </div>
+          )}
+
+          {/* 중앙: 탭 콘텐츠 (max-w-2xl 유지) */}
+          <div className="w-full max-w-2xl min-w-0">
+            {/* 모바일: 퀵가이드를 탭 콘텐츠 상단에 표시 */}
+            {currentQuickGuide && (
+              <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 scroll-mt-28">
+                <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
+                {currentQuickGuide}
+              </div>
+            )}
+            <div ref={contentRef} className="relative">
+              {TAB_DEFS.map((tab) => {
+                const shouldShow = isSearching
+                  ? (matchingTabs?.includes(tab.id) ?? false)
+                  : tab.id === activeTab;
+
+                return (
+                  <div key={tab.id}>
+                    {isSearching && shouldShow && (
+                      <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
+                    )}
+                    <div
+                      ref={(el) => { tabRefs.current[tab.id] = el; }}
+                      data-tab={tab.id}
+                      style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
+                      aria-hidden={!shouldShow}
+                    >
+                      {tabComponents[tab.id]}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="text-center text-[10px] text-gray-300 pb-4">
+      <div className="text-center text-[10px] text-gray-300 pb-4 mt-4">
         한화비전 키퍼 · 사바사 운영
       </div>
     </div>
