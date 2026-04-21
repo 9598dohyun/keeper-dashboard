@@ -1366,21 +1366,20 @@ export default function GuideContent() {
         )}
       </div>
 
-      {/* 본문: 좌측 퀵가이드 사이드바 + 중앙 탭 콘텐츠 */}
-      <div className="max-w-5xl mx-auto mt-4">
-        <div className="flex gap-5 justify-center">
-          {/* 좌측: 퀵 가이드 사이드바 (데스크톱만) */}
-          {currentQuickGuide && (
-            <div className="hidden lg:block w-72 shrink-0">
-              <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
-                <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
-                {currentQuickGuide}
-              </div>
+      {/* 본문: 중앙 탭 콘텐츠 + 좌측 여백에 퀵가이드 */}
+      <div className="relative mt-4">
+        {/* 좌측 여백: 퀵 가이드 사이드바 (데스크톱, 중앙 콘텐츠 왼쪽에 배치) */}
+        {currentQuickGuide && (
+          <div className="hidden xl:block absolute right-[calc(50%+336px)] w-72" style={{ top: 0 }}>
+            <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
+              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
+              {currentQuickGuide}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* 중앙: 탭 콘텐츠 (max-w-2xl 유지) */}
-          <div className="w-full max-w-2xl min-w-0">
+        {/* 중앙: 탭 콘텐츠 (max-w-2xl, 화면 중앙 고정) */}
+        <div className="max-w-2xl mx-auto">
             {/* 모바일: 퀵가이드를 탭 콘텐츠 상단에 표시 */}
             {currentQuickGuide && (
               <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 scroll-mt-28">
@@ -1413,7 +1412,6 @@ export default function GuideContent() {
             </div>
           </div>
         </div>
-      </div>
 
       <div className="text-center text-[10px] text-gray-300 pb-4 mt-4">
         한화비전 키퍼 · 사바사 운영
