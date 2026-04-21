@@ -306,6 +306,17 @@ const QUICK_GUIDES: Record<string, React.ReactNode> = {
   ),
 };
 
+function QuickGuidePanel({ tabId }: { tabId: string }) {
+  const guide = QUICK_GUIDES[tabId];
+  if (!guide) return null;
+  return (
+    <div data-section className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-4 scroll-mt-28">
+      <h2 className="text-[15px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h2>
+      {guide}
+    </div>
+  );
+}
+
 /* ── 탭 콘텐츠 ── */
 function OpsTab() {
   return (
@@ -1235,8 +1246,13 @@ export default function GuideContent() {
   const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
 
   const tabComponents: Record<TabId, React.ReactNode> = useMemo(() => ({
-    ops: <OpsTab />, price: <PriceTab />, spec: <SpecTab />, vs: <VsTab />,
-    cs: <CsTab />, at: <AtTab />, call: <CallTab />,
+    ops: <><QuickGuidePanel tabId="ops" /><OpsTab /></>,
+    price: <><QuickGuidePanel tabId="price" /><PriceTab /></>,
+    spec: <><QuickGuidePanel tabId="spec" /><SpecTab /></>,
+    vs: <><QuickGuidePanel tabId="vs" /><VsTab /></>,
+    cs: <><QuickGuidePanel tabId="cs" /><CsTab /></>,
+    at: <><QuickGuidePanel tabId="at" /><AtTab /></>,
+    call: <><QuickGuidePanel tabId="call" /><CallTab /></>,
   }), []);
 
   // 모든 탭 마운트 완료 감지
@@ -1296,10 +1312,8 @@ export default function GuideContent() {
 
   const totalMatches = matchingTabs?.length ?? 0;
 
-  const currentQuickGuide = isSearching ? null : QUICK_GUIDES[activeTab];
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
@@ -1345,44 +1359,29 @@ export default function GuideContent() {
         </div>
       )}
 
-      {/* 2컬럼 레이아웃: 좌측 퀵 가이드 + 우측 상세 콘텐츠 */}
-      <div className="flex gap-5">
-        {/* 좌측: 상황별 퀵 가이드 (데스크톱에서만 표시) */}
-        {currentQuickGuide && (
-          <div className="hidden lg:block w-72 shrink-0">
-            <div className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
-              {currentQuickGuide}
+      {/* 탭 콘텐츠 (퀵 가이드 포함) */}
+      <div ref={contentRef} className="relative">
+        {TAB_DEFS.map((tab) => {
+          const shouldShow = isSearching
+            ? (matchingTabs?.includes(tab.id) ?? false)
+            : tab.id === activeTab;
+
+          return (
+            <div key={tab.id}>
+              {isSearching && shouldShow && (
+                <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
+              )}
+              <div
+                ref={(el) => { tabRefs.current[tab.id] = el; }}
+                data-tab={tab.id}
+                style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
+                aria-hidden={!shouldShow}
+              >
+                {tabComponents[tab.id]}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* 우측: 기존 상세 콘텐츠 */}
-        <div className="flex-1 min-w-0">
-          <div ref={contentRef} className="relative">
-            {TAB_DEFS.map((tab) => {
-              const shouldShow = isSearching
-                ? (matchingTabs?.includes(tab.id) ?? false)
-                : tab.id === activeTab;
-
-              return (
-                <div key={tab.id}>
-                  {isSearching && shouldShow && (
-                    <div className="text-xs font-bold text-rose-500 mb-2 mt-4">{tab.label}</div>
-                  )}
-                  <div
-                    ref={(el) => { tabRefs.current[tab.id] = el; }}
-                    data-tab={tab.id}
-                    style={shouldShow ? undefined : { position: 'absolute', left: '-9999px', visibility: 'hidden' }}
-                    aria-hidden={!shouldShow}
-                  >
-                    {tabComponents[tab.id]}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
