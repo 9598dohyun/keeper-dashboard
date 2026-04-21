@@ -1363,28 +1363,20 @@ export default function GuideContent() {
         </div>
       )}
 
-      {/* 2컬럼 레이아웃: 좌측 퀵 가이드 + 우측 상세 콘텐츠 */}
+      {/* 2컬럼 레이아웃: 좌측 퀵 가이드 사이드바 + 우측 탭 콘텐츠 */}
       <div className="flex gap-5">
-        {/* 좌측: 상황별 퀵 가이드 (데스크톱에서만 표시) */}
-        {currentQuickGuide && !isSearching && (
+        {/* 좌측: 상황별 퀵 가이드 (항상 표시, 검색에도 포함) */}
+        {currentQuickGuide && (
           <div className="hidden lg:block w-72 shrink-0">
-            <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
               <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
               {currentQuickGuide}
             </div>
           </div>
         )}
 
-        {/* 우측: 기존 상세 콘텐츠 */}
+        {/* 우측: 탭 콘텐츠 */}
         <div className="flex-1 min-w-0">
-          {/* 모바일에서는 퀵가이드를 상단에 표시 */}
-          {currentQuickGuide && !isSearching && (
-            <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-              <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
-              {currentQuickGuide}
-            </div>
-          )}
-
           <div ref={contentRef} className="relative">
             {TAB_DEFS.map((tab) => {
               const shouldShow = isSearching
