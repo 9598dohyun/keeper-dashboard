@@ -12,6 +12,37 @@ import TrendChart from './trend-chart';
 import NavTabs from './nav-tabs';
 import { ChevronDown } from 'lucide-react';
 
+/** ISO 주차 키(2026-W16)를 "4월 3주차" 형태로 변환 */
+function formatWeekLabel(weekKey: string): string {
+  // weekKey = "2026-W16" → year=2026, weekNum=16
+  const match = weekKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return weekKey;
+  const year = parseInt(match[1]);
+  const weekNum = parseInt(match[2]);
+
+  // ISO week의 월요일 날짜 계산
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const firstMonday = new Date(jan4);
+  firstMonday.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+  const monday = new Date(firstMonday);
+  monday.setUTCDate(firstMonday.getUTCDate() + (weekNum - 1) * 7);
+
+  const month = monday.getUTCMonth() + 1; // 1~12
+  // 해당 월의 첫 번째 월요일 기준으로 몇 주차인지 계산
+  const firstOfMonth = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), 1));
+  const firstOfMonthDay = firstOfMonth.getUTCDay() || 7;
+  const firstMondayOfMonth = new Date(firstOfMonth);
+  if (firstOfMonthDay <= 1) {
+    // 1일이 월요일
+  } else {
+    firstMondayOfMonth.setUTCDate(firstOfMonth.getUTCDate() + (8 - firstOfMonthDay));
+  }
+  const weekOfMonth = Math.ceil((monday.getUTCDate() - firstMondayOfMonth.getUTCDate()) / 7) + 1;
+
+  return `${month}월 ${weekOfMonth}주차`;
+}
+
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
   const [trend, setTrend] = useState<TrendEntry[] | null>(null);
@@ -193,7 +224,7 @@ export default function Dashboard() {
             >
               {viewMode === 'daily'
                 ? (selectedDate || '오늘')
-                : (selectedWeek || '이번 주')}
+                : (selectedWeek ? formatWeekLabel(selectedWeek) : '이번 주')}
               <ChevronDown className="w-3 h-3" />
             </button>
             {dateOpen && (
@@ -224,7 +255,7 @@ export default function Dashboard() {
                         onClick={() => handleWeekSelect(w)}
                         className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedWeek === w ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
                       >
-                        {w}
+                        {formatWeekLabel(w)}
                       </button>
                     ))
                 }
