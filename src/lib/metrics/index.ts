@@ -8,6 +8,7 @@ import { isSuccess, isFail, isAlive, processedDate } from './lead-status';
 import { hadContactAction, hadContactActionInRange, hadMissedContactInRange, firstContactTs } from './actions';
 import { computeLeadTimeStats } from './lead-time';
 import { normalizeChannel } from './channel';
+import { TOP_CHANNELS_COUNT } from '../constants';
 
 export function buildHistByLead(histRecords: AirtableHistory[]): Map<string, HistEvent[]> {
   const map = new Map<string, HistEvent[]>();
@@ -200,7 +201,7 @@ export function computeRange(
   }
   const channelTop = [...chCounter.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 10) as [string, number][];
+    .slice(0, TOP_CHANNELS_COUNT) as [string, number][];
 
   // --- 시간대별 분포 ---
   const hourlyInflow: Record<number, number> = {};

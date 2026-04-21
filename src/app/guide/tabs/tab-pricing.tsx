@@ -1,0 +1,96 @@
+import React from 'react';
+import { Alert, Tag, SectionCard, Table } from '../components/guide-helpers';
+
+export default function PriceTab() {
+  return (
+    <div className="space-y-4">
+      <SectionCard id="price-installment" title="💰 할부 가격표 (36개월 무이자)">
+        <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·설치비·저장공간 모두 포함 | 삼성·현대·롯데 무이자</p>
+        <Alert type="warning">고객 안내 시 반드시 <strong>VAT 포함 금액</strong>으로 안내</Alert>
+        <div className="mt-3">
+          <Table
+            headers={['대수', '월 할부금 (VAT포함)', '총액 (VAT포함)']}
+            rows={[
+              ['2대', <strong key="p2">22,000원</strong>, '792,000원'],
+              ['3대', <strong key="p3">33,000원</strong>, '1,188,000원'],
+              ['4대', <strong key="p4">44,000원</strong>, '1,584,000원'],
+              ['5대', <strong key="p5">55,000원</strong>, '1,980,000원'],
+              ['6대', <strong key="p6">66,000원</strong>, '2,376,000원'],
+              ['7대', <strong key="p7">77,000원</strong>, '2,772,000원'],
+              ['8대', <strong key="p8">88,000원</strong>, '3,168,000원'],
+              ['9대', <strong key="p9">99,000원</strong>, '3,564,000원'],
+              ['10대', <strong key="p10">110,000원</strong>, '3,960,000원'],
+              ['12대', <strong key="p12">132,000원</strong>, '4,752,000원'],
+              ['16대', <strong key="p16">176,000원</strong>, '6,336,000원'],
+              ['20대', <strong key="p20">220,000원</strong>, '7,920,000원'],
+            ]}
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard id="price-discount" title="🏷️ 할인 정책">
+        <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만</Alert>
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">현행 (9대↑ 5%, 16대↑ 10%)</h3>
+        <Table
+          headers={['대수', '할인율', '할인가 (VAT포함)', '절감액']}
+          rows={[
+            ['9대', <Tag key="d9" color="blue">5%</Tag>, '3,385,800원', '178,200원'],
+            ['10대', <Tag key="d10" color="blue">5%</Tag>, '3,762,000원', '198,000원'],
+            ['12대', <Tag key="d12" color="blue">5%</Tag>, '4,514,400원', '237,600원'],
+            ['16대', <Tag key="d16" color="green">10%</Tag>, '5,702,400원', '633,600원'],
+            ['20대', <Tag key="d20" color="green">10%</Tag>, '7,128,000원', '792,000원'],
+          ]}
+        />
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">5월 변경 예정 (8대↑ 5%, 12대↑ 10%) <Tag color="yellow">예정</Tag></h3>
+        <Table
+          headers={['대수', '할인율', '할인가 (VAT포함)', '절감액']}
+          rows={[
+            ['8대', <Tag key="n8" color="blue">5%</Tag>, '3,009,600원', '158,400원'],
+            ['10대', <Tag key="n10" color="blue">5%</Tag>, '3,762,000원', '198,000원'],
+            ['12대', <Tag key="n12" color="green">10%</Tag>, '4,276,800원', '475,200원'],
+            ['16대', <Tag key="n16" color="green">10%</Tag>, '5,702,400원', '633,600원'],
+            ['20대', <Tag key="n20" color="green">10%</Tag>, '7,128,000원', '792,000원'],
+          ]}
+        />
+      </SectionCard>
+
+      <SectionCard id="price-relocation" title="🔄 위치변경·이전설치 단가">
+        <h3 className="text-[14px] font-semibold mb-2">위치변경 (동일 건물 내)</h3>
+        <p className="text-[13px] text-gray-500 mb-2">대당 120,000원 균일가</p>
+        <Table
+          headers={['대수', '청구 가격']}
+          rows={[
+            ['1대', '120,000원'], ['2대', '240,000원'], ['3대', '360,000원'],
+            ['4대', '480,000원'], ['5대', '600,000원'],
+          ]}
+        />
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">이전설치 (철거→재설치)</h3>
+        <Table
+          headers={['대수', '청구 가격']}
+          rows={[
+            ['2대', '400,000원'], ['3대', '520,000원'],
+            ['4대', '640,000원'], ['5대', '760,000원'],
+          ]}
+        />
+      </SectionCard>
+
+      <SectionCard id="price-payment" title="💳 결제 안내">
+        <Table
+          headers={['항목', '내용']}
+          rows={[
+            ['결제 경로', '앱 내 결제(기본) / 결제 링크(할인 시) / 네이버 스토어(무이자 3개월만)'],
+            ['36개월 무이자', <><strong key="c">삼성·현대·롯데</strong> 개인 신용카드만 (법인카드 불가)</>],
+            ['기타 카드', '1~2년 할부 가능'],
+            ['체크카드', '일시불만 가능'],
+            ['카카오톡 결제', '고령·카드 없는 고객 → 알림톡 결제 링크 제공'],
+            ['분리 결제', '가능 (예: 3대 일시불 + 2대 할부)'],
+            ['법인', <><strong key="l">일시불만 가능</strong>. 개인사업자는 할부 가능</>],
+            ['VAT', '항상 VAT 포함 금액으로 안내'],
+            ['결제 링크 생성', <><Tag key="t" color="red">상담사 X</Tag> — 에러 시 책임 문제</>],
+            ['할인 적용', '결제 링크로만 적용 (앱 내 불가)'],
+          ]}
+        />
+      </SectionCard>
+    </div>
+  );
+}

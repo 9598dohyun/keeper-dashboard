@@ -87,6 +87,13 @@ export interface MetricsResult {
   _meta: { updatedAt: string; dataDate: string };
 }
 
+export interface MetricsMetaInfo {
+  lastUpdated: string;
+  dataDate: string;
+  leadCount: number;
+  histCount: number;
+}
+
 export interface TrendEntry {
   date: string;
   전날잔존: number;

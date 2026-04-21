@@ -7,6 +7,7 @@ import path from 'path';
 import { AirtableLead, AirtableHistory, TrendEntry } from '../src/lib/types';
 import { buildHistByLead, computeRange } from '../src/lib/metrics/index';
 import { formatDate } from '../src/lib/metrics/biz-date';
+import { KV_DAILY_TTL, KV_WEEKLY_TTL, KV_TREND_TTL, TREND_DAYS } from '../src/lib/constants';
 
 const DATA_DIR = path.join(__dirname, '../data');
 const KV_URL = process.env.KV_REST_API_URL!;
@@ -81,13 +82,13 @@ async function main() {
   const todayMetrics = computeRange(today, today, leads, histByLead);
 
   // KV에 저장
-  await kvSet(`metrics:daily:${today}`, todayMetrics, 30 * 86400); // 30일 TTL
+  await kvSet(`metrics:daily:${today}`, todayMetrics, KV_DAILY_TTL);
   await kvSet('metrics:daily:latest', todayMetrics);
   console.log(`Saved metrics:daily:${today} + latest`);
 
   // 최근 14일 트렌드 계산
   const trend: TrendEntry[] = [];
-  for (let i = 13; i >= 0; i--) {
+  for (let i = TREND_DAYS - 1; i >= 0; i--) {
     const dateStr = getDateStr(i);
     const r = computeRange(dateStr, dateStr, leads, histByLead);
     trend.push({
@@ -105,25 +106,28 @@ async function main() {
     });
   }
 
-  await kvSet('metrics:trend:14d', trend, 86400); // 1일 TTL
+  await kvSet('metrics:trend:14d', trend, KV_TREND_TTL);
   console.log(`Saved trend (${trend.length} days)`);
 
   // === 주간 메트릭 ===
-  const WEEKLY_TTL = 28 * 7 * 86400; // 28주 (196일)
+  // KV_WEEKLY_TTL from constants (28주 = 196일)
+
+  function computeWeekMetrics(dateStr: string) {
+    const week = getISOWeekInfo(dateStr);
+    console.log(`Computing weekly metrics for ${week.weekKey} (${week.monday} ~ ${week.sunday})...`);
+    const metrics = computeRange(week.monday, week.sunday, leads, histByLead);
+    return { week, metrics };
+  }
 
   // 현재 주차
-  const thisWeek = getISOWeekInfo(today);
-  console.log(`Computing weekly metrics for ${thisWeek.weekKey} (${thisWeek.monday} ~ ${thisWeek.sunday})...`);
-  const thisWeekMetrics = computeRange(thisWeek.monday, thisWeek.sunday, leads, histByLead);
-  await kvSet(`metrics:weekly:${thisWeek.weekKey}`, thisWeekMetrics, WEEKLY_TTL);
+  const { week: thisWeek, metrics: thisWeekMetrics } = computeWeekMetrics(today);
+  await kvSet(`metrics:weekly:${thisWeek.weekKey}`, thisWeekMetrics, KV_WEEKLY_TTL);
   await kvSet('metrics:weekly:latest', thisWeekMetrics);
   console.log(`Saved metrics:weekly:${thisWeek.weekKey} + latest`);
 
   // 직전 주차 (보정: 일요일 데이터까지 반영된 최종본)
-  const lastWeekDate = getDateStr(7);
-  const lastWeek = getISOWeekInfo(lastWeekDate);
-  const lastWeekMetrics = computeRange(lastWeek.monday, lastWeek.sunday, leads, histByLead);
-  await kvSet(`metrics:weekly:${lastWeek.weekKey}`, lastWeekMetrics, WEEKLY_TTL);
+  const { week: lastWeek, metrics: lastWeekMetrics } = computeWeekMetrics(getDateStr(7));
+  await kvSet(`metrics:weekly:${lastWeek.weekKey}`, lastWeekMetrics, KV_WEEKLY_TTL);
   console.log(`Saved metrics:weekly:${lastWeek.weekKey} (prev week)`);
 
   // 메타 정보

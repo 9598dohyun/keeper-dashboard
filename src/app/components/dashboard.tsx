@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MetricsResult, TrendEntry } from '@/lib/types';
+import { MetricsResult, MetricsMetaInfo, TrendEntry } from '@/lib/types';
+import { POLL_INTERVAL_MS } from '@/lib/constants';
 import LeadStatusCard from './lead-status-card';
 import ActionStatusCard from './action-status-card';
 import KPIGauges from './kpi-gauges';
@@ -46,7 +47,7 @@ function formatWeekLabel(weekKey: string): string {
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
   const [trend, setTrend] = useState<TrendEntry[] | null>(null);
-  const [meta, setMeta] = useState<any>(null);
+  const [meta, setMeta] = useState<MetricsMetaInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
@@ -155,7 +156,7 @@ export default function Dashboard() {
     fetchData('daily');
     const interval = setInterval(() => {
       if (viewMode === 'daily' && !selectedDate) fetchData('daily');
-    }, 5 * 60 * 1000);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 

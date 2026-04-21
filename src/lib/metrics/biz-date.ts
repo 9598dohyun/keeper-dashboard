@@ -2,6 +2,7 @@
  * 영업일 계산 (20 to 20 기준)
  * 영업일 d = 전날 20:00 KST ~ 당일 20:00 KST
  */
+import { BIZ_DAY_CUTOFF_HOUR } from '../constants';
 
 const KST_OFFSET = 9 * 60; // minutes
 
@@ -20,7 +21,7 @@ export function parseUTC(s: string | undefined | null): Date | null {
 export function bizDate(dtKst: Date): string {
   const hour = dtKst.getHours();
   const d = new Date(dtKst);
-  if (hour >= 20) {
+  if (hour >= BIZ_DAY_CUTOFF_HOUR) {
     d.setDate(d.getDate() + 1);
   }
   return formatDate(d);
