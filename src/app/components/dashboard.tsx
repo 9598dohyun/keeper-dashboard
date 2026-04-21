@@ -195,9 +195,26 @@ export default function Dashboard() {
         <div>
           <h1 className="text-lg font-bold">키퍼 인바운드 대시보드</h1>
           <div className="text-xs text-gray-400 mt-0.5">
-            {metrics.대상기간.start === metrics.대상기간.end
-              ? metrics.대상기간.start
-              : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
+            {viewMode === 'weekly' && selectedWeek
+              ? (() => {
+                  const m = selectedWeek.match(/^(\d{4})-W(\d{2})$/);
+                  if (!m) return selectedWeek;
+                  const year = parseInt(m[1]);
+                  const wn = parseInt(m[2]);
+                  const jan4 = new Date(Date.UTC(year, 0, 4));
+                  const jan4d = jan4.getUTCDay() || 7;
+                  const fm = new Date(jan4);
+                  fm.setUTCDate(jan4.getUTCDate() - jan4d + 1);
+                  const mon = new Date(fm);
+                  mon.setUTCDate(fm.getUTCDate() + (wn - 1) * 7);
+                  const sun = new Date(mon);
+                  sun.setUTCDate(mon.getUTCDate() + 6);
+                  const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                  return `${fmt(mon)} ~ ${fmt(sun)}`;
+                })()
+              : metrics.대상기간.start === metrics.대상기간.end
+                ? metrics.대상기간.start
+                : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
           </div>
         </div>
         <div className="flex items-center gap-2">
