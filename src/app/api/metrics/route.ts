@@ -18,6 +18,32 @@ export async function GET(request: Request) {
       return NextResponse.json({ dates });
     }
 
+    // 사용 가능한 주차 목록 반환
+    if (type === 'weeks') {
+      const keys: string[] = await kv.keys('metrics:weekly:*');
+      const weeks = keys
+        .map(k => k.replace('metrics:weekly:', ''))
+        .filter(w => w !== 'latest' && /^\d{4}-W\d{2}$/.test(w))
+        .sort()
+        .reverse();
+      return NextResponse.json({ weeks });
+    }
+
+    // 주간 데이터 조회
+    if (type === 'weekly') {
+      const week = searchParams.get('week');
+      if (week) {
+        const data = await kv.get(`metrics:weekly:${week}`);
+        if (!data) {
+          return NextResponse.json({ error: 'No data for this week' }, { status: 404 });
+        }
+        return NextResponse.json({ data, type: 'weekly' });
+      }
+      const data = await kv.get('metrics:weekly:latest');
+      const meta = await kv.get('metrics:meta');
+      return NextResponse.json({ data, meta, type: 'weekly' });
+    }
+
     if (type === 'trend') {
       const trend = await kv.get('metrics:trend:14d');
       return NextResponse.json({ data: trend, type: 'trend' });

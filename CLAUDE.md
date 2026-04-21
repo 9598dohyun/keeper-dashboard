@@ -35,7 +35,9 @@ Next.js (Vercel)
   → /api/metrics (route.ts): KV에서 캐시된 결과 읽기 (<100ms)
   → /api/metrics?type=dates: 사용 가능한 날짜 목록 반환
   → /api/metrics?date=YYYY-MM-DD: 특정 날짜 데이터 조회
-  → Dashboard 컴포넌트: 날짜 선택 드롭다운으로 과거 데이터 조회 가능
+  → /api/metrics?type=weeks: 사용 가능한 주차 목록 반환
+  → /api/metrics?type=weekly&week=YYYY-Www: 특정 주차 데이터 조회
+  → Dashboard 컴포넌트: 일별/주별 토글 + 드롭다운으로 과거 데이터 조회
 ```
 
 ### Metrics Engine (`src/lib/metrics/`)
@@ -53,8 +55,10 @@ Next.js (Vercel)
 
 | Key | Content | TTL |
 |-----|---------|-----|
-| `metrics:daily:{YYYY-MM-DD}` | MetricsResult JSON | 7일 |
+| `metrics:daily:{YYYY-MM-DD}` | MetricsResult JSON | 30일 |
 | `metrics:daily:latest` | 최신 일간 결과 | 없음 |
+| `metrics:weekly:{YYYY-Www}` | MetricsResult JSON (주간 집계) | 196일 (28주) |
+| `metrics:weekly:latest` | 최신 주간 결과 | 없음 |
 | `metrics:trend:14d` | TrendEntry[] (14일분) | 1일 |
 | `metrics:meta` | { lastUpdated, dataDate } | 없음 |
 

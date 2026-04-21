@@ -18,8 +18,11 @@ export default function Dashboard() {
   const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
   const dateRef = useRef<HTMLDivElement>(null);
 
@@ -42,20 +45,34 @@ export default function Dashboard() {
     } catch {}
   };
 
-  const fetchData = async (date?: string | null) => {
+  const fetchWeeks = async () => {
+    try {
+      const res = await fetch('/api/metrics?type=weeks');
+      const json = await res.json();
+      if (json.weeks) setAvailableWeeks(json.weeks);
+    } catch {}
+  };
+
+  const fetchData = async (mode: 'daily' | 'weekly', key?: string | null) => {
     setLoading(true);
     try {
-      const dailyUrl = date ? `/api/metrics?date=${date}` : '/api/metrics';
-      const [dailyRes, trendRes] = await Promise.all([
-        fetch(dailyUrl),
+      let dataUrl: string;
+      if (mode === 'weekly') {
+        dataUrl = key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly';
+      } else {
+        dataUrl = key ? `/api/metrics?date=${key}` : '/api/metrics';
+      }
+
+      const [dataRes, trendRes] = await Promise.all([
+        fetch(dataUrl),
         fetch('/api/metrics?type=trend'),
       ]);
-      const dailyJson = await dailyRes.json();
+      const dataJson = await dataRes.json();
       const trendJson = await trendRes.json();
 
-      if (dailyJson.data) {
-        setMetrics(dailyJson.data);
-        setMeta(dailyJson.meta || null);
+      if (dataJson.data) {
+        setMetrics(dataJson.data);
+        setMeta(dataJson.meta || null);
       }
       if (trendJson.data) {
         setTrend(trendJson.data);
@@ -70,21 +87,43 @@ export default function Dashboard() {
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     setDateOpen(false);
-    fetchData(date);
+    fetchData('daily', date);
+  };
+
+  const handleWeekSelect = (week: string) => {
+    setSelectedWeek(week);
+    setDateOpen(false);
+    fetchData('weekly', week);
   };
 
   const handleLatest = () => {
-    setSelectedDate(null);
+    if (viewMode === 'daily') {
+      setSelectedDate(null);
+    } else {
+      setSelectedWeek(null);
+    }
     setDateOpen(false);
-    fetchData(null);
+    fetchData(viewMode, null);
+  };
+
+  const switchMode = (mode: 'daily' | 'weekly') => {
+    setViewMode(mode);
+    setDateOpen(false);
+    if (mode === 'daily') {
+      setSelectedWeek(null);
+      fetchData('daily', selectedDate);
+    } else {
+      setSelectedDate(null);
+      fetchData('weekly', selectedWeek);
+    }
   };
 
   useEffect(() => {
     fetchDates();
-    fetchData();
-    // 5분마다 자동 새로고침 (최신 보기 중일 때만)
+    fetchWeeks();
+    fetchData('daily');
     const interval = setInterval(() => {
-      if (!selectedDate) fetchData();
+      if (viewMode === 'daily' && !selectedDate) fetchData('daily');
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -103,7 +142,7 @@ export default function Dashboard() {
         <div className="text-gray-400 text-lg">{error || '데이터가 없습니다'}</div>
         <div className="text-sm text-gray-300">GitHub Actions로 데이터를 갱신해주세요</div>
         <button
-          onClick={() => fetchData(selectedDate)}
+          onClick={() => fetchData(viewMode, viewMode === 'daily' ? selectedDate : selectedWeek)}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
         >
           다시 시도
@@ -131,39 +170,70 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* 날짜 선택 드롭다운 */}
+          {/* 일별/주별 토글 */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => switchMode('daily')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${viewMode === 'daily' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
+            >
+              일별
+            </button>
+            <button
+              onClick={() => switchMode('weekly')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${viewMode === 'weekly' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
+            >
+              주별
+            </button>
+          </div>
+          {/* 날짜/주차 선택 드롭다운 */}
           <div className="relative" ref={dateRef}>
             <button
               onClick={() => setDateOpen(!dateOpen)}
               className="flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
-              {selectedDate || '오늘'}
+              {viewMode === 'daily'
+                ? (selectedDate || '오늘')
+                : (selectedWeek || '이번 주')}
               <ChevronDown className="w-3 h-3" />
             </button>
             {dateOpen && (
               <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                 <button
                   onClick={handleLatest}
-                  className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${!selectedDate ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                  className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${
+                    viewMode === 'daily' ? (!selectedDate ? 'bg-blue-50 text-blue-600 font-medium' : '')
+                    : (!selectedWeek ? 'bg-blue-50 text-blue-600 font-medium' : '')
+                  }`}
                 >
-                  오늘 (최신)
+                  {viewMode === 'daily' ? '오늘 (최신)' : '이번 주 (최신)'}
                 </button>
                 <div className="border-t border-gray-100" />
-                {availableDates.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => handleDateSelect(d)}
-                    className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedDate === d ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
-                  >
-                    {d}
-                  </button>
-                ))}
+                {viewMode === 'daily'
+                  ? availableDates.map(d => (
+                      <button
+                        key={d}
+                        onClick={() => handleDateSelect(d)}
+                        className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedDate === d ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                      >
+                        {d}
+                      </button>
+                    ))
+                  : availableWeeks.map(w => (
+                      <button
+                        key={w}
+                        onClick={() => handleWeekSelect(w)}
+                        className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedWeek === w ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                      >
+                        {w}
+                      </button>
+                    ))
+                }
               </div>
             )}
           </div>
           <NavTabs />
           <button
-            onClick={() => fetchData(selectedDate)}
+            onClick={() => fetchData(viewMode, viewMode === 'daily' ? selectedDate : selectedWeek)}
             className="text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
           >
             새로고침
