@@ -30,26 +30,14 @@ export default function PriceTab() {
 
       <SectionCard id="price-discount" title="🏷️ 할인 정책">
         <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만</Alert>
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">현행 (9대↑ 5%, 16대↑ 10%)</h3>
         <Table
           headers={['대수', '할인율', '할인가 (VAT포함)', '절감액']}
           rows={[
-            ['9대', <Tag key="d9" color="blue">5%</Tag>, '3,385,800원', '178,200원'],
+            ['8대', <Tag key="d8" color="blue">5%</Tag>, '3,009,600원', '158,400원'],
             ['10대', <Tag key="d10" color="blue">5%</Tag>, '3,762,000원', '198,000원'],
-            ['12대', <Tag key="d12" color="blue">5%</Tag>, '4,514,400원', '237,600원'],
+            ['12대', <Tag key="d12" color="green">10%</Tag>, '4,276,800원', '475,200원'],
             ['16대', <Tag key="d16" color="green">10%</Tag>, '5,702,400원', '633,600원'],
             ['20대', <Tag key="d20" color="green">10%</Tag>, '7,128,000원', '792,000원'],
-          ]}
-        />
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">5월 변경 예정 (8대↑ 5%, 12대↑ 10%) <Tag color="yellow">예정</Tag></h3>
-        <Table
-          headers={['대수', '할인율', '할인가 (VAT포함)', '절감액']}
-          rows={[
-            ['8대', <Tag key="n8" color="blue">5%</Tag>, '3,009,600원', '158,400원'],
-            ['10대', <Tag key="n10" color="blue">5%</Tag>, '3,762,000원', '198,000원'],
-            ['12대', <Tag key="n12" color="green">10%</Tag>, '4,276,800원', '475,200원'],
-            ['16대', <Tag key="n16" color="green">10%</Tag>, '5,702,400원', '633,600원'],
-            ['20대', <Tag key="n20" color="green">10%</Tag>, '7,128,000원', '792,000원'],
           ]}
         />
       </SectionCard>

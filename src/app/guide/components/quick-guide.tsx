@@ -62,7 +62,7 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p className="text-gray-400 mt-1">반드시 VAT 포함으로 통일 안내</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🏷️" title="&quot;할인 안 되나요? / 깎아주세요&quot;">
-        <p><QuickGuideTag color="blue">수량할인</QuickGuideTag> 9대↑ 5% / 16대↑ 10%</p>
+        <p><QuickGuideTag color="blue">수량할인</QuickGuideTag> 8대↑ 5% / 12대↑ 10%</p>
         <p><QuickGuideTag color="green">일시불</QuickGuideTag> 추가 5% (일시불에서만)</p>
         <p className="mt-1"><strong>BP:</strong> 할인 대신 <strong>대수 최적화</strong>로 단가 유지</p>
         <p className="text-gray-400 mt-1">&quot;화각 105도라 대수 줄여도 커버 가능&quot;</p>
