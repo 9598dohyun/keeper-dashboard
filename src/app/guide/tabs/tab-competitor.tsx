@@ -14,9 +14,9 @@ export default function VsTab() {
           <p>• &quot;캡스 저장 약 20일, 키퍼 28일. 가격도 캡스는 전화해야 알려주는데, 키퍼는 홈페이지 공개.&quot;</p>
         </div>
 
-        <h3 className="text-[14px] font-semibold mb-2"><Tag color="blue">에스원</Tag> &quot;세콤 알아��고 있어요&quot;</h3>
+        <h3 className="text-[14px] font-semibold mb-2"><Tag color="blue">에스원</Tag> &quot;세콤 알아보고 있어요&quot;</h3>
         <div className="space-y-1.5 text-[13px] text-gray-600 mb-4">
-          <p>• &quot;에스원도 3년 후 ���기는 내 것이 되지만, <strong>망사용료 계속</strong>. ��퍼는 36개월 후 0원.&quot;</p>
+          <p>• &quot;에스원도 3년 후 기기는 내 것이 되지만, <strong>망사용료 계속</strong>. 키퍼는 36개월 후 0원.&quot;</p>
           <p>• &quot;에스원 카메라 대부분 200만. 키퍼는 400만으로 두 배 선명. 저장도 18일 vs 28일.&quot;</p>
         </div>
 
@@ -43,7 +43,7 @@ export default function VsTab() {
                 <th className="text-left p-1.5 bg-gray-50 font-semibold text-gray-700 border-b border-gray-200 min-w-[110px]">ADT캡스</th>
                 <th className="text-left p-1.5 bg-gray-50 font-semibold text-gray-700 border-b border-gray-200 min-w-[100px]">에스원</th>
                 <th className="text-left p-1.5 bg-gray-50 font-semibold text-gray-700 border-b border-gray-200 min-w-[100px]">KT텔레캅</th>
-                <th className="text-left p-1.5 bg-gray-50 font-semibold text-gray-700 border-b border-gray-200 min-w-[90px]">중국��</th>
+                <th className="text-left p-1.5 bg-gray-50 font-semibold text-gray-700 border-b border-gray-200 min-w-[90px]">중국산</th>
               </tr>
             </thead>
             <tbody className="text-gray-600">
@@ -59,7 +59,7 @@ export default function VsTab() {
                 <td className="p-1.5 border-b border-gray-100 font-semibold sticky left-0 bg-white z-10">월 비용</td>
                 <td className="p-1.5 border-b border-gray-100 font-bold text-green-700">✅ 44,000원</td>
                 <td className="p-1.5 border-b border-gray-100">비공개<br/>(현장 견적)</td>
-                <td className="p-1.5 border-b border-gray-100">��공개<br/>(5~7만 추정)</td>
+                <td className="p-1.5 border-b border-gray-100">비공개<br/>(5~7만 추정)</td>
                 <td className="p-1.5 border-b border-gray-100">44,000원(200만)<br/>55,000원(500만)</td>
                 <td className="p-1.5 border-b border-gray-100">저가<br/>A/S 별도</td>
               </tr>
@@ -142,21 +142,21 @@ export default function VsTab() {
           rows={[
             [<Tag key="v1" color="red">출동</Tag>, 'ADT캡스·에스원 출동 가능', '도어센서 알림+112 바로 연결. 출동은 월5만+, 캡스 고객요청 건당 2.5만원'],
             [<Tag key="v2" color="red">AI 감지</Tag>, 'ADT캡스 KISA 인증 AI', '대형·무인매장용. 소규모는 CCTV+도어센서 충분, AI 때문에 렌탈료 계속 내는 건 비효율'],
-            [<Tag key="v3" color="red">보상</Tag>, 'ADT캡스 도난1천만+화재1��', '렌탈 계약 중에만 적용. 키퍼는 1년 무료보험+소유 CCTV로 증거 확보'],
+            [<Tag key="v3" color="red">보상</Tag>, 'ADT캡스 도난1천만+화재1억', '렌탈 계약 중에만 적용. 키퍼는 1년 무료보험+소유 CCTV로 증거 확보'],
             [<Tag key="v4" color="yellow">1대 판매</Tag>, '캡스·KT 1대 가능', '사각지대 커버 위해 최소 2대 추천'],
           ]}
         />
       </SectionCard>
 
       {/* KT 가격표 */}
-      <SectionCard title="📋 KT텔���캅 가격표 (브로셔 원본, VAT 별도)">
+      <SectionCard title="📋 KT텔레캅 가격표 (브로셔 원본, VAT 별도)">
         <Table
           headers={['대수', 'KT 200만 3년', 'KT 500만 3년', 'KEEPER 3년']}
           rows={[
             ['1대', '25,000원', '35,000원', <span key="k1" className="text-gray-400">- (2대부터)</span>],
             ['2대', '30,000원', '40,000원', <strong key="k2" className="text-green-700">✅ 20,000원</strong>],
             ['3대', '35,000원', '45,000원', <strong key="k3" className="text-green-700">✅ 30,000원</strong>],
-            ['4���', '40,000원', '50,000원', <strong key="k4" className="text-green-700">✅ 40,000원</strong>],
+            ['4대', '40,000원', '50,000원', <strong key="k4" className="text-green-700">✅ 40,000원</strong>],
           ]}
         />
         <p className="text-[11px] text-gray-400 mt-2">저장: KT 200만 4대 14일 / 500만 4대 15일 / 키퍼 4대 약 28일 | KT 모니터 옵션 월 15,000원 추가</p>
@@ -167,7 +167,7 @@ export default function VsTab() {
         <Table
           headers={['기능', '설명']}
           rows={[
-            ['침입��배회·쓰러짐·방화', '금지구역 설정 → 실시간 감지·알림'],
+            ['침입·배회·쓰러짐·방화', '금지구역 설정 → 실시간 감지·알림'],
             ['동일인 추적', '혼잡 구역 동일 인물 입·퇴장 식별 (2025.03 추가)'],
             ['소리 감지', '유리 파손, 비명 등 비정상 소리 감지'],
             ['매장 분석', '방문자 수·성별·연령·동선 리포트'],

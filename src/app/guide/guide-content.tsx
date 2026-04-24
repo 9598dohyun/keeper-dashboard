@@ -17,7 +17,7 @@ const TAB_DEFS = [
   { id: 'price', label: '가격·결제' },
   { id: 'spec', label: '제품스펙' },
   { id: 'vs', label: '경쟁사비교' },
-  { id: 'cs', label: '고��응대' },
+  { id: 'cs', label: '고객응대' },
   { id: 'at', label: '에어테이블' },
   { id: 'call', label: '전화상담' },
 ] as const;
