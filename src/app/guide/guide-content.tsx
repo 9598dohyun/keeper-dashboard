@@ -86,7 +86,6 @@ export default function GuideContent() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [mounted, setMounted] = useState(false);
   const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
 
   const tabComponents: Record<TabId, React.ReactNode> = useMemo(() => ({
@@ -101,12 +100,25 @@ export default function GuideContent() {
 
   const currentQuickGuide = QUICK_GUIDES[activeTab] ?? null;
 
-  useEffect(() => { setMounted(true); }, []);
-
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setDebouncedSearch(search.trim().toLowerCase());
+      const normalized = search.trim().toLowerCase();
+      setDebouncedSearch(normalized);
+
+      if (!normalized) {
+        setMatchingTabs(null);
+        return;
+      }
+
+      const matches: TabId[] = [];
+      for (const def of TAB_DEFS) {
+        const el = tabRefs.current[def.id];
+        if (el && el.textContent?.toLowerCase().includes(normalized)) {
+          matches.push(def.id);
+        }
+      }
+      setMatchingTabs(matches);
     }, 200);
     return () => clearTimeout(searchTimerRef.current);
   }, [search]);
@@ -114,29 +126,17 @@ export default function GuideContent() {
   const isSearching = debouncedSearch.length > 0;
 
   useEffect(() => {
-    if (!mounted) return;
-
     for (const def of TAB_DEFS) {
       const el = tabRefs.current[def.id];
       if (el) clearHighlights(el);
     }
 
     if (!isSearching) {
-      setMatchingTabs(null);
       return;
     }
 
-    const matches: TabId[] = [];
-    for (const def of TAB_DEFS) {
-      const el = tabRefs.current[def.id];
-      if (el && el.textContent?.toLowerCase().includes(debouncedSearch)) {
-        matches.push(def.id);
-      }
-    }
-    setMatchingTabs(matches);
-
     requestAnimationFrame(() => {
-      for (const tabId of matches) {
+      for (const tabId of matchingTabs ?? []) {
         const el = tabRefs.current[tabId];
         if (el) {
           highlightDOM(el, debouncedSearch);
@@ -148,7 +148,7 @@ export default function GuideContent() {
         if (firstMark) firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 50);
     });
-  }, [mounted, isSearching, debouncedSearch]);
+  }, [debouncedSearch, isSearching, matchingTabs]);
 
   const totalMatches = matchingTabs?.length ?? 0;
 

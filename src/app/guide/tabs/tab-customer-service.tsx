@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Tag, FaqItem, SectionCard, Table } from '../components/guide-helpers';
+import { Tag, FaqItem, SectionCard, Table } from '../components/guide-helpers';
 
 export default function CsTab() {
   return (

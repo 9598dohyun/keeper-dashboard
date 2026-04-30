@@ -13,8 +13,8 @@ const DATA_DIR = path.join(__dirname, '../data');
 const KV_URL = process.env.KV_REST_API_URL!;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN!;
 
-async function kvSet(key: string, value: any, exSeconds?: number) {
-  const args: any[] = ['SET', key, JSON.stringify(value)];
+async function kvSet(key: string, value: unknown, exSeconds?: number) {
+  const args: Array<string | number> = ['SET', key, JSON.stringify(value)];
   if (exSeconds) args.push('EX', exSeconds);
 
   const res = await fetch(`${KV_URL}`, {

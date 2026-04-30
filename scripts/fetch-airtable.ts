@@ -5,6 +5,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { AirtableHistory, AirtableLead } from '../src/lib/types';
 
 const TOKEN = process.env.AIRTABLE_TOKEN!;
 const BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -33,15 +34,20 @@ const HIST_FIELDS = [
   'Created time',
 ];
 
-async function fetchAll(tableId: string, fields?: string[]) {
-  const records: any[] = [];
+type AirtableListResponse<TRecord> = {
+  records?: TRecord[];
+  offset?: string;
+};
+
+async function fetchAll<TRecord>(tableId: string, fields?: string[]): Promise<TRecord[]> {
+  const records: TRecord[] = [];
   let offset: string | undefined;
 
   while (true) {
     const params = new URLSearchParams({ pageSize: '100' });
     if (offset) params.set('offset', offset);
     if (fields) {
-      fields.forEach(f => params.append('fields[]', f));
+      fields.forEach((f) => params.append('fields[]', f));
     }
 
     const url = `https://api.airtable.com/v0/${BASE_ID}/${tableId}?${params}`;
@@ -53,13 +59,13 @@ async function fetchAll(tableId: string, fields?: string[]) {
       throw new Error(`Airtable API error: ${res.status} ${await res.text()}`);
     }
 
-    const data = await res.json();
-    records.push(...(data.records || []));
+    const data = await res.json() as AirtableListResponse<TRecord>;
+    records.push(...(data.records ?? []));
     offset = data.offset;
 
     if (!offset) break;
     // Rate limit: 5 req/sec
-    await new Promise(r => setTimeout(r, 220));
+    await new Promise((resolve) => setTimeout(resolve, 220));
   }
 
   return records;
@@ -71,7 +77,7 @@ async function main() {
   }
 
   console.log('Fetching 피추천인...');
-  const leads = await fetchAll(TABLES.피추천인, LEAD_FIELDS);
+  const leads = await fetchAll<AirtableLead>(TABLES.피추천인, LEAD_FIELDS);
   fs.writeFileSync(
     path.join(OUT_DIR, '피추천인.json'),
     JSON.stringify(leads, null, 0)
@@ -79,7 +85,7 @@ async function main() {
   console.log(`피추천인: ${leads.length}건`);
 
   console.log('Fetching 이력관리...');
-  const hist = await fetchAll(TABLES.이력관리, HIST_FIELDS);
+  const hist = await fetchAll<AirtableHistory>(TABLES.이력관리, HIST_FIELDS);
   fs.writeFileSync(
     path.join(OUT_DIR, '이력관리.json'),
     JSON.stringify(hist, null, 0)
@@ -87,7 +93,7 @@ async function main() {
   console.log(`이력관리: ${hist.length}건`);
 }
 
-main().catch(e => {
-  console.error(e);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

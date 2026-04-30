@@ -90,6 +90,31 @@ export default function SpecTab() {
         <div className="mt-3"><Alert type="info">케이블 길이로는 추가비용 산정하지 않음</Alert></div>
       </SectionCard>
 
+      <SectionCard title="🏗️ 실외 설치 가능 여부 판단">
+        <Table
+          headers={['구분', '확인 사항', '판단 기준']}
+          rows={[
+            ['1차 확인', '녹화기 위치 / 인터넷(유선) / 전기 인입', '셋 중 하나라도 불명확하면 설치 가능 판단 보류'],
+            ['배선 조건', '녹화기~카메라 거리 / 벽체 타공 여부 / 장애물', '배선 동선 확보 시 진행 검토 가능'],
+            ['부착 구조', '카메라 부착면 / 받침판 가능 여부 / 별도 폴대 필요 여부', '고정 가능한 구조물이 있어야 함'],
+            ['실외 배관', 'PVC/CD관 등 외부 배선 보호 작업 여부', '미시공 상태면 고객 측 사전 준비 필요할 수 있음'],
+            ['설치 곤란', '폴대 신설 / 기초 타설 / 지반 작업 필요', <Tag key="pole" color="red">설치팀 작업 불가 가능성 높음</Tag>],
+          ]}
+        />
+        <div className="mt-3">
+          <Alert type="warning">
+            실외 카메라는 가능해도, <strong>폴대 설치나 지반 공사까지 포함된 현장</strong>은 설치팀 대응 범위를 벗어날 수 있습니다.
+          </Alert>
+        </div>
+        <div className="mt-3">
+          <Alert type="info">
+            예: 유선 인터넷 가능 / 전기 인입 가능 / 배선 약 40m / 샌드위치판넬 타공 가능 / 받침판 고정 가능
+            <br />
+            → 기본 여건은 검토 가능. 다만 <strong>외부 PVC관 미시공, 폴대 신설 필요, 지반 상태 불량</strong>이면 설치 불가로 종료될 수 있음
+          </Alert>
+        </div>
+      </SectionCard>
+
       <Alert type="info">상세 경쟁사 비교는 <strong>경쟁사비교</strong> 탭 참조</Alert>
     </div>
   );

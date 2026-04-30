@@ -106,6 +106,11 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p><strong>월 500원 (곧 무료화 예정)</strong>, 출퇴근 자동 계산</p>
         <p className="text-gray-400 mt-1">매장형(카페·식당·미용실) 고객 관심 높음 → 선제 안내</p>
       </QuickGuideItem>
+      <QuickGuideItem emoji="🏗️" title="실외 설치 문의">
+        <p>먼저 <strong>녹화기 위치 · 유선 인터넷 · 전기 인입 · 배선 거리 · 부착 구조</strong>를 확인</p>
+        <p className="mt-1">받침판 고정 수준이면 검토 가능, <strong>폴대 신설·지반 공사 필요 시 설치팀 작업 불가 가능성 높음</strong></p>
+        <p className="text-gray-400 mt-1">외부 PVC/CD관 미시공이면 고객 측 사전 준비 필요할 수 있음</p>
+      </QuickGuideItem>
     </>
   ),
   vs: (
@@ -136,7 +141,7 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
   cs: (
     <>
       <QuickGuideItem emoji="🔐" title="&quot;선결제가 좀 의심되는데…&quot;">
-        <p><strong>BP:</strong> &quot;한화비전 공식 서비스입니다. 앱스토어에서 '키퍼' 검색해보세요&quot;</p>
+        <p><strong>BP:</strong> &quot;한화비전 공식 서비스입니다. 앱스토어에서 &apos;키퍼&apos; 검색해보세요&quot;</p>
         <p className="text-gray-400 mt-1">보이스피싱 의심 고객 증가 → 공식성 강조 필수</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="📋" title="&quot;3년 뒤엔 어떻게 되나요?&quot;">

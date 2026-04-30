@@ -13,6 +13,23 @@ import TrendChart from './trend-chart';
 import NavTabs from './nav-tabs';
 import { ChevronDown } from 'lucide-react';
 
+type MetricsApiResponse = {
+  data?: MetricsResult;
+  meta?: MetricsMetaInfo | null;
+};
+
+type TrendApiResponse = {
+  data?: TrendEntry[];
+};
+
+type DatesApiResponse = {
+  dates?: string[];
+};
+
+type WeeksApiResponse = {
+  weeks?: string[];
+};
+
 /** ISO 주차 키(2026-W16)를 "4월 3주차" 형태로 변환 */
 function formatWeekLabel(weekKey: string): string {
   // weekKey = "2026-W16" → year=2026, weekNum=16
@@ -69,51 +86,55 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const fetchDates = async () => {
-    try {
-      const res = await fetch('/api/metrics?type=dates');
-      const json = await res.json();
-      if (json.dates) setAvailableDates(json.dates);
-    } catch {}
+  const applyMetricsResponse = (dataJson: MetricsApiResponse, trendJson: TrendApiResponse) => {
+    if (dataJson.data) {
+      setMetrics(dataJson.data);
+      setMeta(dataJson.meta || null);
+    }
+    if (trendJson.data) {
+      setTrend(trendJson.data);
+    }
+    setError(null);
   };
 
-  const fetchWeeks = async () => {
-    try {
-      const res = await fetch('/api/metrics?type=weeks');
-      const json = await res.json();
-      if (json.weeks) setAvailableWeeks(json.weeks);
-    } catch {}
+  const requestDates = async (): Promise<DatesApiResponse> => {
+    const res = await fetch('/api/metrics?type=dates');
+    return res.json();
+  };
+
+  const requestWeeks = async (): Promise<WeeksApiResponse> => {
+    const res = await fetch('/api/metrics?type=weeks');
+    return res.json();
+  };
+
+  const requestMetrics = async (mode: 'daily' | 'weekly', key?: string | null) => {
+    const dataUrl = mode === 'weekly'
+      ? (key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly')
+      : (key ? `/api/metrics?date=${key}` : '/api/metrics');
+
+    const [dataRes, trendRes] = await Promise.all([
+      fetch(dataUrl),
+      fetch('/api/metrics?type=trend'),
+    ]);
+
+    const [dataJson, trendJson] = await Promise.all([
+      dataRes.json() as Promise<MetricsApiResponse>,
+      trendRes.json() as Promise<TrendApiResponse>,
+    ]);
+
+    return { dataJson, trendJson };
   };
 
   const fetchData = async (mode: 'daily' | 'weekly', key?: string | null) => {
     setLoading(true);
     try {
-      let dataUrl: string;
-      if (mode === 'weekly') {
-        dataUrl = key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly';
-      } else {
-        dataUrl = key ? `/api/metrics?date=${key}` : '/api/metrics';
-      }
-
-      const [dataRes, trendRes] = await Promise.all([
-        fetch(dataUrl),
-        fetch('/api/metrics?type=trend'),
-      ]);
-      const dataJson = await dataRes.json();
-      const trendJson = await trendRes.json();
-
-      if (dataJson.data) {
-        setMetrics(dataJson.data);
-        setMeta(dataJson.meta || null);
-      }
-      if (trendJson.data) {
-        setTrend(trendJson.data);
-      }
-      setError(null);
-    } catch (e) {
+      const { dataJson, trendJson } = await requestMetrics(mode, key);
+      applyMetricsResponse(dataJson, trendJson);
+    } catch {
       setError('데이터를 불러올 수 없습니다');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDateSelect = (date: string) => {
@@ -151,14 +172,54 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchDates();
-    fetchWeeks();
-    fetchData('daily');
-    const interval = setInterval(() => {
-      if (viewMode === 'daily' && !selectedDate) fetchData('daily');
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    let cancelled = false;
+
+    const initialize = async () => {
+      try {
+        const [{ dates }, { weeks }, { dataJson, trendJson }] = await Promise.all([
+          requestDates(),
+          requestWeeks(),
+          requestMetrics('daily'),
+        ]);
+
+        if (cancelled) return;
+
+        setAvailableDates(dates ?? []);
+        setAvailableWeeks(weeks ?? []);
+        applyMetricsResponse(dataJson, trendJson);
+      } catch {
+        if (cancelled) return;
+        setError('데이터를 불러올 수 없습니다');
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (viewMode !== 'daily' || selectedDate) return;
+
+    const interval = setInterval(() => {
+      void (async () => {
+        try {
+          const { dataJson, trendJson } = await requestMetrics('daily');
+          applyMetricsResponse(dataJson, trendJson);
+        } catch {
+          setError('데이터를 불러올 수 없습니다');
+        }
+      })();
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [selectedDate, viewMode]);
 
   if (loading) {
     return (

@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     const data = await kv.get('metrics:daily:latest');
     const meta = await kv.get('metrics:meta');
     return NextResponse.json({ data, meta, type: 'daily' });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 });
   }
 }

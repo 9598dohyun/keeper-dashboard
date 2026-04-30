@@ -1,4 +1,4 @@
-import { AirtableLead, HistEvent } from '../types';
+import { HistEvent } from '../types';
 import { bizDate, toKST } from './biz-date';
 
 function isExcludedAbsence(txt: string): boolean {
