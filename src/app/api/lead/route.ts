@@ -9,10 +9,6 @@ function isValidPhone(raw: string) {
   return digits.length === 10 || digits.length === 11;
 }
 
-function phoneTail8(raw: string) {
-  return raw.replace(/\D/g, '').slice(-8);
-}
-
 export async function POST(request: Request) {
   if (!AIRTABLE_BASE_ID || !AIRTABLE_TOKEN) {
     return NextResponse.json(
@@ -46,10 +42,8 @@ export async function POST(request: Request) {
   const fields: Record<string, unknown> = {
     피추천인이름: name,
     연락처: phone,
-    유입시간: new Date().toISOString(),
     진입경로: '견적계산기-cal페이지',
     'UTM_source': 'cal-page',
-    '전화번호 키워드': phoneTail8(phone),
   };
 
   try {
