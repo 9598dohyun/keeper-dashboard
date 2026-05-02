@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { name?: string; phone?: string };
+  let body: { name?: string; phone?: string; source?: string };
   try {
     body = await request.json();
   } catch {
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
 
   const name = (body.name ?? '').trim();
   const phone = (body.phone ?? '').trim();
+  const source = body.source === 'trial' ? 'trial' : 'cal';
 
   if (!name) {
     return NextResponse.json({ error: '이름을 입력해주세요.' }, { status: 400 });
@@ -42,8 +43,8 @@ export async function POST(request: Request) {
   const fields: Record<string, unknown> = {
     피추천인이름: name,
     연락처: phone,
-    진입경로: '견적계산기-cal페이지',
-    'UTM_source': 'cal-page',
+    진입경로: source === 'trial' ? '한달무료체험-trial페이지' : '견적계산기-cal페이지',
+    'UTM_source': source === 'trial' ? 'trial-page' : 'cal-page',
   };
 
   try {
