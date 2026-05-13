@@ -58,6 +58,9 @@ export interface KPIMetrics {
   부재율_pct: number;
   부재율_분자: number;
   부재율_분모: number;
+  주문전환율_pct: number;
+  주문전환율_분자: number;
+  주문전환율_분모: number;
 }
 
 export interface LeadTimeMetrics {

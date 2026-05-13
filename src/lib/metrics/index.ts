@@ -180,6 +180,7 @@ export function computeRange(
   const convRate = denomConv ? (todaySuccess / denomConv) * 100 : 0;
   const burnRate = periodNewUnique ? (todayContactedFromNew / periodNewUnique) * 100 : 0;
   const missRate = todayContacted ? (todayMissed / todayContacted) * 100 : 0;
+  const orderConvRate = todayContacted ? (todaySuccess / todayContacted) * 100 : 0;
 
   // --- 리드타임 ---
   const leadTimesMin: number[] = [];
@@ -278,6 +279,9 @@ export function computeRange(
       부재율_pct: round2(missRate),
       부재율_분자: todayMissed,
       부재율_분모: todayContacted,
+      주문전환율_pct: round2(orderConvRate),
+      주문전환율_분자: todaySuccess,
+      주문전환율_분모: todayContacted,
     },
     리드타임: computeLeadTimeStats(leadTimesMin),
     채널_신규Top: channelTop,

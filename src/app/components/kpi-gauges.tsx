@@ -21,6 +21,8 @@ function Gauge({
     ? 'text-emerald-600'
     : label === '응대율'
     ? 'text-blue-600'
+    : label === '주문전환율'
+    ? 'text-violet-600'
     : 'text-red-500';
 
   return (
@@ -40,7 +42,7 @@ export default function KPIGauges({ data }: { data: KPIMetrics }) {
   return (
     <div>
       <h2 className="text-sm font-semibold text-yellow-600 mb-3">KPI</h2>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Gauge
           label="결제율"
           value={data.전환율_pct}
@@ -48,6 +50,14 @@ export default function KPIGauges({ data }: { data: KPIMetrics }) {
           denominator={data.전환율_분모}
           numLabel="결제"
           denomLabel="전체"
+        />
+        <Gauge
+          label="주문전환율"
+          value={data.주문전환율_pct}
+          numerator={data.주문전환율_분자}
+          denominator={data.주문전환율_분모}
+          numLabel="결제"
+          denomLabel="응대"
         />
         <Gauge
           label="응대율"
