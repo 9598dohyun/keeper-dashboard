@@ -282,7 +282,7 @@ export default function Dashboard() {
     : '';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
@@ -414,7 +414,19 @@ export default function Dashboard() {
         실패={metrics.시간대별_실패}
       />
       {trend && <TrendChart data={trend} />}
-      <InsightsCard viewMode={viewMode} />
+      <InsightsCard
+        viewMode={viewMode}
+        selectedKey={
+          viewMode === 'daily' ? selectedDate
+            : viewMode === 'weekly' ? selectedWeek
+            : selectedMonth
+        }
+        periodLabel={
+          metrics.대상기간.start === metrics.대상기간.end
+            ? metrics.대상기간.start
+            : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
+        }
+      />
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
         영업일 기준: 전날 20:00 ~ 당일 20:00 KST

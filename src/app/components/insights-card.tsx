@@ -14,53 +14,54 @@ const TAB_LABELS: Record<Tab, string> = {
   hourly: '시간대',
 };
 
-const PERIOD_LABELS: Record<Period, string> = {
-  daily: '일',
-  weekly: '주',
-  monthly: '월',
-};
-
-const DAYS_BY_PERIOD: Record<Period, number[]> = {
-  daily: [7, 14, 30, 60, 90],
-  weekly: [4, 8, 13, 26],
-  monthly: [3, 6, 12, 24],
-};
-
-const DEFAULT_DAYS_BY_PERIOD: Record<Period, number> = {
-  daily: 14,
-  weekly: 8,
-  monthly: 6,
-};
-
 interface BreakdownTrendResponse {
   dates: string[];
   data: Record<string, ChannelBreakdownEntry[] | AssigneeBreakdownEntry[] | null>;
 }
 
 interface Props {
-  /** 상단 모드(일별/주별/월별). 인사이트 카드의 단위가 상단에 종속된다. */
+  /** 상단 모드(일별/주별/월별). 인사이트 카드의 데이터가 이 모드/일자에 종속된다. */
   viewMode: Period;
+  /** 상단에서 선택된 일자 키. daily=YYYY-MM-DD, weekly=YYYY-Www, monthly=YYYY-MM, null=최신. */
+  selectedKey: string | null;
+  /** 현재 표시 기간 라벨 (예: "2026-05-13" 또는 "2026-05-05 ~ 2026-05-11" 또는 "2026-05"). */
+  periodLabel?: string;
 }
 
-export default function InsightsCard({ viewMode }: Props) {
+export default function InsightsCard({ viewMode, selectedKey, periodLabel }: Props) {
   const [tab, setTab] = useState<Tab>('channel');
-  const period: Period = viewMode; // 상단 모드에 종속
-  // period별로 사용자가 선택한 days를 각각 기억 (period 전환 시 자동 복원)
-  const [daysByPeriod, setDaysByPeriod] = useState<Record<Period, number>>(DEFAULT_DAYS_BY_PERIOD);
-  const days = daysByPeriod[period];
-  const setDays = (d: number) => setDaysByPeriod(prev => ({ ...prev, [period]: d }));
+  const period: Period = viewMode;
   const [trend, setTrend] = useState<BreakdownTrendResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 채널/담당자 탭일 때만 fetch
+  // 상단 모드/일자가 바뀌면 그에 맞춰 자동 fetch
+  // - daily: selectedKey=YYYY-MM-DD → 그 날 1일치만 (period=daily&date=YYYY-MM-DD&days=1)
+  // - weekly: selectedKey=YYYY-Www → 그 주 7일치 → daily 키 7개 합산
+  // - monthly: selectedKey=YYYY-MM → 그 달 daily 키 전체 합산
   useEffect(() => {
     if (tab === 'hourly') return;
     let cancelled = false;
     const run = async () => {
       setLoading(true);
       try {
-        const url = `/api/metrics?type=${tab === 'channel' ? 'channel-trend' : 'assignee-trend'}&period=${period}&days=${days}`;
-        const res = await fetch(url);
+        const params = new URLSearchParams();
+        params.set('type', tab === 'channel' ? 'channel-trend' : 'assignee-trend');
+        if (period === 'monthly') {
+          params.set('period', 'monthly');
+          params.set('days', '1');
+        } else {
+          // daily/weekly 모두 일간 KV 키로 처리. 일자 범위는 selectedKey로 결정.
+          params.set('period', 'daily');
+          if (period === 'daily') {
+            params.set('days', '1');
+            if (selectedKey) params.set('date', selectedKey);
+          } else {
+            // weekly: 7일치
+            params.set('days', '7');
+            if (selectedKey) params.set('week', selectedKey);
+          }
+        }
+        const res = await fetch(`/api/metrics?${params.toString()}`);
         const json = await res.json();
         if (!cancelled) setTrend(json);
       } catch {
@@ -71,10 +72,7 @@ export default function InsightsCard({ viewMode }: Props) {
     };
     void run();
     return () => { cancelled = true; };
-  }, [tab, period, days]);
-
-  const daysOptions = DAYS_BY_PERIOD[period];
-  const periodLabel = PERIOD_LABELS[period];
+  }, [tab, period, selectedKey]);
 
   return (
     <div className="bg-white rounded-xl border p-4">
@@ -95,22 +93,9 @@ export default function InsightsCard({ viewMode }: Props) {
             </button>
           ))}
         </div>
-        {tab !== 'hourly' && (
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-gray-400 mr-1">최근</span>
-            {daysOptions.map(d => (
-              <button
-                key={d}
-                onClick={() => setDays(d)}
-                className={`px-2 py-0.5 text-xs rounded ${
-                  days === d
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {d}{periodLabel}
-              </button>
-            ))}
+        {tab !== 'hourly' && periodLabel && (
+          <div className="text-xs text-gray-500">
+            기준: <span className="font-medium text-gray-700">{periodLabel}</span>
           </div>
         )}
       </div>

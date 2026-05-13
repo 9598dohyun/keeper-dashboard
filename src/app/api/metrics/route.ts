@@ -154,11 +154,49 @@ export async function GET(request: Request) {
       const keyPattern = period === 'monthly' ? /^\d{4}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/;
 
       const allKeys: string[] = await kv.keys(`${keyPrefix}:*`);
-      const dates = allKeys
+      let dates = allKeys
         .map(k => k.replace(`${keyPrefix}:`, ''))
         .filter(d => keyPattern.test(d))
-        .sort()
-        .slice(-days);
+        .sort();
+
+      // 특정 일자/주차/월 필터 (상단 모드와 종속될 때 사용)
+      const dateFilter = searchParams.get('date');     // daily 'YYYY-MM-DD'
+      const weekFilter = searchParams.get('week');     // weekly 'YYYY-Www'
+      const monthFilter = searchParams.get('month');   // monthly 'YYYY-MM'
+
+      if (period === 'daily' && dateFilter) {
+        dates = dates.filter(d => d === dateFilter);
+      } else if (period === 'daily' && weekFilter) {
+        // 'YYYY-Www' → 그 주 월~일 7일치
+        const m = weekFilter.match(/^(\d{4})-W(\d{2})$/);
+        if (m) {
+          const year = parseInt(m[1]);
+          const wn = parseInt(m[2]);
+          const jan4 = new Date(Date.UTC(year, 0, 4));
+          const jan4d = jan4.getUTCDay() || 7;
+          const fm = new Date(jan4);
+          fm.setUTCDate(jan4.getUTCDate() - jan4d + 1);
+          const mon = new Date(fm);
+          mon.setUTCDate(fm.getUTCDate() + (wn - 1) * 7);
+          const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+          const range: string[] = [];
+          for (let i = 0; i < 7; i++) {
+            const x = new Date(mon);
+            x.setUTCDate(mon.getUTCDate() + i);
+            range.push(fmt(x));
+          }
+          dates = dates.filter(d => range.includes(d));
+        }
+      } else if (period === 'daily' && !dateFilter && !weekFilter) {
+        // 최근 N일
+        dates = dates.slice(-days);
+      } else if (period === 'monthly' && monthFilter) {
+        dates = dates.filter(d => d === monthFilter);
+      } else if (period === 'monthly') {
+        dates = dates.slice(-days);
+      } else if (period === 'weekly') {
+        dates = dates.slice(-days);
+      }
 
       if (dates.length === 0) {
         return NextResponse.json({ dates: [], data: {}, type, period, days });
