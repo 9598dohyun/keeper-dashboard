@@ -49,6 +49,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: trend, type: 'trend' });
     }
 
+    // 채널별 일간 breakdown (Python push_to_sheets.py가 저장)
+    if (type === 'channel-daily') {
+      const targetDate = date ?? (await kv.get<string>('metrics:meta') ? (await kv.get<{ dataDate?: string }>('metrics:meta'))?.dataDate : null);
+      if (!targetDate) {
+        return NextResponse.json({ error: 'date required' }, { status: 400 });
+      }
+      const data = await kv.get(`metrics:channel:daily:${targetDate}`);
+      return NextResponse.json({ data, type: 'channel-daily', date: targetDate });
+    }
+
+    // 담당자별 일간 breakdown
+    if (type === 'assignee-daily') {
+      const targetDate = date ?? (await kv.get<string>('metrics:meta') ? (await kv.get<{ dataDate?: string }>('metrics:meta'))?.dataDate : null);
+      if (!targetDate) {
+        return NextResponse.json({ error: 'date required' }, { status: 400 });
+      }
+      const data = await kv.get(`metrics:assignee:daily:${targetDate}`);
+      return NextResponse.json({ data, type: 'assignee-daily', date: targetDate });
+    }
+
     if (date) {
       const data = await kv.get(`metrics:daily:${date}`);
       if (!data) {

@@ -523,6 +523,45 @@ def _format_period_label(mode, start_date, end_date):
     return f"{start_date.strftime('%Y. %m. %d.')} ~ {end_date.strftime('%Y. %m. %d.')}"
 
 
+def push_to_kv(mode, row_date, r):
+    """채널별·담당자별 breakdown을 Upstash KV에 저장.
+
+    환경변수 KV_REST_API_URL · KV_REST_API_TOKEN이 있을 때만 동작.
+    GitHub Actions에서만 호출됨(로컬 실행 시 환경변수 없으면 silent skip).
+
+    저장 키 (일간만 우선 구현 — 주간/월간은 후속):
+      metrics:channel:{mode}:{YYYY-MM-DD}    — 채널별 breakdown 배열
+      metrics:assignee:{mode}:{YYYY-MM-DD}   — 담당자별 breakdown 배열
+
+    TTL: 일간 90일 (추이 차트 기간 확장 대비)."""
+    import requests as _requests
+
+    kv_url = os.environ.get('KV_REST_API_URL', '').strip()
+    kv_token = os.environ.get('KV_REST_API_TOKEN', '').strip()
+    if not kv_url or not kv_token:
+        return  # 로컬 실행 — KV 비활성
+
+    date_str = row_date.strftime('%Y-%m-%d')
+    ttl_seconds = 90 * 24 * 3600  # 90일
+
+    payloads = [
+        (f'metrics:channel:{mode}:{date_str}', r.get('채널_breakdown', [])),
+        (f'metrics:assignee:{mode}:{date_str}', r.get('담당자_breakdown', [])),
+    ]
+
+    headers = {
+        'Authorization': f'Bearer {kv_token}',
+        'Content-Type': 'application/json',
+    }
+    for key, value in payloads:
+        body = ['SET', key, json.dumps(value, ensure_ascii=False), 'EX', ttl_seconds]
+        resp = _requests.post(kv_url, headers=headers, json=body, timeout=15)
+        if not resp.ok:
+            print(f"[KV] {key} 저장 실패: {resp.status_code} {resp.text}")
+            continue
+        print(f"[KV] {key} 저장 (TTL {ttl_seconds // 86400}일, {len(value)}개 항목)")
+
+
 def _push_range(mode, start_date, end_date, row_date):
     """기간 지표를 계산해 mode에 해당하는 시트 3종에 기록.
     row_date = 시트의 A열 정렬 기준 일자(일간=target, 주간=종료일=월요일, 월간=월 1일).
@@ -537,6 +576,10 @@ def _push_range(mode, start_date, end_date, row_date):
     push_total_sheet(service, row_date, r, sheet_name=sheets['total'], display_str=display_str)
     push_channel_sheet(service, row_date, r, sheet_name=sheets['channel'], display_str=display_str)
     push_assignee_sheet(service, row_date, r, sheet_name=sheets['assignee'], display_str=display_str)
+
+    # KV 저장 (일간만 우선; 주간/월간은 후속 작업에서 추가)
+    if mode == 'daily':
+        push_to_kv(mode, row_date, r)
 
 
 def push_daily(target_date):

@@ -107,3 +107,39 @@ export interface TrendEntry {
   부재율: number;
   리드타임_중앙값: number | null;
 }
+
+/** Python push_to_sheets.py가 KV에 저장하는 채널별 일간 breakdown.
+ *  키: metrics:channel:daily:{YYYY-MM-DD} */
+export interface ChannelBreakdownEntry {
+  채널: string;
+  전날잔존: number;
+  오늘신규: number;
+  잔존컨택: number;
+  신규컨택: number;
+  잔존성공: number;
+  신규성공: number;
+  프로모션: number;
+  실패: number;
+  부재: number;
+  가용: number;
+  컨택: number;
+  처리완료: number;
+}
+
+/** Python push_to_sheets.py가 KV에 저장하는 담당자별 일간 breakdown.
+ *  키: metrics:assignee:daily:{YYYY-MM-DD} */
+export interface AssigneeBreakdownEntry {
+  담당자: string;
+  전날잔존: number;
+  오늘신규: number;
+  잔존컨택: number;
+  신규컨택: number;
+  잔존성공: number;
+  신규성공: number;
+  프로모션: number;
+  실패: number;
+  부재: number;
+  가용: number;
+  컨택: number;
+  처리완료: number;
+}
