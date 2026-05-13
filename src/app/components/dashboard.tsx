@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MetricsResult, MetricsMetaInfo, TrendEntry } from '@/lib/types';
+import { MetricsResult, MetricsMetaInfo, TrendEntry, ChannelBreakdownEntry, AssigneeBreakdownEntry } from '@/lib/types';
 import { POLL_INTERVAL_MS } from '@/lib/constants';
 import LeadStatusCard from './lead-status-card';
 import ActionStatusCard from './action-status-card';
@@ -10,6 +10,7 @@ import LeadTimeChart from './lead-time-chart';
 import ChannelChart from './channel-chart';
 import HourlyChart from './hourly-chart';
 import TrendChart from './trend-chart';
+import BreakdownTrendChart from './breakdown-trend-chart';
 import NavTabs from './nav-tabs';
 import { ChevronDown } from 'lucide-react';
 
@@ -64,6 +65,8 @@ function formatWeekLabel(weekKey: string): string {
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
   const [trend, setTrend] = useState<TrendEntry[] | null>(null);
+  const [channelTrend, setChannelTrend] = useState<{ dates: string[]; data: Record<string, ChannelBreakdownEntry[] | null> } | null>(null);
+  const [assigneeTrend, setAssigneeTrend] = useState<{ dates: string[]; data: Record<string, AssigneeBreakdownEntry[] | null> } | null>(null);
   const [meta, setMeta] = useState<MetricsMetaInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -176,10 +179,12 @@ export default function Dashboard() {
 
     const initialize = async () => {
       try {
-        const [{ dates }, { weeks }, { dataJson, trendJson }] = await Promise.all([
+        const [{ dates }, { weeks }, { dataJson, trendJson }, channelRes, assigneeRes] = await Promise.all([
           requestDates(),
           requestWeeks(),
           requestMetrics('daily'),
+          fetch('/api/metrics?type=channel-trend&days=14').then(r => r.json()).catch(() => null),
+          fetch('/api/metrics?type=assignee-trend&days=14').then(r => r.json()).catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -187,6 +192,8 @@ export default function Dashboard() {
         setAvailableDates(dates ?? []);
         setAvailableWeeks(weeks ?? []);
         applyMetricsResponse(dataJson, trendJson);
+        if (channelRes?.dates) setChannelTrend(channelRes);
+        if (assigneeRes?.dates) setAssigneeTrend(assigneeRes);
       } catch {
         if (cancelled) return;
         setError('데이터를 불러올 수 없습니다');
@@ -365,6 +372,8 @@ export default function Dashboard() {
         실패={metrics.시간대별_실패}
       />
       {trend && <TrendChart data={trend} />}
+      {channelTrend && <BreakdownTrendChart mode="channel" trend={channelTrend} />}
+      {assigneeTrend && <BreakdownTrendChart mode="assignee" trend={assigneeTrend} />}
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
         영업일 기준: 전날 20:00 ~ 당일 20:00 KST

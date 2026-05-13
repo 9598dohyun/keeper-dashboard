@@ -69,6 +69,35 @@ export async function GET(request: Request) {
       return NextResponse.json({ data, type: 'assignee-daily', date: targetDate });
     }
 
+    // 채널별 추이: 최근 N일치 일별 breakdown을 한 번에 반환
+    // 응답 형식: { dates: [...], data: { [date]: ChannelBreakdownEntry[] } }
+    if (type === 'channel-trend' || type === 'assignee-trend') {
+      const days = Math.min(Math.max(parseInt(searchParams.get('days') ?? '14', 10) || 14, 1), 90);
+      const keyPrefix = type === 'channel-trend' ? 'metrics:channel:daily' : 'metrics:assignee:daily';
+
+      // KV에 저장된 모든 일자 키를 가져와서 최근 days개만 선택
+      const allKeys: string[] = await kv.keys(`${keyPrefix}:*`);
+      const dates = allKeys
+        .map(k => k.replace(`${keyPrefix}:`, ''))
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .slice(-days);
+
+      if (dates.length === 0) {
+        return NextResponse.json({ dates: [], data: {}, type });
+      }
+
+      const values = await Promise.all(
+        dates.map(d => kv.get(`${keyPrefix}:${d}`))
+      );
+      const dataByDate: Record<string, unknown> = {};
+      dates.forEach((d, i) => {
+        dataByDate[d] = values[i];
+      });
+
+      return NextResponse.json({ dates, data: dataByDate, type, days });
+    }
+
     if (date) {
       const data = await kv.get(`metrics:daily:${date}`);
       if (!data) {
