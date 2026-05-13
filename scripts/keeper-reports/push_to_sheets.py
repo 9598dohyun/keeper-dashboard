@@ -529,11 +529,15 @@ def push_to_kv(mode, row_date, r):
     환경변수 KV_REST_API_URL · KV_REST_API_TOKEN이 있을 때만 동작.
     GitHub Actions에서만 호출됨(로컬 실행 시 환경변수 없으면 silent skip).
 
-    저장 키 (일간만 우선 구현 — 주간/월간은 후속):
-      metrics:channel:{mode}:{YYYY-MM-DD}    — 채널별 breakdown 배열
-      metrics:assignee:{mode}:{YYYY-MM-DD}   — 담당자별 breakdown 배열
+    저장 키:
+      metrics:channel:daily:{YYYY-MM-DD}       — 일간 채널 breakdown
+      metrics:assignee:daily:{YYYY-MM-DD}      — 일간 담당자 breakdown
+      metrics:channel:weekly:{YYYY-MM-DD}      — 주간 채널 (row_date = 종료일=월요일)
+      metrics:assignee:weekly:{YYYY-MM-DD}     — 주간 담당자
+      metrics:channel:monthly:{YYYY-MM}        — 월간 채널 (row_date 월 단위)
+      metrics:assignee:monthly:{YYYY-MM}       — 월간 담당자
 
-    TTL: 일간 90일 (추이 차트 기간 확장 대비)."""
+    TTL: 일간 90일, 주간 365일, 월간 무제한(0)."""
     import requests as _requests
 
     kv_url = os.environ.get('KV_REST_API_URL', '').strip()
@@ -541,12 +545,17 @@ def push_to_kv(mode, row_date, r):
     if not kv_url or not kv_token:
         return  # 로컬 실행 — KV 비활성
 
-    date_str = row_date.strftime('%Y-%m-%d')
-    ttl_seconds = 90 * 24 * 3600  # 90일
+    # 모드별 키 일자 표기 및 TTL
+    if mode == 'monthly':
+        key_date = row_date.strftime('%Y-%m')
+        ttl_seconds = 0  # 무제한
+    else:
+        key_date = row_date.strftime('%Y-%m-%d')
+        ttl_seconds = (90 if mode == 'daily' else 365) * 24 * 3600
 
     payloads = [
-        (f'metrics:channel:{mode}:{date_str}', r.get('채널_breakdown', [])),
-        (f'metrics:assignee:{mode}:{date_str}', r.get('담당자_breakdown', [])),
+        (f'metrics:channel:{mode}:{key_date}', r.get('채널_breakdown', [])),
+        (f'metrics:assignee:{mode}:{key_date}', r.get('담당자_breakdown', [])),
     ]
 
     headers = {
@@ -554,12 +563,15 @@ def push_to_kv(mode, row_date, r):
         'Content-Type': 'application/json',
     }
     for key, value in payloads:
-        body = ['SET', key, json.dumps(value, ensure_ascii=False), 'EX', ttl_seconds]
+        body = ['SET', key, json.dumps(value, ensure_ascii=False)]
+        if ttl_seconds > 0:
+            body += ['EX', ttl_seconds]
         resp = _requests.post(kv_url, headers=headers, json=body, timeout=15)
         if not resp.ok:
             print(f"[KV] {key} 저장 실패: {resp.status_code} {resp.text}")
             continue
-        print(f"[KV] {key} 저장 (TTL {ttl_seconds // 86400}일, {len(value)}개 항목)")
+        ttl_label = f"TTL {ttl_seconds // 86400}일" if ttl_seconds > 0 else "TTL 무제한"
+        print(f"[KV] {key} 저장 ({ttl_label}, {len(value)}개 항목)")
 
 
 def _push_range(mode, start_date, end_date, row_date):
@@ -577,9 +589,8 @@ def _push_range(mode, start_date, end_date, row_date):
     push_channel_sheet(service, row_date, r, sheet_name=sheets['channel'], display_str=display_str)
     push_assignee_sheet(service, row_date, r, sheet_name=sheets['assignee'], display_str=display_str)
 
-    # KV 저장 (일간만 우선; 주간/월간은 후속 작업에서 추가)
-    if mode == 'daily':
-        push_to_kv(mode, row_date, r)
+    # KV 저장 (일간/주간/월간 모두)
+    push_to_kv(mode, row_date, r)
 
 
 def push_daily(target_date):

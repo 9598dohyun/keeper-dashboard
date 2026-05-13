@@ -49,6 +49,51 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: trend, type: 'trend' });
     }
 
+    // 시간대별 히트맵: 최근 N일치 일간 데이터를 요일×시간으로 집계
+    // 응답: { rows: [{ day: 0|1|...|6, hours: [count, count, ...] }], days, metric: '유입'|'성공'|'실패' }
+    if (type === 'hourly-heatmap') {
+      const days = Math.min(Math.max(parseInt(searchParams.get('days') ?? '14', 10) || 14, 1), 90);
+      const metric = (searchParams.get('metric') ?? '유입') as '유입' | '성공' | '실패';
+      const metricKey = metric === '유입' ? '시간대별_유입' : metric === '성공' ? '시간대별_성공' : '시간대별_실패';
+
+      const allKeys: string[] = await kv.keys('metrics:daily:*');
+      const dailyDates = allKeys
+        .map(k => k.replace('metrics:daily:', ''))
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .slice(-days);
+
+      if (dailyDates.length === 0) {
+        return NextResponse.json({ rows: [], days, metric, total: 0 });
+      }
+
+      type DailyEntry = { 시간대별_유입?: Record<number, number>; 시간대별_성공?: Record<number, number>; 시간대별_실패?: Record<number, number> };
+      const values = await Promise.all(
+        dailyDates.map(d => kv.get<DailyEntry>(`metrics:daily:${d}`))
+      );
+
+      // 7요일 × 24시간 행렬 초기화
+      const matrix: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+      let total = 0;
+      dailyDates.forEach((dateStr, i) => {
+        const v = values[i];
+        if (!v) return;
+        const d = new Date(dateStr + 'T12:00:00+09:00');
+        const dow = d.getDay(); // 0=일, 1=월, ..., 6=토
+        const buckets = v[metricKey] ?? {};
+        for (const [hourStr, count] of Object.entries(buckets)) {
+          const hour = parseInt(hourStr, 10);
+          if (!isNaN(hour) && hour >= 0 && hour < 24) {
+            matrix[dow][hour] += (count as number) ?? 0;
+            total += (count as number) ?? 0;
+          }
+        }
+      });
+
+      const rows = matrix.map((hours, day) => ({ day, hours }));
+      return NextResponse.json({ rows, days, metric, total, dates: dailyDates });
+    }
+
     // 채널별 일간 breakdown (Python push_to_sheets.py가 저장)
     if (type === 'channel-daily') {
       const targetDate = date ?? (await kv.get<string>('metrics:meta') ? (await kv.get<{ dataDate?: string }>('metrics:meta'))?.dataDate : null);
@@ -69,22 +114,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ data, type: 'assignee-daily', date: targetDate });
     }
 
-    // 채널별 추이: 최근 N일치 일별 breakdown을 한 번에 반환
-    // 응답 형식: { dates: [...], data: { [date]: ChannelBreakdownEntry[] } }
+    // 채널/담당자별 추이: 최근 N개 기간의 breakdown을 한 번에 반환
+    // period=daily(기본) → 일자 키 (YYYY-MM-DD)
+    // period=weekly → 주 종료일 키 (YYYY-MM-DD, 월요일)
+    // period=monthly → 월 키 (YYYY-MM)
     if (type === 'channel-trend' || type === 'assignee-trend') {
-      const days = Math.min(Math.max(parseInt(searchParams.get('days') ?? '14', 10) || 14, 1), 90);
-      const keyPrefix = type === 'channel-trend' ? 'metrics:channel:daily' : 'metrics:assignee:daily';
+      const period = (searchParams.get('period') ?? 'daily') as 'daily' | 'weekly' | 'monthly';
+      const defaultDays = period === 'monthly' ? 6 : period === 'weekly' ? 8 : 14;
+      const maxDays = period === 'monthly' ? 24 : period === 'weekly' ? 26 : 90;
+      const days = Math.min(Math.max(parseInt(searchParams.get('days') ?? String(defaultDays), 10) || defaultDays, 1), maxDays);
+      const resource = type === 'channel-trend' ? 'channel' : 'assignee';
+      const keyPrefix = `metrics:${resource}:${period}`;
+      const keyPattern = period === 'monthly' ? /^\d{4}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/;
 
-      // KV에 저장된 모든 일자 키를 가져와서 최근 days개만 선택
       const allKeys: string[] = await kv.keys(`${keyPrefix}:*`);
       const dates = allKeys
         .map(k => k.replace(`${keyPrefix}:`, ''))
-        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .filter(d => keyPattern.test(d))
         .sort()
         .slice(-days);
 
       if (dates.length === 0) {
-        return NextResponse.json({ dates: [], data: {}, type });
+        return NextResponse.json({ dates: [], data: {}, type, period, days });
       }
 
       const values = await Promise.all(
@@ -95,7 +146,7 @@ export async function GET(request: Request) {
         dataByDate[d] = values[i];
       });
 
-      return NextResponse.json({ dates, data: dataByDate, type, days });
+      return NextResponse.json({ dates, data: dataByDate, type, period, days });
     }
 
     if (date) {

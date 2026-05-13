@@ -10,11 +10,28 @@ interface BreakdownTrendResponse {
   data: Record<string, BreakdownEntry[] | null>;
 }
 
+type Period = 'daily' | 'weekly' | 'monthly';
+
 interface Props {
   mode: 'channel' | 'assignee';
   trend: BreakdownTrendResponse;
   topN?: number;
+  days?: number;
+  onDaysChange?: (days: number) => void;
+  period?: Period;
+  onPeriodChange?: (period: Period) => void;
 }
+
+const DAYS_OPTIONS_BY_PERIOD: Record<Period, number[]> = {
+  daily: [14, 30, 60, 90],
+  weekly: [4, 8, 13, 26],
+  monthly: [3, 6, 12, 24],
+};
+const PERIOD_LABELS: Record<Period, string> = {
+  daily: '일',
+  weekly: '주',
+  monthly: '월',
+};
 
 // 라인 색상 팔레트 (Tailwind-friendly)
 const COLORS = [
@@ -34,7 +51,17 @@ function getKey(entry: BreakdownEntry, mode: 'channel' | 'assignee'): string {
     : (entry as AssigneeBreakdownEntry).담당자;
 }
 
-export default function BreakdownTrendChart({ mode, trend, topN = 6 }: Props) {
+export default function BreakdownTrendChart({
+  mode,
+  trend,
+  topN = 6,
+  days,
+  onDaysChange,
+  period = 'daily',
+  onPeriodChange,
+}: Props) {
+  const daysOptions = DAYS_OPTIONS_BY_PERIOD[period];
+  const periodLabel = PERIOD_LABELS[period];
   if (!trend?.dates || trend.dates.length === 0) return null;
 
   // 1) 모든 날짜에서 등장한 채널/담당자별 누적 가용 합계 계산 → 상위 N개 선정
@@ -57,7 +84,9 @@ export default function BreakdownTrendChart({ mode, trend, topN = 6 }: Props) {
 
   // 2) 차트 데이터 구성: 날짜별로 각 key의 전환율(%)을 컬럼으로 펼침
   const chartData = trend.dates.map(date => {
-    const row: Record<string, string | number> = { 날짜: date.slice(5) };
+    // 월간(YYYY-MM)은 그대로, 그 외엔 MM-DD로 축약
+    const label = period === 'monthly' ? date : date.slice(5);
+    const row: Record<string, string | number> = { 날짜: label };
     const entries = trend.data[date];
     if (!Array.isArray(entries)) return row;
     for (const key of topKeys) {
@@ -78,7 +107,45 @@ export default function BreakdownTrendChart({ mode, trend, topN = 6 }: Props) {
 
   return (
     <div>
-      <h2 className={`text-sm font-semibold ${colorClass} mb-3`}>{title} ({trend.dates.length}일)</h2>
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 className={`text-sm font-semibold ${colorClass}`}>{title} ({trend.dates.length}{periodLabel})</h2>
+        <div className="flex gap-2 items-center">
+          {onPeriodChange && (
+            <div className="flex gap-1">
+              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => onPeriodChange(p)}
+                  className={`px-2 py-0.5 text-xs rounded ${
+                    period === p
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {PERIOD_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          )}
+          {onDaysChange && (
+            <div className="flex gap-1">
+              {daysOptions.map(d => (
+                <button
+                  key={d}
+                  onClick={() => onDaysChange(d)}
+                  className={`px-2 py-0.5 text-xs rounded ${
+                    days === d
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {d}{periodLabel}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       <div className="bg-white rounded-xl border p-4">
         <div className="text-xs text-gray-500 mb-1">상위 {topKeys.length}개 ({mode === 'channel' ? '가용 리드 합계' : '담당자별 가용'} 기준) · 단위 %</div>
         <ResponsiveContainer width="100%" height={260}>
