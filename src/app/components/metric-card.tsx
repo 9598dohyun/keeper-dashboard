@@ -3,7 +3,8 @@
 interface MetricCardProps {
   title: string;
   value: string | number;
-  sub?: string;
+  unit?: string;      // "건", "%" 등 값 옆에 작게 표기
+  sub?: string;       // 보조 설명 (예: "결제 26 / 전체 678")
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'gray';
 }
 
@@ -15,12 +16,15 @@ const colorMap = {
   gray: 'bg-gray-50 border-gray-200 text-gray-700',
 };
 
-export default function MetricCard({ title, value, sub, color = 'gray' }: MetricCardProps) {
+export default function MetricCard({ title, value, unit, sub, color = 'gray' }: MetricCardProps) {
   return (
     <div className={`rounded-xl border p-4 ${colorMap[color]}`}>
-      <div className="text-xs font-medium opacity-70">{title}</div>
-      <div className="text-2xl font-bold mt-1">{value}</div>
-      {sub && <div className="text-xs mt-1 opacity-60">{sub}</div>}
+      <div className="text-xs font-semibold opacity-80">{title}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-2xl font-bold">{value}</span>
+        {unit && <span className="text-sm font-semibold opacity-70">{unit}</span>}
+      </div>
+      {sub && <div className="text-xs mt-1 font-medium opacity-80">{sub}</div>}
     </div>
   );
 }

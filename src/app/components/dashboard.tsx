@@ -406,14 +406,6 @@ export default function Dashboard() {
       <ActionStatusCard data={metrics.액션} />
       <KPIGauges data={metrics.지표} />
       <LeadStatusCard data={metrics.리드} />
-      <LeadTimeChart data={metrics.리드타임} newCount={metrics.리드.오늘신규} />
-      <ChannelChart data={metrics.채널_신규Top} />
-      <HourlyChart
-        유입={metrics.시간대별_유입}
-        성공={metrics.시간대별_성공}
-        실패={metrics.시간대별_실패}
-      />
-      {trend && <TrendChart data={trend} />}
       <InsightsCard
         viewMode={viewMode}
         selectedKey={
@@ -427,6 +419,14 @@ export default function Dashboard() {
             : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
         }
       />
+      <LeadTimeChart data={metrics.리드타임} newCount={metrics.리드.오늘신규} />
+      <ChannelChart data={metrics.채널_신규Top} />
+      <HourlyChart
+        유입={metrics.시간대별_유입}
+        성공={metrics.시간대별_성공}
+        실패={metrics.시간대별_실패}
+      />
+      {trend && <TrendChart data={trend} />}
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
         영업일 기준: 전날 20:00 ~ 당일 20:00 KST

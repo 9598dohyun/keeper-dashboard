@@ -14,18 +14,22 @@ export default function LeadStatusCard({ data }: { data: LeadMetrics }) {
         <MetricCard
           title="남은 리드"
           value={data.전날잔존.toLocaleString()}
+          unit="건"
+          sub="이전 미처리"
           color="blue"
         />
         <MetricCard
           title="받은 리드"
           value={data.오늘신규_고유.toLocaleString()}
-          sub={data.오늘신규_중복 > 0 ? `(중복 ${data.오늘신규_중복})` : undefined}
+          unit="건"
+          sub={data.오늘신규_중복 > 0 ? `이번 유입 · 중복 ${data.오늘신규_중복}건 제외` : '이번 유입'}
           color="blue"
         />
         <MetricCard
           title="오늘 마감 잔여"
           value={data.오늘잔존.toLocaleString()}
-          sub={`${sign}${delta}건`}
+          unit="건"
+          sub={`전 마감 대비 ${sign}${delta}건`}
           color="blue"
         />
       </div>
