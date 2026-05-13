@@ -556,6 +556,7 @@ def push_to_kv(mode, row_date, r):
     payloads = [
         (f'metrics:channel:{mode}:{key_date}', r.get('채널_breakdown', [])),
         (f'metrics:assignee:{mode}:{key_date}', r.get('담당자_breakdown', [])),
+        (f'metrics:page:{mode}:{key_date}', r.get('페이지_breakdown', [])),
     ]
 
     headers = {

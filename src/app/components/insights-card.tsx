@@ -1,22 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChannelBreakdownEntry, AssigneeBreakdownEntry } from '@/lib/types';
+import { ChannelBreakdownEntry, AssigneeBreakdownEntry, PageBreakdownEntry } from '@/lib/types';
 import BreakdownBarChart from './breakdown-bar-chart';
 import HourlyHeatmap from './hourly-heatmap';
 
-type Tab = 'channel' | 'assignee' | 'hourly';
+type Tab = 'channel' | 'page' | 'assignee' | 'hourly';
 type Period = 'daily' | 'weekly' | 'monthly';
 
 const TAB_LABELS: Record<Tab, string> = {
   channel: '채널',
+  page: '페이지',
   assignee: '담당자',
   hourly: '시간대',
 };
 
 interface BreakdownTrendResponse {
   dates: string[];
-  data: Record<string, ChannelBreakdownEntry[] | AssigneeBreakdownEntry[] | null>;
+  data: Record<string, ChannelBreakdownEntry[] | AssigneeBreakdownEntry[] | PageBreakdownEntry[] | null>;
 }
 
 interface Props {
@@ -45,7 +46,7 @@ export default function InsightsCard({ viewMode, selectedKey, periodLabel }: Pro
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        params.set('type', tab === 'channel' ? 'channel-trend' : 'assignee-trend');
+        params.set('type', tab === 'channel' ? 'channel-trend' : tab === 'page' ? 'page-trend' : 'assignee-trend');
         if (period === 'monthly') {
           params.set('period', 'monthly');
           params.set('days', '1');
@@ -79,7 +80,7 @@ export default function InsightsCard({ viewMode, selectedKey, periodLabel }: Pro
       {/* 탭 헤더 */}
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div className="flex gap-1">
-          {(['channel', 'assignee', 'hourly'] as Tab[]).map(t => (
+          {(['channel', 'page', 'assignee', 'hourly'] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -107,7 +108,10 @@ export default function InsightsCard({ viewMode, selectedKey, periodLabel }: Pro
         ) : loading ? (
           <div className="text-xs text-gray-400 py-8 text-center">불러오는 중…</div>
         ) : trend ? (
-          <BreakdownBarChart mode={tab === 'channel' ? 'channel' : 'assignee'} trend={trend} />
+          <BreakdownBarChart
+            mode={tab === 'channel' ? 'channel' : tab === 'page' ? 'page' : 'assignee'}
+            trend={trend}
+          />
         ) : (
           <div className="text-xs text-gray-400 py-8 text-center">데이터 없음</div>
         )}

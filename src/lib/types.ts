@@ -143,3 +143,21 @@ export interface AssigneeBreakdownEntry {
   컨택: number;
   처리완료: number;
 }
+
+/** 페이지(진입경로)별 일간 breakdown.
+ *  키: metrics:page:daily/weekly/monthly:{KEY} */
+export interface PageBreakdownEntry {
+  페이지: string;
+  전날잔존: number;
+  오늘신규: number;
+  잔존컨택: number;
+  신규컨택: number;
+  잔존성공: number;
+  신규성공: number;
+  프로모션: number;
+  실패: number;
+  부재: number;
+  가용: number;
+  컨택: number;
+  처리완료: number;
+}

@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ChannelBreakdownEntry, AssigneeBreakdownEntry } from '@/lib/types';
+import { ChannelBreakdownEntry, AssigneeBreakdownEntry, PageBreakdownEntry } from '@/lib/types';
 
-type BreakdownEntry = ChannelBreakdownEntry | AssigneeBreakdownEntry;
+type BreakdownEntry = ChannelBreakdownEntry | AssigneeBreakdownEntry | PageBreakdownEntry;
+type BreakdownMode = 'channel' | 'assignee' | 'page';
 
 interface BreakdownTrendResponse {
   dates: string[];
@@ -11,15 +12,15 @@ interface BreakdownTrendResponse {
 }
 
 interface Props {
-  mode: 'channel' | 'assignee';
+  mode: BreakdownMode;
   trend: BreakdownTrendResponse;
   topN?: number;
 }
 
-function getKey(entry: BreakdownEntry, mode: 'channel' | 'assignee'): string {
-  return mode === 'channel'
-    ? (entry as ChannelBreakdownEntry).채널
-    : (entry as AssigneeBreakdownEntry).담당자;
+function getKey(entry: BreakdownEntry, mode: BreakdownMode): string {
+  if (mode === 'channel') return (entry as ChannelBreakdownEntry).채널;
+  if (mode === 'assignee') return (entry as AssigneeBreakdownEntry).담당자;
+  return (entry as PageBreakdownEntry).페이지;
 }
 
 // 막대 색상 (결제율 구간별)

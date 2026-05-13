@@ -101,6 +101,28 @@ def parse_channel_from_entry(hist_text):
     return '(미상)'
 
 
+def normalize_page(entry_path):
+    """피추천인의 진입경로 필드 값을 정규화.
+    예: '/calculator', '/trial', '/cal/lead?utm=...'
+    빈 값이면 '(미상)'.
+    """
+    if not entry_path:
+        return '(미상)'
+    s = str(entry_path).strip()
+    if not s:
+        return '(미상)'
+    # 쿼리스트링/해시 제거
+    s = s.split('?', 1)[0].split('#', 1)[0].strip()
+    if not s:
+        return '(미상)'
+    if not s.startswith('/'):
+        s = '/' + s
+    # trailing slash 정리 (단, '/' 단독은 유지)
+    if len(s) > 1 and s.endswith('/'):
+        s = s[:-1]
+    return s
+
+
 def load_data():
     """이력관리 기준으로 리드 데이터 구축. 피추천인은 참고용. 메모 관리는 컨택 보완용."""
     raw_leads = json.loads((SNAP / "피추천인.json").read_text(encoding='utf-8'))
@@ -137,6 +159,7 @@ def load_data():
             'utm_campaign': l['fields'].get('UTM_campaign') or '',
             '유입시간': parse_utc(l['fields'].get('유입시간')),
             '유입경로': l['fields'].get('[참고]전체유입경로') or '',
+            '진입경로': l['fields'].get('진입경로') or '',
         }
 
     # 이력관리 → 리드별 이벤트 리스트 + 첫진입 정보
@@ -182,6 +205,7 @@ def load_data():
             'id': lid,
             'inflow_ts': entry['유입시간'],
             'channel': entry['유입경로'],
+            'page': normalize_page(ref.get('진입경로', '')),
             'phone_key': ref.get('전화번호_키워드', ''),
             'fail_reason': ref.get('실패사유', ''),
             '담당자': ref.get('담당자', ''),
@@ -207,6 +231,7 @@ def load_data():
             'id': lid,
             'inflow_ts': fallback_ts,
             'channel': fallback_channel,
+            'page': normalize_page(ref.get('진입경로', '')),
             'phone_key': ref.get('전화번호_키워드', ''),
             'fail_reason': ref.get('실패사유', ''),
             '담당자': ref.get('담당자', ''),
@@ -712,6 +737,66 @@ def compute_range(start_date, end_date, leads, hist_by_lead, memo_dates_by_lead=
         s['처리완료'] = s['잔존성공'] + s['신규성공'] + s['실패'] + s['부재']
         assignee_breakdown.append({'담당자': name, **s})
 
+    # --- 페이지별 세부 집계 (피추천인.진입경로 기준) ---
+    page_stats = defaultdict(ZERO)
+
+    for l in leads:
+        lid = l['id']
+        page = l.get('page') or '(미상)'
+        inflow_biz = biz_date(to_kst(l['inflow_ts']))
+        proc_d = processed_date(lid, hist_by_lead)
+        alive = is_alive_result(get_last_final_result(lid, hist_by_lead))
+        final = get_final_result_text(lid, hist_by_lead)
+        is_new = lid in period_new_ids
+
+        t = page_stats[page]
+
+        # 전날잔존
+        if inflow_biz <= prev_date:
+            if alive or (proc_d and proc_d > prev_date):
+                t['전날잔존'] += 1
+
+        # 오늘신규
+        if is_new:
+            t['오늘신규'] += 1
+
+        # 컨택 (잔존/신규)
+        contacted = had_contact_action_in_range(lid, hist_by_lead, start_date, end_date, memo_dates_by_lead)
+        if contacted:
+            if is_new:
+                t['신규컨택'] += 1
+            else:
+                t['잔존컨택'] += 1
+
+        # 부재
+        missed = had_missed_contact_in_range(lid, hist_by_lead, start_date, end_date)
+        if missed:
+            t['부재'] += 1
+
+        # 성공/실패
+        if proc_d and start_date <= proc_d <= end_date:
+            if is_success(final):
+                if is_new:
+                    t['신규성공'] += 1
+                else:
+                    t['잔존성공'] += 1
+            elif is_fail(final):
+                t['실패'] += 1
+
+        # 프로모션
+        if had_promotion_in_range(lid, hist_by_lead, start_date, end_date):
+            t['프로모션'] += 1
+
+    sorted_pages = sorted(page_stats.items(),
+                          key=lambda x: x[1]['전날잔존'] + x[1]['오늘신규'], reverse=True)
+    page_breakdown = []
+    for page_name, stats in sorted_pages:
+        s = dict(stats)
+        s['가용'] = s['전날잔존'] + s['오늘신규']
+        s['컨택'] = s['잔존컨택'] + s['신규컨택']
+        s['처리완료'] = s['잔존성공'] + s['신규성공'] + s['실패'] + s['부재']
+        page_breakdown.append({'페이지': page_name, **s})
+
     return {
         '대상기간': (start_date, end_date),
         '리드': {
@@ -755,6 +840,7 @@ def compute_range(start_date, end_date, leads, hist_by_lead, memo_dates_by_lead=
         '시간대별_실패': dict(sorted(hourly_fail.items())),
         '채널_breakdown': channel_breakdown,
         '담당자_breakdown': assignee_breakdown,
+        '페이지_breakdown': page_breakdown,
     }
 
 

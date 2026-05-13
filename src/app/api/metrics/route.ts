@@ -144,12 +144,12 @@ export async function GET(request: Request) {
     // period=daily(기본) → 일자 키 (YYYY-MM-DD)
     // period=weekly → 주 종료일 키 (YYYY-MM-DD, 월요일)
     // period=monthly → 월 키 (YYYY-MM)
-    if (type === 'channel-trend' || type === 'assignee-trend') {
+    if (type === 'channel-trend' || type === 'assignee-trend' || type === 'page-trend') {
       const period = (searchParams.get('period') ?? 'daily') as 'daily' | 'weekly' | 'monthly';
       const defaultDays = period === 'monthly' ? 6 : period === 'weekly' ? 8 : 14;
       const maxDays = period === 'monthly' ? 24 : period === 'weekly' ? 26 : 90;
       const days = Math.min(Math.max(parseInt(searchParams.get('days') ?? String(defaultDays), 10) || defaultDays, 1), maxDays);
-      const resource = type === 'channel-trend' ? 'channel' : 'assignee';
+      const resource = type === 'channel-trend' ? 'channel' : type === 'assignee-trend' ? 'assignee' : 'page';
       const keyPrefix = `metrics:${resource}:${period}`;
       const keyPattern = period === 'monthly' ? /^\d{4}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/;
 
