@@ -537,7 +537,7 @@ def push_to_kv(mode, row_date, r):
       metrics:channel:monthly:{YYYY-MM}        — 월간 채널 (row_date 월 단위)
       metrics:assignee:monthly:{YYYY-MM}       — 월간 담당자
 
-    TTL: 일간 90일, 주간 365일, 월간 무제한(0)."""
+    TTL: 일간·주간·월간 모두 무제한(0). 1일 약 6.8KB → 1년 약 2.5MB로 KV 무료 한도(256MB) 대비 충분."""
     import requests as _requests
 
     kv_url = os.environ.get('KV_REST_API_URL', '').strip()
@@ -545,13 +545,12 @@ def push_to_kv(mode, row_date, r):
     if not kv_url or not kv_token:
         return  # 로컬 실행 — KV 비활성
 
-    # 모드별 키 일자 표기 및 TTL
+    # 모드별 키 일자 표기
     if mode == 'monthly':
         key_date = row_date.strftime('%Y-%m')
-        ttl_seconds = 0  # 무제한
     else:
         key_date = row_date.strftime('%Y-%m-%d')
-        ttl_seconds = (90 if mode == 'daily' else 365) * 24 * 3600
+    ttl_seconds = 0  # 무제한
 
     payloads = [
         (f'metrics:channel:{mode}:{key_date}', r.get('채널_breakdown', [])),
