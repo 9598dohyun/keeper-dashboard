@@ -9,21 +9,21 @@ export default function LeadStatusCard({ data }: { data: LeadMetrics }) {
 
   return (
     <div>
-      <h2 className="text-sm font-semibold text-blue-600 mb-3">리드 현황</h2>
+      <h2 className="text-sm font-semibold text-gray-500 mb-3">리드 풀</h2>
       <div className="grid grid-cols-3 gap-3">
         <MetricCard
-          title="전날 잔존"
+          title="남은 리드"
           value={data.전날잔존.toLocaleString()}
           color="blue"
         />
         <MetricCard
-          title="오늘 신규"
+          title="받은 리드"
           value={data.오늘신규_고유.toLocaleString()}
           sub={data.오늘신규_중복 > 0 ? `(중복 ${data.오늘신규_중복})` : undefined}
           color="blue"
         />
         <MetricCard
-          title="오늘 잔존"
+          title="오늘 마감 잔여"
           value={data.오늘잔존.toLocaleString()}
           sub={`${sign}${delta}건`}
           color="blue"

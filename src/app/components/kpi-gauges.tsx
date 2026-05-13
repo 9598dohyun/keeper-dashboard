@@ -3,9 +3,9 @@
 import { KPIMetrics } from '@/lib/types';
 
 function Gauge({ label, value, formula }: { label: string; value: number; formula: string }) {
-  const color = label === '전환율'
+  const color = label === '결제율'
     ? 'text-emerald-600'
-    : label === '소진율'
+    : label === '응대율'
     ? 'text-blue-600'
     : 'text-red-500';
 
@@ -24,12 +24,12 @@ export default function KPIGauges({ data }: { data: KPIMetrics }) {
       <h2 className="text-sm font-semibold text-yellow-600 mb-3">KPI</h2>
       <div className="grid grid-cols-3 gap-3">
         <Gauge
-          label="전환율"
+          label="결제율"
           value={data.전환율_pct}
           formula={`${data.전환율_분자} / ${data.전환율_분모}`}
         />
         <Gauge
-          label="소진율"
+          label="응대율"
           value={data.소진율_pct}
           formula={`${data.소진율_분자} / ${data.소진율_분모}`}
         />

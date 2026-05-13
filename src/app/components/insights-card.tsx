@@ -26,15 +26,29 @@ const DAYS_BY_PERIOD: Record<Period, number[]> = {
   monthly: [3, 6, 12, 24],
 };
 
+const DEFAULT_DAYS_BY_PERIOD: Record<Period, number> = {
+  daily: 14,
+  weekly: 8,
+  monthly: 6,
+};
+
 interface BreakdownTrendResponse {
   dates: string[];
   data: Record<string, ChannelBreakdownEntry[] | AssigneeBreakdownEntry[] | null>;
 }
 
-export default function InsightsCard() {
+interface Props {
+  /** 상단 모드(일별/주별/월별). 인사이트 카드의 단위가 상단에 종속된다. */
+  viewMode: Period;
+}
+
+export default function InsightsCard({ viewMode }: Props) {
   const [tab, setTab] = useState<Tab>('channel');
-  const [period, setPeriod] = useState<Period>('daily');
-  const [days, setDays] = useState(14);
+  const period: Period = viewMode; // 상단 모드에 종속
+  // period별로 사용자가 선택한 days를 각각 기억 (period 전환 시 자동 복원)
+  const [daysByPeriod, setDaysByPeriod] = useState<Record<Period, number>>(DEFAULT_DAYS_BY_PERIOD);
+  const days = daysByPeriod[period];
+  const setDays = (d: number) => setDaysByPeriod(prev => ({ ...prev, [period]: d }));
   const [trend, setTrend] = useState<BreakdownTrendResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,12 +73,6 @@ export default function InsightsCard() {
     return () => { cancelled = true; };
   }, [tab, period, days]);
 
-  // 기간 단위 변경 시 days 기본값 조정
-  const handlePeriodChange = (p: Period) => {
-    setPeriod(p);
-    setDays(DAYS_BY_PERIOD[p][1] ?? DAYS_BY_PERIOD[p][0]);
-  };
-
   const daysOptions = DAYS_BY_PERIOD[period];
   const periodLabel = PERIOD_LABELS[period];
 
@@ -88,39 +96,21 @@ export default function InsightsCard() {
           ))}
         </div>
         {tab !== 'hourly' && (
-          <div className="flex gap-3 items-center">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 mr-1">단위</span>
-              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
-                <button
-                  key={p}
-                  onClick={() => handlePeriodChange(p)}
-                  className={`px-2 py-0.5 text-xs rounded ${
-                    period === p
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {PERIOD_LABELS[p]}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-gray-400 mr-1">기간</span>
-              {daysOptions.map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDays(d)}
-                  className={`px-2 py-0.5 text-xs rounded ${
-                    days === d
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {d}{periodLabel}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-400 mr-1">최근</span>
+            {daysOptions.map(d => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={`px-2 py-0.5 text-xs rounded ${
+                  days === d
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {d}{periodLabel}
+              </button>
+            ))}
           </div>
         )}
       </div>

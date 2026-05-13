@@ -130,6 +130,39 @@ async function main() {
   await kvSet(`metrics:weekly:${lastWeek.weekKey}`, lastWeekMetrics, KV_WEEKLY_TTL);
   console.log(`Saved metrics:weekly:${lastWeek.weekKey} (prev week)`);
 
+  // === 월간 메트릭 ===
+
+  function computeMonthMetrics(ymStr: string) {
+    // ymStr 'YYYY-MM' → 해당 월 1일 ~ 말일
+    const [y, m] = ymStr.split('-').map(Number);
+    const start = `${y}-${String(m).padStart(2, '0')}-01`;
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate(); // m은 1-12, 다음 달 0일 = 이번 달 말일
+    const end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    console.log(`Computing monthly metrics for ${ymStr} (${start} ~ ${end})...`);
+    return { ym: ymStr, start, end, metrics: computeRange(start, end, leads, histByLead) };
+  }
+
+  function ymFromDateStr(dateStr: string): string {
+    return dateStr.slice(0, 7); // 'YYYY-MM'
+  }
+
+  // 이번 달
+  const thisYM = ymFromDateStr(today);
+  const thisMonth = computeMonthMetrics(thisYM);
+  // 월간 TTL은 무제한 (영구 저장)
+  await kvSet(`metrics:monthly:${thisYM}`, thisMonth.metrics);
+  await kvSet('metrics:monthly:latest', thisMonth.metrics);
+  console.log(`Saved metrics:monthly:${thisYM} + latest`);
+
+  // 직전 월 (전월 데이터가 그달 마지막날까지 반영되도록 매번 다시 계산)
+  const prevDate = new Date(`${today}T12:00:00Z`);
+  prevDate.setUTCDate(1);
+  prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
+  const prevYM = `${prevDate.getUTCFullYear()}-${String(prevDate.getUTCMonth() + 1).padStart(2, '0')}`;
+  const prevMonth = computeMonthMetrics(prevYM);
+  await kvSet(`metrics:monthly:${prevYM}`, prevMonth.metrics);
+  console.log(`Saved metrics:monthly:${prevYM} (prev month)`);
+
   // 메타 정보
   await kvSet('metrics:meta', {
     lastUpdated: new Date().toISOString(),

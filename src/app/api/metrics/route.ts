@@ -29,6 +29,32 @@ export async function GET(request: Request) {
       return NextResponse.json({ weeks });
     }
 
+    // 사용 가능한 월 목록 반환
+    if (type === 'months') {
+      const keys: string[] = await kv.keys('metrics:monthly:*');
+      const months = keys
+        .map(k => k.replace('metrics:monthly:', ''))
+        .filter(m => m !== 'latest' && /^\d{4}-\d{2}$/.test(m))
+        .sort()
+        .reverse();
+      return NextResponse.json({ months });
+    }
+
+    // 월간 데이터 조회
+    if (type === 'monthly') {
+      const month = searchParams.get('month');
+      if (month) {
+        const data = await kv.get(`metrics:monthly:${month}`);
+        if (!data) {
+          return NextResponse.json({ error: 'No data for this month' }, { status: 404 });
+        }
+        return NextResponse.json({ data, type: 'monthly' });
+      }
+      const data = await kv.get('metrics:monthly:latest');
+      const meta = await kv.get('metrics:meta');
+      return NextResponse.json({ data, meta, type: 'monthly' });
+    }
+
     // 주간 데이터 조회
     if (type === 'weekly') {
       const week = searchParams.get('week');

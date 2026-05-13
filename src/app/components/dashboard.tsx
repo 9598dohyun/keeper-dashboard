@@ -68,11 +68,13 @@ export default function Dashboard() {
   const [meta, setMeta] = useState<MetricsMetaInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
   const dateRef = useRef<HTMLDivElement>(null);
 
@@ -108,10 +110,20 @@ export default function Dashboard() {
     return res.json();
   };
 
-  const requestMetrics = async (mode: 'daily' | 'weekly', key?: string | null) => {
-    const dataUrl = mode === 'weekly'
-      ? (key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly')
-      : (key ? `/api/metrics?date=${key}` : '/api/metrics');
+  const requestMonths = async (): Promise<{ months?: string[] }> => {
+    const res = await fetch('/api/metrics?type=months');
+    return res.json();
+  };
+
+  const requestMetrics = async (mode: 'daily' | 'weekly' | 'monthly', key?: string | null) => {
+    let dataUrl: string;
+    if (mode === 'weekly') {
+      dataUrl = key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly';
+    } else if (mode === 'monthly') {
+      dataUrl = key ? `/api/metrics?type=monthly&month=${key}` : '/api/metrics?type=monthly';
+    } else {
+      dataUrl = key ? `/api/metrics?date=${key}` : '/api/metrics';
+    }
 
     const [dataRes, trendRes] = await Promise.all([
       fetch(dataUrl),
@@ -126,7 +138,7 @@ export default function Dashboard() {
     return { dataJson, trendJson };
   };
 
-  const fetchData = async (mode: 'daily' | 'weekly', key?: string | null) => {
+  const fetchData = async (mode: 'daily' | 'weekly' | 'monthly', key?: string | null) => {
     setLoading(true);
     try {
       const { dataJson, trendJson } = await requestMetrics(mode, key);
@@ -150,25 +162,35 @@ export default function Dashboard() {
     fetchData('weekly', week);
   };
 
+  const handleMonthSelect = (month: string) => {
+    setSelectedMonth(month);
+    setDateOpen(false);
+    fetchData('monthly', month);
+  };
+
   const handleLatest = () => {
-    if (viewMode === 'daily') {
-      setSelectedDate(null);
-    } else {
-      setSelectedWeek(null);
-    }
+    if (viewMode === 'daily') setSelectedDate(null);
+    else if (viewMode === 'weekly') setSelectedWeek(null);
+    else setSelectedMonth(null);
     setDateOpen(false);
     fetchData(viewMode, null);
   };
 
-  const switchMode = (mode: 'daily' | 'weekly') => {
+  const switchMode = (mode: 'daily' | 'weekly' | 'monthly') => {
     setViewMode(mode);
     setDateOpen(false);
     if (mode === 'daily') {
       setSelectedWeek(null);
+      setSelectedMonth(null);
       fetchData('daily', selectedDate);
+    } else if (mode === 'weekly') {
+      setSelectedDate(null);
+      setSelectedMonth(null);
+      fetchData('weekly', selectedWeek);
     } else {
       setSelectedDate(null);
-      fetchData('weekly', selectedWeek);
+      setSelectedWeek(null);
+      fetchData('monthly', selectedMonth);
     }
   };
 
@@ -177,9 +199,10 @@ export default function Dashboard() {
 
     const initialize = async () => {
       try {
-        const [{ dates }, { weeks }, { dataJson, trendJson }] = await Promise.all([
+        const [{ dates }, { weeks }, monthsRes, { dataJson, trendJson }] = await Promise.all([
           requestDates(),
           requestWeeks(),
+          requestMonths(),
           requestMetrics('daily'),
         ]);
 
@@ -187,6 +210,7 @@ export default function Dashboard() {
 
         setAvailableDates(dates ?? []);
         setAvailableWeeks(weeks ?? []);
+        setAvailableMonths(monthsRes?.months ?? []);
         applyMetricsResponse(dataJson, trendJson);
       } catch {
         if (cancelled) return;
@@ -237,7 +261,12 @@ export default function Dashboard() {
         <div className="text-gray-400 text-lg">{error || '데이터가 없습니다'}</div>
         <div className="text-sm text-gray-300">GitHub Actions로 데이터를 갱신해주세요</div>
         <button
-          onClick={() => fetchData(viewMode, viewMode === 'daily' ? selectedDate : selectedWeek)}
+          onClick={() => fetchData(
+            viewMode,
+            viewMode === 'daily' ? selectedDate
+              : viewMode === 'weekly' ? selectedWeek
+              : selectedMonth
+          )}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
         >
           다시 시도
@@ -276,13 +305,15 @@ export default function Dashboard() {
                   const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
                   return `${fmt(mon)} ~ ${fmt(sun)}`;
                 })()
-              : metrics.대상기간.start === metrics.대상기간.end
-                ? metrics.대상기간.start
-                : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
+              : viewMode === 'monthly'
+                ? `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
+                : metrics.대상기간.start === metrics.대상기간.end
+                  ? metrics.대상기간.start
+                  : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* 일별/주별 토글 */}
+          {/* 일별/주별/월별 토글 */}
           <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => switchMode('daily')}
@@ -296,6 +327,12 @@ export default function Dashboard() {
             >
               주별
             </button>
+            <button
+              onClick={() => switchMode('monthly')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${viewMode === 'monthly' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
+            >
+              월별
+            </button>
           </div>
           {/* 날짜/주차 선택 드롭다운 */}
           <div className="relative" ref={dateRef}>
@@ -305,7 +342,9 @@ export default function Dashboard() {
             >
               {viewMode === 'daily'
                 ? (selectedDate || '오늘')
-                : (selectedWeek ? formatWeekLabel(selectedWeek) : '이번 주')}
+                : viewMode === 'weekly'
+                ? (selectedWeek ? formatWeekLabel(selectedWeek) : '이번 주')
+                : (selectedMonth || '이번 달')}
               <ChevronDown className="w-3 h-3" />
             </button>
             {dateOpen && (
@@ -314,32 +353,40 @@ export default function Dashboard() {
                   onClick={handleLatest}
                   className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${
                     viewMode === 'daily' ? (!selectedDate ? 'bg-blue-50 text-blue-600 font-medium' : '')
-                    : (!selectedWeek ? 'bg-blue-50 text-blue-600 font-medium' : '')
+                    : viewMode === 'weekly' ? (!selectedWeek ? 'bg-blue-50 text-blue-600 font-medium' : '')
+                    : (!selectedMonth ? 'bg-blue-50 text-blue-600 font-medium' : '')
                   }`}
                 >
-                  {viewMode === 'daily' ? '오늘 (최신)' : '이번 주 (최신)'}
+                  {viewMode === 'daily' ? '오늘 (최신)' : viewMode === 'weekly' ? '이번 주 (최신)' : '이번 달 (최신)'}
                 </button>
                 <div className="border-t border-gray-100" />
-                {viewMode === 'daily'
-                  ? availableDates.map(d => (
-                      <button
-                        key={d}
-                        onClick={() => handleDateSelect(d)}
-                        className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedDate === d ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
-                      >
-                        {d}
-                      </button>
-                    ))
-                  : availableWeeks.map(w => (
-                      <button
-                        key={w}
-                        onClick={() => handleWeekSelect(w)}
-                        className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedWeek === w ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
-                      >
-                        {formatWeekLabel(w)}
-                      </button>
-                    ))
-                }
+                {viewMode === 'daily' && availableDates.map(d => (
+                  <button
+                    key={d}
+                    onClick={() => handleDateSelect(d)}
+                    className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedDate === d ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                  >
+                    {d}
+                  </button>
+                ))}
+                {viewMode === 'weekly' && availableWeeks.map(w => (
+                  <button
+                    key={w}
+                    onClick={() => handleWeekSelect(w)}
+                    className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedWeek === w ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                  >
+                    {formatWeekLabel(w)}
+                  </button>
+                ))}
+                {viewMode === 'monthly' && availableMonths.map(m => (
+                  <button
+                    key={m}
+                    onClick={() => handleMonthSelect(m)}
+                    className={`w-full text-left text-xs px-3 py-2 hover:bg-gray-50 ${selectedMonth === m ? 'bg-blue-50 text-blue-600 font-medium' : ''}`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -356,9 +403,9 @@ export default function Dashboard() {
         <div className="text-[10px] text-gray-300 text-right -mt-4">갱신: {lastUpdated}</div>
       )}
 
-      <LeadStatusCard data={metrics.리드} />
       <ActionStatusCard data={metrics.액션} />
       <KPIGauges data={metrics.지표} />
+      <LeadStatusCard data={metrics.리드} />
       <LeadTimeChart data={metrics.리드타임} newCount={metrics.리드.오늘신규} />
       <ChannelChart data={metrics.채널_신규Top} />
       <HourlyChart
@@ -367,7 +414,7 @@ export default function Dashboard() {
         실패={metrics.시간대별_실패}
       />
       {trend && <TrendChart data={trend} />}
-      <InsightsCard />
+      <InsightsCard viewMode={viewMode} />
 
       <div className="text-center text-[10px] text-gray-300 pb-4">
         영업일 기준: 전날 20:00 ~ 당일 20:00 KST

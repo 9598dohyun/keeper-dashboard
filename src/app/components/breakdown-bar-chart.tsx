@@ -22,7 +22,7 @@ function getKey(entry: BreakdownEntry, mode: 'channel' | 'assignee'): string {
     : (entry as AssigneeBreakdownEntry).담당자;
 }
 
-// 막대 색상 (전환율 구간별)
+// 막대 색상 (결제율 구간별)
 function barColor(convRate: number): string {
   if (convRate >= 5) return 'bg-green-500';
   if (convRate >= 3) return 'bg-emerald-400';
@@ -72,7 +72,7 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
   return (
     <div className="space-y-2">
       <div className="text-xs text-gray-500">
-        상위 {rows.length}개 · 가용 리드 합계 기준 · {trend.dates.length}개 구간 합산
+        상위 {rows.length}개 · 받은+남은 리드 합계 기준 · {trend.dates.length}개 구간 합산
       </div>
       <div className="space-y-1.5">
         {rows.map(r => {
@@ -96,9 +96,9 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
           );
         })}
       </div>
-      <div className="text-[10px] text-gray-400 pt-1 flex gap-3">
-        <span>막대 길이: 가용 리드</span>
-        <span>막대 안: 전환율 % · 성공/가용 건수</span>
+      <div className="text-[10px] text-gray-400 pt-1 flex gap-3 flex-wrap">
+        <span>막대 길이: 받은+남은 리드</span>
+        <span>막대 안: 결제율 % · 결제한/전체 건수</span>
         <span>색: ≥5% 진녹 · ≥3% 녹 · ≥1% 파랑 · &lt;1% 회색</span>
       </div>
     </div>
