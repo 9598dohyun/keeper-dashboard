@@ -1,0 +1,96 @@
+name: Keeper Reports (Sheets)
+
+on:
+  schedule:
+    # 일간: 매일 KST 19:00 = UTC 10:00 (영업 마감 후)
+    - cron: '0 10 * * *'
+    # 주간: 매주 토요일 KST 10:00 = UTC 01:00 (저번주 화~금주 월 7일 집계)
+    - cron: '0 1 * * 6'
+    # 월간: 매월 1일 KST 11:00 = UTC 02:00 (전월 1일~말일)
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '실행 모드'
+        required: true
+        default: 'daily'
+        type: choice
+        options: [daily, weekly, monthly]
+      date:
+        description: '기준일(YYYY-MM-DD, 일간/주간) 또는 대상월(YYYY-MM, 월간). 비우면 자동'
+        required: false
+        type: string
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      KEEPER_SNAPSHOT_DIR: ${{ github.workspace }}/scripts/keeper-reports/airtable_snapshot
+      AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+      GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        working-directory: scripts/keeper-reports
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch Airtable snapshot
+        working-directory: scripts/keeper-reports
+        run: python fetch_snapshot.py
+
+      - name: Determine mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+            echo "date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
+          else
+            # schedule 트리거 — cron 표현식으로 모드 판정
+            case "${{ github.event.schedule }}" in
+              "0 10 * * *") echo "mode=daily" >> "$GITHUB_OUTPUT" ;;
+              "0 1 * * 6")  echo "mode=weekly" >> "$GITHUB_OUTPUT" ;;
+              "0 2 1 * *")  echo "mode=monthly" >> "$GITHUB_OUTPUT" ;;
+            esac
+            echo "date=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push to Sheets (daily)
+        if: steps.mode.outputs.mode == 'daily'
+        working-directory: scripts/keeper-reports
+        run: |
+          if [ -n "${{ steps.mode.outputs.date }}" ]; then
+            python push_to_sheets.py "${{ steps.mode.outputs.date }}"
+          else
+            python push_to_sheets.py "$(date +%Y-%m-%d)"
+          fi
+
+      - name: Push to Sheets (weekly)
+        if: steps.mode.outputs.mode == 'weekly'
+        working-directory: scripts/keeper-reports
+        run: |
+          if [ -n "${{ steps.mode.outputs.date }}" ]; then
+            python push_to_sheets.py --weekly "${{ steps.mode.outputs.date }}"
+          else
+            python push_to_sheets.py --weekly "$(date +%Y-%m-%d)"
+          fi
+
+      - name: Push to Sheets (monthly)
+        if: steps.mode.outputs.mode == 'monthly'
+        working-directory: scripts/keeper-reports
+        run: |
+          if [ -n "${{ steps.mode.outputs.date }}" ]; then
+            python push_to_sheets.py --monthly "${{ steps.mode.outputs.date }}"
+          else
+            # 전월 산출 (이번 달 1일 - 1일)
+            TARGET=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m)
+            python push_to_sheets.py --monthly "$TARGET"
+          fi

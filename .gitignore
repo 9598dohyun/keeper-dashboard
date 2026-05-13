@@ -2,6 +2,8 @@
 
 # data (airtable snapshots)
 /data
+scripts/keeper-reports/airtable_snapshot/
+scripts/keeper-reports/__pycache__/
 
 # dependencies
 /node_modules
