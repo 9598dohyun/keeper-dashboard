@@ -357,7 +357,11 @@ export default function Dashboard() {
                     : (!selectedMonth ? 'bg-blue-50 text-blue-600 font-medium' : '')
                   }`}
                 >
-                  {viewMode === 'daily' ? '오늘 (최신)' : viewMode === 'weekly' ? '이번 주 (최신)' : '이번 달 (최신)'}
+                  {viewMode === 'daily'
+                    ? `오늘 (${availableDates[0] ?? '최신'})`
+                    : viewMode === 'weekly'
+                    ? `이번 주 (${availableWeeks[0] ? formatWeekLabel(availableWeeks[0]) : '최신'})`
+                    : `이번 달 (${availableMonths[0] ?? '최신'})`}
                 </button>
                 <div className="border-t border-gray-100" />
                 {viewMode === 'daily' && availableDates.map(d => (
