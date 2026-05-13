@@ -65,7 +65,7 @@ export default function KPIGauges({ data }: { data: KPIMetrics }) {
           numerator={data.소진율_분자}
           denominator={data.소진율_분모}
           numLabel="응대"
-          denomLabel="받은"
+          denomLabel="신규"
         />
         <Gauge
           label="부재율"

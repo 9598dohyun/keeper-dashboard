@@ -39,7 +39,7 @@ export default function TrendChart({ data }: { data: TrendEntry[] }) {
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="오늘성공" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} name="결제한 리드" />
               <Line type="monotone" dataKey="오늘실패" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} name="놓친 리드" />
-              <Line type="monotone" dataKey="오늘신규_고유" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} name="받은 리드" />
+              <Line type="monotone" dataKey="오늘신규_고유" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} name="신규 리드" />
             </LineChart>
           </ResponsiveContainer>
         </div>

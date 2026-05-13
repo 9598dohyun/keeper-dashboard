@@ -12,14 +12,14 @@ export default function ActionStatusCard({ data }: { data: ActionMetrics }) {
           title="응대한 리드"
           value={data.오늘컨택}
           unit="건"
-          sub={`받은 ${data.오늘컨택_신규}건 · 남은 ${data.오늘컨택_기존팔로업}건`}
+          sub={`신규 ${data.오늘컨택_신규}건 · 잔존 ${data.오늘컨택_기존팔로업}건`}
           color="green"
         />
         <MetricCard
           title="결제한 리드"
           value={data.오늘성공}
           unit="건"
-          sub={`받은 ${data.오늘성공_신규}건 · 남은 ${data.오늘성공_기존}건`}
+          sub={`신규 ${data.오늘성공_신규}건 · 잔존 ${data.오늘성공_기존}건`}
           color="green"
         />
         <MetricCard

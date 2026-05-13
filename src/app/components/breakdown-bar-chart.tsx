@@ -73,7 +73,7 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
   return (
     <div className="space-y-2">
       <div className="text-xs text-gray-500">
-        상위 {rows.length}개 · 받은+남은 리드 합계 기준 · {trend.dates.length}개 구간 합산
+        상위 {rows.length}개 · 신규+잔존 리드 합계 기준 · {trend.dates.length}개 구간 합산
       </div>
       <div className="space-y-1.5">
         {rows.map(r => {
@@ -98,7 +98,7 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
         })}
       </div>
       <div className="text-[10px] text-gray-400 pt-1 flex gap-3 flex-wrap">
-        <span>막대 길이: 받은+남은 리드</span>
+        <span>막대 길이: 신규+잔존 리드</span>
         <span>막대 안: 결제율 % · 결제한/전체 건수</span>
         <span>색: ≥5% 진녹 · ≥3% 녹 · ≥1% 파랑 · &lt;1% 회색</span>
       </div>
