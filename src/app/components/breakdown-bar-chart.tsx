@@ -90,7 +90,7 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
                   style={{ width: `${width}%` }}
                 >
                   <span className="tabular-nums">{r.전환율}%</span>
-                  <span className="tabular-nums opacity-90">{r.성공}/{r.가용}</span>
+                  <span className="tabular-nums opacity-90">결제 {r.성공} · 응대 {r.컨택} · 전체 {r.가용}</span>
                 </div>
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function BreakdownBarChart({ mode, trend, topN = 10 }: Props) {
       </div>
       <div className="text-[10px] text-gray-400 pt-1 flex gap-3 flex-wrap">
         <span>막대 길이: 신규+잔존 리드</span>
-        <span>막대 안: 결제율 % · 결제한/전체 건수</span>
+        <span>막대 안: 결제율 % · 결제 / 응대 / 전체 건수</span>
         <span>색: ≥5% 진녹 · ≥3% 녹 · ≥1% 파랑 · &lt;1% 회색</span>
       </div>
     </div>
