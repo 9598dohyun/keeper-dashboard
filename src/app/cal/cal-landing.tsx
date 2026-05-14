@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import './cal.css';
+import VideoCompare from './video-compare';
 
 const CAMERA_UNIT_PRICE = 396_000;
 
@@ -60,10 +61,16 @@ export default function CalLanding() {
     const safeCameras = Math.max(1, Math.min(50, Number(cameras) || 1));
     const unit = calcUnitPriceWithDiscount(safeCameras);
     const total = Math.round(unit * safeCameras);
+    const subtotal = CAMERA_UNIT_PRICE * safeCameras;
+    const discountAmount = subtotal - total;
+    const discountPct = safeCameras >= 12 ? 10 : safeCameras >= 8 ? 5 : 0;
     return {
       cameras: safeCameras,
       unit,
       total,
+      subtotal,
+      discountAmount,
+      discountPct,
       m12: Math.round(total / 12),
       m24: Math.round(total / 24),
       m36: Math.round(total / 36),
@@ -226,7 +233,7 @@ export default function CalLanding() {
                     <div className="total-card-label">키퍼 일시불 총액 (VAT 포함)</div>
                     <div className="total-card-value num">{formatKRW(totals.total)}</div>
                     <div className="total-card-sub">
-                      카메라 {totals.cameras}대 × {formatKRW(Math.round(totals.unit))}
+                      카메라 {totals.cameras}대 × {formatKRW(CAMERA_UNIT_PRICE)}{totals.discountPct > 0 ? ` − 자동 할인 ${totals.discountPct}%` : ''}
                     </div>
                   </div>
                   <div>
@@ -238,8 +245,16 @@ export default function CalLanding() {
                 <div className="breakdown">
                   <div className="breakdown-row">
                     <span>카메라 ({totals.cameras}대)</span>
-                    <span className="num">{formatKRW(totals.total)}</span>
+                    <span className="num">{formatKRW(CAMERA_UNIT_PRICE * totals.cameras)}</span>
                   </div>
+                  {totals.discountPct > 0 && (
+                    <div className="breakdown-row">
+                      <span>자동 할인 ({totals.discountPct}%)</span>
+                      <span className="num" style={{ color: 'var(--cal-accent)', fontWeight: 600 }}>
+                        −{formatKRW(totals.discountAmount)}
+                      </span>
+                    </div>
+                  )}
                   <div className="breakdown-row">
                     <span>NVR(녹화기) · 저장공간</span>
                     <span className="num" style={{ color: 'var(--cal-positive)', fontWeight: 600 }}>
@@ -342,6 +357,8 @@ export default function CalLanding() {
           <strong>카메라는 결제 즉시 사장님 자산</strong>으로 등재됩니다.
         </div>
       </section>
+
+      <VideoCompare />
 
       <section className="section">
         <div className="section-eyebrow">Section 02 · 매장에 키퍼인 이유</div>

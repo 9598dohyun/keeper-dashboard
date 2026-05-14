@@ -1,0 +1,209 @@
+/* video-compare.css — self-contained, no dependency on cal.css custom properties */
+
+.vc-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 22px;
+  text-align: center;
+  font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
+  word-break: keep-all;
+  word-wrap: break-word;
+}
+
+.vc-section .vc-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ff5c00;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: #fff6f1;
+  margin-bottom: 14px;
+}
+
+.vc-section .vc-title {
+  font-weight: 700;
+  font-size: clamp(24px, 3.5vw, 34px);
+  line-height: 1.4;
+  letter-spacing: -1px;
+  margin-bottom: 14px;
+  color: #222;
+}
+
+.vc-accent {
+  color: #ff5c00;
+}
+
+.vc-section .vc-lede {
+  color: #666;
+  font-size: 16px;
+  max-width: 720px;
+  margin: 0 auto 36px;
+  line-height: 1.65;
+}
+
+.vc-wrap {
+  background: #fff;
+  border: 1px solid #dedede;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.vc-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.vc-tab {
+  padding: 8px 18px;
+  border-radius: 100px;
+  border: 1px solid #dedede;
+  background: #fff;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
+}
+
+.vc-tab:hover {
+  border-color: #ff5c00;
+  color: #ff5c00;
+}
+
+.vc-tab.is-active {
+  background: #ff5c00;
+  color: #fff;
+  border-color: #ff5c00;
+}
+
+.vc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  text-align: left;
+}
+
+.vc-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #dedede;
+  background: #fff;
+}
+
+.vc-card-keeper {
+  border-color: #ff5c00;
+}
+
+.vc-card-label {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+  border-bottom: 1px solid #eee;
+  gap: 8px;
+}
+
+.vc-card-keeper .vc-card-label {
+  background: #fff6f1;
+  color: #cc4900;
+}
+
+.vc-card-s1 .vc-card-label {
+  background: #f9f9f9;
+  color: #333;
+}
+
+.vc-card-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: #ff5c00;
+  color: #fff;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+
+.vc-card-badge-muted {
+  background: #999;
+  color: #fff;
+}
+
+.vc-card video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+}
+
+.vc-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.vc-play-btn {
+  padding: 14px 36px;
+  border-radius: 100px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
+}
+
+.vc-play-btn.is-paused {
+  background: #ff5c00;
+  color: #fff;
+}
+
+.vc-play-btn.is-paused:hover {
+  background: #ff8d4d;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(255, 92, 0, 0.25);
+}
+
+.vc-play-btn.is-playing {
+  background: #333;
+  color: #fff;
+}
+
+.vc-play-btn.is-playing:hover {
+  background: #222;
+}
+
+.vc-controls-note {
+  font-size: 12.5px;
+  color: #666;
+  text-align: center;
+  line-height: 1.55;
+  letter-spacing: -0.3px;
+  max-width: 480px;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .vc-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vc-section {
+    padding: 56px 18px;
+  }
+
+  .vc-wrap {
+    padding: 20px;
+  }
+}

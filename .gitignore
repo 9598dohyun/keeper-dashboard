@@ -5,6 +5,12 @@
 scripts/keeper-reports/airtable_snapshot/
 scripts/keeper-reports/__pycache__/
 
+# source video (served copies live under /public/video)
+/video
+
+# omc workspace
+.omc/
+
 # dependencies
 /node_modules
 /.pnp
