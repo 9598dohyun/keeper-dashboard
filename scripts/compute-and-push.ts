@@ -163,12 +163,70 @@ async function main() {
   await kvSet(`metrics:monthly:${prevYM}`, prevMonth.metrics);
   console.log(`Saved metrics:monthly:${prevYM} (prev month)`);
 
+  // === 전체 기간 메트릭 ===
+  // 수집된 데이터의 실제 범위(유입시간 min~max)로 집계
+  let minInflow: Date | null = null;
+  let maxInflow: Date | null = null;
+  for (const l of leads) {
+    const t = l.fields.유입시간;
+    if (!t) continue;
+    const d = new Date(t.replace('Z', '+00:00'));
+    if (isNaN(d.getTime())) continue;
+    if (!minInflow || d < minInflow) minInflow = d;
+    if (!maxInflow || d > maxInflow) maxInflow = d;
+  }
+
+  // 이력관리(상태변경 로그) 범위도 별도 파악 — 처리/컨택 판정 신뢰 구간
+  let minHist: Date | null = null;
+  let maxHist: Date | null = null;
+  for (const h of histRecords) {
+    const t = h.fields['Created time'];
+    if (!t) continue;
+    const d = new Date(t.replace('Z', '+00:00'));
+    if (isNaN(d.getTime())) continue;
+    if (!minHist || d < minHist) minHist = d;
+    if (!maxHist || d > maxHist) maxHist = d;
+  }
+
+  let allRange: { start: string; end: string } | null = null;
+  if (minInflow && maxInflow) {
+    // KST 영업일로 변환
+    const toKstBiz = (utc: Date) => {
+      const kst = new Date(utc.getTime() + 9 * 3600 * 1000);
+      const hour = kst.getUTCHours();
+      const d = new Date(kst);
+      if (hour >= 20) d.setUTCDate(d.getUTCDate() + 1);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    };
+    const startAll = toKstBiz(minInflow);
+    const endAll = toKstBiz(maxInflow);
+    allRange = { start: startAll, end: endAll };
+
+    console.log(`Computing all-time metrics for ${startAll} ~ ${endAll}...`);
+    const allMetrics = computeRange(startAll, endAll, leads, histByLead);
+    await kvSet('metrics:all', allMetrics);
+    console.log(`Saved metrics:all (${startAll} ~ ${endAll})`);
+  }
+
+  const toKstIso = (utc: Date | null) =>
+    utc ? new Date(utc.getTime() + 9 * 3600 * 1000).toISOString().replace('Z', '+09:00') : null;
+
   // 메타 정보
   await kvSet('metrics:meta', {
     lastUpdated: new Date().toISOString(),
     dataDate: today,
     leadCount: leads.length,
     histCount: histRecords.length,
+    데이터범위: allRange
+      ? {
+          리드_시작: allRange.start,
+          리드_끝: allRange.end,
+          리드_시작_KST: toKstIso(minInflow),
+          리드_끝_KST: toKstIso(maxInflow),
+          이력_시작_KST: toKstIso(minHist),
+          이력_끝_KST: toKstIso(maxHist),
+        }
+      : null,
   });
   console.log('Done!');
 }

@@ -68,7 +68,7 @@ export default function Dashboard() {
   const [meta, setMeta] = useState<MetricsMetaInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('daily');
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
@@ -115,12 +115,14 @@ export default function Dashboard() {
     return res.json();
   };
 
-  const requestMetrics = async (mode: 'daily' | 'weekly' | 'monthly', key?: string | null) => {
+  const requestMetrics = async (mode: 'daily' | 'weekly' | 'monthly' | 'all', key?: string | null) => {
     let dataUrl: string;
     if (mode === 'weekly') {
       dataUrl = key ? `/api/metrics?type=weekly&week=${key}` : '/api/metrics?type=weekly';
     } else if (mode === 'monthly') {
       dataUrl = key ? `/api/metrics?type=monthly&month=${key}` : '/api/metrics?type=monthly';
+    } else if (mode === 'all') {
+      dataUrl = '/api/metrics?type=all';
     } else {
       dataUrl = key ? `/api/metrics?date=${key}` : '/api/metrics';
     }
@@ -138,7 +140,7 @@ export default function Dashboard() {
     return { dataJson, trendJson };
   };
 
-  const fetchData = async (mode: 'daily' | 'weekly' | 'monthly', key?: string | null) => {
+  const fetchData = async (mode: 'daily' | 'weekly' | 'monthly' | 'all', key?: string | null) => {
     setLoading(true);
     try {
       const { dataJson, trendJson } = await requestMetrics(mode, key);
@@ -171,12 +173,12 @@ export default function Dashboard() {
   const handleLatest = () => {
     if (viewMode === 'daily') setSelectedDate(null);
     else if (viewMode === 'weekly') setSelectedWeek(null);
-    else setSelectedMonth(null);
+    else if (viewMode === 'monthly') setSelectedMonth(null);
     setDateOpen(false);
     fetchData(viewMode, null);
   };
 
-  const switchMode = (mode: 'daily' | 'weekly' | 'monthly') => {
+  const switchMode = (mode: 'daily' | 'weekly' | 'monthly' | 'all') => {
     setViewMode(mode);
     setDateOpen(false);
     if (mode === 'daily') {
@@ -187,10 +189,16 @@ export default function Dashboard() {
       setSelectedDate(null);
       setSelectedMonth(null);
       fetchData('weekly', selectedWeek);
-    } else {
+    } else if (mode === 'monthly') {
       setSelectedDate(null);
       setSelectedWeek(null);
       fetchData('monthly', selectedMonth);
+    } else {
+      // all
+      setSelectedDate(null);
+      setSelectedWeek(null);
+      setSelectedMonth(null);
+      fetchData('all', null);
     }
   };
 
@@ -288,7 +296,9 @@ export default function Dashboard() {
         <div>
           <h1 className="text-lg font-bold">키퍼 인바운드 대시보드</h1>
           <div className="text-xs text-gray-400 mt-0.5">
-            {viewMode === 'weekly' && selectedWeek
+            {viewMode === 'all'
+              ? `전체 ${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
+              : viewMode === 'weekly' && selectedWeek
               ? (() => {
                   const m = selectedWeek.match(/^(\d{4})-W(\d{2})$/);
                   if (!m) return selectedWeek;
@@ -333,18 +343,31 @@ export default function Dashboard() {
             >
               월별
             </button>
+            <button
+              onClick={() => switchMode('all')}
+              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${viewMode === 'all' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
+            >
+              전체
+            </button>
           </div>
-          {/* 날짜/주차 선택 드롭다운 */}
+          {/* 날짜/주차 선택 드롭다운 — 전체 모드에서는 비활성 */}
           <div className="relative" ref={dateRef}>
             <button
-              onClick={() => setDateOpen(!dateOpen)}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
+              onClick={() => viewMode !== 'all' && setDateOpen(!dateOpen)}
+              disabled={viewMode === 'all'}
+              className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg ${
+                viewMode === 'all'
+                  ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
             >
               {viewMode === 'daily'
                 ? (selectedDate || '오늘')
                 : viewMode === 'weekly'
                 ? (selectedWeek ? formatWeekLabel(selectedWeek) : '이번 주')
-                : (selectedMonth || '이번 달')}
+                : viewMode === 'monthly'
+                ? (selectedMonth || '이번 달')
+                : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`}
               <ChevronDown className="w-3 h-3" />
             </button>
             {dateOpen && (
@@ -396,7 +419,18 @@ export default function Dashboard() {
           </div>
           <NavTabs />
           <button
-            onClick={() => fetchData(viewMode, viewMode === 'daily' ? selectedDate : selectedWeek)}
+            onClick={() =>
+              fetchData(
+                viewMode,
+                viewMode === 'daily'
+                  ? selectedDate
+                  : viewMode === 'weekly'
+                  ? selectedWeek
+                  : viewMode === 'monthly'
+                  ? selectedMonth
+                  : null,
+              )
+            }
             className="text-xs px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200"
           >
             새로고침
@@ -406,23 +440,38 @@ export default function Dashboard() {
       {lastUpdated && (
         <div className="text-[10px] text-gray-300 text-right -mt-4">갱신: {lastUpdated}</div>
       )}
+      {viewMode === 'all' && meta?.데이터범위 && (
+        <div className="text-[11px] text-gray-500 bg-amber-50 border border-amber-100 rounded-md px-3 py-2 -mt-2">
+          데이터 수집 범위 — 리드: {meta.데이터범위.리드_시작} ~ {meta.데이터범위.리드_끝}
+          {meta.데이터범위.이력_시작_KST && meta.데이터범위.이력_끝_KST && (
+            <>
+              {' '}/ 상태변경 이력: {meta.데이터범위.이력_시작_KST.slice(0, 10)} ~ {meta.데이터범위.이력_끝_KST.slice(0, 10)}
+            </>
+          )}
+          <div className="text-[10px] text-gray-400 mt-0.5">
+            * 이력관리 시작일 이전 리드는 처리/컨택 시점 판정이 불완전할 수 있습니다.
+          </div>
+        </div>
+      )}
 
       <ActionStatusCard data={metrics.액션} />
       <KPIGauges data={metrics.지표} />
       <LeadStatusCard data={metrics.리드} />
-      <InsightsCard
-        viewMode={viewMode}
-        selectedKey={
-          viewMode === 'daily' ? selectedDate
-            : viewMode === 'weekly' ? selectedWeek
-            : selectedMonth
-        }
-        periodLabel={
-          metrics.대상기간.start === metrics.대상기간.end
-            ? metrics.대상기간.start
-            : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
-        }
-      />
+      {viewMode !== 'all' && (
+        <InsightsCard
+          viewMode={viewMode}
+          selectedKey={
+            viewMode === 'daily' ? selectedDate
+              : viewMode === 'weekly' ? selectedWeek
+              : selectedMonth
+          }
+          periodLabel={
+            metrics.대상기간.start === metrics.대상기간.end
+              ? metrics.대상기간.start
+              : `${metrics.대상기간.start} ~ ${metrics.대상기간.end}`
+          }
+        />
+      )}
       <LeadTimeChart data={metrics.리드타임} newCount={metrics.리드.오늘신규} />
       <ChannelChart data={metrics.채널_신규Top} />
       <HourlyChart

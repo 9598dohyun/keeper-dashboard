@@ -40,6 +40,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ months });
     }
 
+    // 전체 기간 데이터 조회
+    if (type === 'all') {
+      const data = await kv.get('metrics:all');
+      const meta = await kv.get('metrics:meta');
+      if (!data) {
+        return NextResponse.json({ error: 'No all-time data', meta }, { status: 404 });
+      }
+      return NextResponse.json({ data, meta, type: 'all' });
+    }
+
+    // 메타만 조회 (데이터 수집 범위 표기용)
+    if (type === 'meta') {
+      const meta = await kv.get('metrics:meta');
+      return NextResponse.json({ meta, type: 'meta' });
+    }
+
     // 월간 데이터 조회
     if (type === 'monthly') {
       const month = searchParams.get('month');

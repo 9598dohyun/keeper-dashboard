@@ -95,6 +95,14 @@ export interface MetricsMetaInfo {
   dataDate: string;
   leadCount: number;
   histCount: number;
+  데이터범위?: {
+    리드_시작: string;
+    리드_끝: string;
+    리드_시작_KST?: string | null;
+    리드_끝_KST?: string | null;
+    이력_시작_KST?: string | null;
+    이력_끝_KST?: string | null;
+  } | null;
 }
 
 export interface TrendEntry {
