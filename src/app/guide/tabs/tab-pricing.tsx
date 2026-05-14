@@ -5,7 +5,7 @@ export default function PriceTab() {
   return (
     <div className="space-y-4">
       <SectionCard id="price-installment" title="💰 할부 가격표 (36개월 무이자)">
-        <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·설치비·저장공간 모두 포함 | 삼성·현대·롯데 무이자</p>
+        <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·저장공간 포함 | 삼성·현대·롯데·국민·하나 무이자</p>
         <Alert type="warning">고객 안내 시 반드시 <strong>VAT 포함 금액</strong>으로 안내</Alert>
         <div className="mt-3">
           <Table
@@ -67,7 +67,7 @@ export default function PriceTab() {
           headers={['항목', '내용']}
           rows={[
             ['결제 경로', '앱 내 결제(기본) / 결제 링크(할인 시) / 네이버 스토어(무이자 3개월만)'],
-            ['36개월 무이자', <><strong key="c">삼성·현대·롯데</strong> 개인 신용카드만 (법인카드 불가)</>],
+            ['36개월 무이자', <><strong key="c">삼성·현대·롯데·국민·하나</strong> 개인 신용카드 (법인카드 불가)</>],
             ['기타 카드', '1~2년 할부 가능'],
             ['체크카드', '일시불만 가능'],
             ['카카오톡 결제', '고령·카드 없는 고객 → 알림톡 결제 링크 제공'],
