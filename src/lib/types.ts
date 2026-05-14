@@ -5,6 +5,7 @@ export interface AirtableLead {
     수정일자?: string;
     '[콜]최종 결과'?: string;
     '[콜]실패사유'?: string;
+    '[콜]메모 관리'?: string[];
     '전화번호 키워드'?: string;
     '[참고]전체유입경로'?: string;
     진입경로?: string;
@@ -77,6 +78,16 @@ export interface LeadTimeMetrics {
   '12시간+'?: number;
 }
 
+export interface AllTimeBreakdown {
+  /** 메모 X & 최종결과 X — 아직 컨택 시도 전 */
+  신규: number;
+  /** 메모 O & 최종결과 X — 컨택 시도 중, 미결 */
+  잔존: number;
+  /** 최종결과 O — 처리완료(성공+실패+중복문의 등) */
+  처리완료: number;
+  합계: number;
+}
+
 export interface MetricsResult {
   대상기간: { start: string; end: string };
   리드: LeadMetrics;
@@ -87,6 +98,8 @@ export interface MetricsResult {
   시간대별_유입: Record<number, number>;
   시간대별_성공: Record<number, number>;
   시간대별_실패: Record<number, number>;
+  /** 전체 기간(metrics:all) 산출 시에만 채워지는 분류 */
+  전체분류?: AllTimeBreakdown;
   _meta: { updatedAt: string; dataDate: string };
 }
 

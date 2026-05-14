@@ -204,8 +204,23 @@ async function main() {
 
     console.log(`Computing all-time metrics for ${startAll} ~ ${endAll}...`);
     const allMetrics = computeRange(startAll, endAll, leads, histByLead);
+
+    // 전체 모드 전용: 메모/최종결과 기준 분류
+    let 신규 = 0;
+    let 잔존 = 0;
+    let 처리완료 = 0;
+    for (const l of leads) {
+      const memoLinks = l.fields['[콜]메모 관리'] || [];
+      const hasMemo = Array.isArray(memoLinks) ? memoLinks.length > 0 : Boolean(memoLinks);
+      const final = l.fields['[콜]최종 결과'];
+      if (final) 처리완료++;
+      else if (hasMemo) 잔존++;
+      else 신규++;
+    }
+    allMetrics.전체분류 = { 신규, 잔존, 처리완료, 합계: 신규 + 잔존 + 처리완료 };
+
     await kvSet('metrics:all', allMetrics);
-    console.log(`Saved metrics:all (${startAll} ~ ${endAll})`);
+    console.log(`Saved metrics:all (${startAll} ~ ${endAll}) — 신규 ${신규} · 잔존 ${잔존} · 처리완료 ${처리완료}`);
   }
 
   const toKstIso = (utc: Date | null) =>

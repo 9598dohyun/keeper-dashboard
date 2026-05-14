@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MetricsResult, MetricsMetaInfo, TrendEntry } from '@/lib/types';
 import { POLL_INTERVAL_MS } from '@/lib/constants';
 import LeadStatusCard from './lead-status-card';
+import LeadStatusCardAll from './lead-status-card-all';
 import ActionStatusCard from './action-status-card';
 import KPIGauges from './kpi-gauges';
 import LeadTimeChart from './lead-time-chart';
@@ -456,7 +457,11 @@ export default function Dashboard() {
 
       <ActionStatusCard data={metrics.액션} />
       <KPIGauges data={metrics.지표} />
-      <LeadStatusCard data={metrics.리드} />
+      {viewMode === 'all' && metrics.전체분류 ? (
+        <LeadStatusCardAll data={metrics.전체분류} />
+      ) : (
+        <LeadStatusCard data={metrics.리드} />
+      )}
       {viewMode !== 'all' && (
         <InsightsCard
           viewMode={viewMode}
