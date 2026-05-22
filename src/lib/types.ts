@@ -22,6 +22,18 @@ export interface AirtableHistory {
   };
 }
 
+export interface AirtableMemo {
+  id: string;
+  fields: {
+    피추천인?: string[];
+    생성자?: string;
+    Created?: string;
+  };
+}
+
+/** leadId → { 영업일 'YYYY-MM-DD': 메모 생성자 } */
+export type MemoDatesByLead = Map<string, Map<string, string>>;
+
 export interface HistEvent {
   이력: string;
   변경필드: string;

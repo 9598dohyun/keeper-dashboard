@@ -5,7 +5,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { AirtableHistory, AirtableLead } from '../src/lib/types';
+import { AirtableHistory, AirtableLead, AirtableMemo } from '../src/lib/types';
 
 const TOKEN = process.env.AIRTABLE_TOKEN!;
 const BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -14,6 +14,7 @@ const OUT_DIR = path.join(__dirname, '../data');
 const TABLES = {
   피추천인: 'tbl45D05oiu3wffTT',
   이력관리: 'tblEPutPIjLYcm0Lp',
+  메모관리: 'tblAziNK1u9NVChR3',
 };
 
 // 계산에 필요한 필드만 가져옴 (개인정보 제외)
@@ -33,6 +34,12 @@ const HIST_FIELDS = [
   '피추천인',
   '변경 필드값',
   'Created time',
+];
+
+const MEMO_FIELDS = [
+  '피추천인',
+  '생성자',
+  'Created',
 ];
 
 type AirtableListResponse<TRecord> = {
@@ -92,6 +99,14 @@ async function main() {
     JSON.stringify(hist, null, 0)
   );
   console.log(`이력관리: ${hist.length}건`);
+
+  console.log('Fetching 메모관리...');
+  const memo = await fetchAll<AirtableMemo>(TABLES.메모관리, MEMO_FIELDS);
+  fs.writeFileSync(
+    path.join(OUT_DIR, '메모관리.json'),
+    JSON.stringify(memo, null, 0)
+  );
+  console.log(`메모관리: ${memo.length}건`);
 }
 
 main().catch((error) => {

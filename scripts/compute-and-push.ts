@@ -4,8 +4,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { AirtableLead, AirtableHistory, TrendEntry } from '../src/lib/types';
-import { buildHistByLead, computeRange } from '../src/lib/metrics/index';
+import { AirtableLead, AirtableHistory, AirtableMemo, TrendEntry } from '../src/lib/types';
+import { buildHistByLead, buildMemoDatesByLead, computeRange } from '../src/lib/metrics/index';
 import { formatDate } from '../src/lib/metrics/biz-date';
 import { KV_DAILY_TTL, KV_WEEKLY_TTL, KV_TREND_TTL, TREND_DAYS } from '../src/lib/constants';
 
@@ -74,12 +74,18 @@ async function main() {
   );
   const histByLead = buildHistByLead(histRecords);
 
-  console.log(`Loaded: ${leads.length} leads, ${histRecords.length} history events`);
+  const memoPath = path.join(DATA_DIR, '메모관리.json');
+  const memoRecords: AirtableMemo[] = fs.existsSync(memoPath)
+    ? JSON.parse(fs.readFileSync(memoPath, 'utf-8'))
+    : [];
+  const memoDates = buildMemoDatesByLead(memoRecords);
+
+  console.log(`Loaded: ${leads.length} leads, ${histRecords.length} history events, ${memoRecords.length} memos`);
 
   // 오늘 (KST) 지표 계산
   const today = getDateStr(0);
   console.log(`Computing metrics for ${today}...`);
-  const todayMetrics = computeRange(today, today, leads, histByLead);
+  const todayMetrics = computeRange(today, today, leads, histByLead, memoDates);
 
   // KV에 저장
   await kvSet(`metrics:daily:${today}`, todayMetrics, KV_DAILY_TTL);
@@ -90,7 +96,7 @@ async function main() {
   const trend: TrendEntry[] = [];
   for (let i = TREND_DAYS - 1; i >= 0; i--) {
     const dateStr = getDateStr(i);
-    const r = computeRange(dateStr, dateStr, leads, histByLead);
+    const r = computeRange(dateStr, dateStr, leads, histByLead, memoDates);
     trend.push({
       date: dateStr,
       전날잔존: r.리드.전날잔존,
@@ -115,7 +121,7 @@ async function main() {
   function computeWeekMetrics(dateStr: string) {
     const week = getISOWeekInfo(dateStr);
     console.log(`Computing weekly metrics for ${week.weekKey} (${week.monday} ~ ${week.sunday})...`);
-    const metrics = computeRange(week.monday, week.sunday, leads, histByLead);
+    const metrics = computeRange(week.monday, week.sunday, leads, histByLead, memoDates);
     return { week, metrics };
   }
 
@@ -139,7 +145,7 @@ async function main() {
     const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate(); // m은 1-12, 다음 달 0일 = 이번 달 말일
     const end = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     console.log(`Computing monthly metrics for ${ymStr} (${start} ~ ${end})...`);
-    return { ym: ymStr, start, end, metrics: computeRange(start, end, leads, histByLead) };
+    return { ym: ymStr, start, end, metrics: computeRange(start, end, leads, histByLead, memoDates) };
   }
 
   function ymFromDateStr(dateStr: string): string {
@@ -203,7 +209,7 @@ async function main() {
     allRange = { start: startAll, end: endAll };
 
     console.log(`Computing all-time metrics for ${startAll} ~ ${endAll}...`);
-    const allMetrics = computeRange(startAll, endAll, leads, histByLead);
+    const allMetrics = computeRange(startAll, endAll, leads, histByLead, memoDates);
 
     // 전체 모드 전용: 메모/최종결과 기준 분류
     let 신규 = 0;
