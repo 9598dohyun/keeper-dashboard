@@ -10,17 +10,27 @@ This project uses **Next.js 16** which has breaking changes from earlier version
 
 ```bash
 npm run dev        # 로컬 개발 서버 (localhost:3000)
-npm run build      # 프로덕션 빌드
-npm run lint       # ESLint 검사
+npm run build      # 프로덕션 빌드 (배포 전 라우트 생성/타입 검증용)
+npm run lint       # ESLint 검사 (= eslint)
+npx tsc --noEmit   # 타입체크 (별도 test 스위트 없음 — 빌드+타입체크가 검증 수단)
 
 # 데이터 파이프라인 (로컬 수동 실행)
 npx tsx scripts/fetch-airtable.ts        # Airtable → data/*.json
 npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
 ```
 
-환경변수 필요: `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`
+환경변수 필요: `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `SK_AIRTABLE_TOKEN`, `SK_AIRTABLE_BASE_ID` (`.env.local`은 gitignore — 운영 환경은 Vercel 프로젝트 env에 별도 등록 필요)
 
 ## Architecture
+
+이 앱은 **두 개의 독립된 기능**을 한 Next.js 프로젝트에 담고 있다.
+
+1. **내부 대시보드** (`/dashboard`, `/guide`) — 에어테이블 CRM 데이터를 12시간 단위로 수집해 KPI를 표시하는 read-only 분석 화면. KV 캐시 기반.
+2. **외부 리드 수집 랜딩** (`/cal`, `/cal/lead`, `/trial`, `/sk_lead`) — 고객 대상 공개 페이지. 폼 제출을 API Route가 받아 에어테이블에 **직접 write**한다 (KV 거치지 않음).
+
+> **두 기능은 서로 다른 에어테이블 베이스를 쓴다 — 절대 혼동 금지.** 아래 "Airtable — 두 개의 베이스" 참조.
+
+### 대시보드 파이프라인
 
 한화비전 키퍼 인바운드 SDR 대시보드. 에어테이블 CRM 데이터를 12시간 단위(07:59, 19:59 KST)로 수집하여 전환율·소진율·부재율 등 KPI를 표시한다.
 
@@ -62,10 +72,30 @@ Next.js (Vercel)
 | `metrics:trend:14d` | TrendEntry[] (14일분) | 1일 |
 | `metrics:meta` | { lastUpdated, dataDate } | 없음 |
 
-### Airtable Tables
+### Airtable — 두 개의 베이스 (혼동 시 422 에러 / 잘못된 베이스 저장)
 
-- **피추천인** (`tbl45D05oiu3wffTT`): 리드 마스터. 계산에 쓰는 필드만 fetch (개인정보 제외)
-- **이력관리** (`tblEPutPIjLYcm0Lp`): 상태 변경 이벤트 로그
+| 용도 | 베이스 | env | 테이블 | 주요 필드 |
+|------|--------|-----|--------|----------|
+| 대시보드 + `/cal`·`/trial` 리드 | 한화비전-키퍼 (`app0jJrNlgdkRmlIZ`) | `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID` | 피추천인 `tbl45D05oiu3wffTT`, 이력관리 `tblEPutPIjLYcm0Lp` | `피추천인이름`, `진입경로`, `UTM_source` |
+| `/sk_lead` 리드 (SK브로드밴드 종료고객) | SK브로드밴드 통합관리 (`appa2Foo0JnvfPmlp`) | `SK_AIRTABLE_TOKEN`, `SK_AIRTABLE_BASE_ID` | 고객 `tbl45D05oiu3wffTT` | `이름`, `연락처`, `개인정보 수집동의`(checkbox), `UTM_source`, `페이지경로` |
+
+- **테이블 ID(`tbl45D05oiu3wffTT`)가 우연히 같지만 베이스도 필드명도 다르다.** `/api/lead`는 `피추천인이름`을, `/api/sk-lead`는 `이름`을 쓴다. 한쪽 필드명을 다른 라우트에 넣으면 422.
+- 대시보드 파이프라인은 **피추천인** + **이력관리** 두 테이블만 fetch (개인정보 제외, 계산용 필드만). SK 베이스는 리드 write 전용 — 대시보드와 무관.
+- `UTM_source`는 singleSelect — 새 옵션(`sk-lead-page` 등)은 `typecast: true`로 자동 생성.
+
+## Lead Capture (외부 공개 페이지)
+
+| 라우트 | 파일 | 제출 → API | 저장 베이스 |
+|--------|------|-----------|------------|
+| `/cal` | `cal/cal-landing.tsx` | (소개+계산기, 폼은 `/cal/lead`로 이동) | — |
+| `/cal/lead` | `cal/lead/lead-form.tsx` | `/api/lead` (`source: 'cal'`) | 한화비전-키퍼 |
+| `/trial` | `trial/trial-landing.tsx` | `/api/lead` (`source: 'trial'`) | 한화비전-키퍼 |
+| `/sk_lead` | `sk_lead/sk-lead-form.tsx` | `/api/sk-lead` | SK브로드밴드 |
+
+- `/cal/lead`·`/trial`은 **공유 라우트 `/api/lead`** 를 쓰며 `source`로 분기(`피추천인이름`/`진입경로`/`UTM_source` 세팅). `/cal/lead`·`/trial` 폼을 고칠 땐 `/api/lead` 한 곳이 둘 다 영향.
+- `/sk_lead`는 **전용 라우트 `/api/sk-lead`** — SK 베이스 구조에 맞춰 분리됨. cal/trial과 코드·env를 섞지 말 것.
+- 리드 폼은 클라이언트 컴포넌트(`'use client'`), 페이지(`page.tsx`)는 metadata만 가진 서버 컴포넌트 래퍼. 스타일은 `cal/cal.css`(CSS 변수 정의) + 페이지별 css를 상대경로로 import.
+- 폼 검증을 바꿀 땐 **클라이언트(폼)와 서버(route.ts) 양쪽**을 같이 고칠 것 — 서버가 최종 게이트.
 
 ## File Index
 
@@ -93,7 +123,9 @@ Next.js (Vercel)
 
 | 파일 | 역할 |
 |------|------|
-| `metrics/route.ts` | GET /api/metrics — KV 조회 (type=dates/trend/daily, ?date=YYYY-MM-DD) |
+| `metrics/route.ts` | GET /api/metrics — KV 조회. `type=` 으로 분기: `daily`(기본)·`weekly`·`monthly`·`all`·`meta`·`dates`/`weeks`/`months`(목록)·`trend`(14d)·`hourly-heatmap`·`channel-trend`/`assignee-trend`/`page-trend`(period=daily/weekly/monthly). `?date=`·`?week=`·`?month=`로 특정 기간 조회 |
+| `lead/route.ts` | POST /api/lead — `/cal/lead`·`/trial` 폼 수신 → 한화비전-키퍼 베이스에 write (`source`로 분기) |
+| `sk-lead/route.ts` | POST /api/sk-lead — `/sk_lead` 폼 수신 → SK브로드밴드 베이스에 write |
 
 ### src/app/components/ — 대시보드 UI
 
@@ -119,6 +151,7 @@ Next.js (Vercel)
 | `dashboard/page.tsx` | `/dashboard` — Dashboard 컴포넌트 래퍼 |
 | `guide/page.tsx` | `/guide` — 가이드 페이지 래퍼 |
 | `guide/guide-content.tsx` | 상담 가이드 콘텐츠 — 7개 탭(운영룰, 가격, 스펙, 경쟁사, 응대, 에어테이블, 전화상담) |
+| `cal/`, `trial/`, `sk_lead/` | 외부 리드 수집 랜딩 (위 "Lead Capture" 섹션 참조) |
 
 ### src/components/ui/ — shadcn 기반 UI 프리미티브
 
