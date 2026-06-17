@@ -242,37 +242,16 @@ export default function SkLeadForm() {
                   className="sk-terms-toggle"
                   onClick={() => setShowTerms((v) => !v)}
                   aria-expanded={showTerms}
-                  style={{
-                    display: 'inline-block',
-                    color: 'var(--cal-accent)',
-                    fontSize: 13.5,
-                    fontWeight: 500,
-                    textDecoration: 'underline',
-                    letterSpacing: '-0.3px',
-                    marginBottom: 10,
-                  }}
                 >
                   개인 정보 수집 동의 및 이용 약관 상세 내용 보기
                 </button>
                 {showTerms && (
-                  <div
-                    style={{
-                      background: 'var(--cal-paper-soft)',
-                      border: '1px solid var(--cal-line-soft)',
-                      borderRadius: 10,
-                      padding: '14px 16px',
-                      fontSize: 12.5,
-                      lineHeight: 1.65,
-                      color: 'var(--cal-muted)',
-                      letterSpacing: '-0.3px',
-                      marginBottom: 10,
-                    }}
-                  >
-                    <strong style={{ color: 'var(--cal-ink-soft)' }}>수집 항목</strong> 매장명(혹은 성함), 연락처
+                  <div className="sk-terms-box">
+                    <strong>수집 항목</strong> 매장명(혹은 성함), 연락처
                     <br />
-                    <strong style={{ color: 'var(--cal-ink-soft)' }}>수집 목적</strong> 한화비전 키퍼 전환 상담 연락
+                    <strong>수집 목적</strong> 한화비전 키퍼 전환 상담 연락
                     <br />
-                    <strong style={{ color: 'var(--cal-ink-soft)' }}>보유·이용 기간</strong> 상담 종료 후 관련 법령에 따라 보관·파기
+                    <strong>보유·이용 기간</strong> 상담 종료 후 관련 법령에 따라 보관·파기
                     <br />※ 남겨주신 정보는 전환 상담 연락 목적으로만 사용됩니다. 동의를 거부하실 수 있으나, 거부 시 상담 연락이 어렵습니다.
                   </div>
                 )}
