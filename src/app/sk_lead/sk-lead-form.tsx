@@ -97,7 +97,7 @@ export default function SkLeadForm() {
   }
 
   return (
-    <main className="cal-main sk-main min-h-screen">
+    <main className="cal-main lead-main sk-main min-h-screen">
       <nav className="cal-nav">
         <div className="nav-inner">
           <div className="brand">
