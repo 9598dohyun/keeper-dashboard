@@ -163,14 +163,13 @@ export default function SkLeadForm() {
         </div>
       </section>
 
-      <p className="sk-cta-lede">
-        연락처를 남겨주시면 키퍼 전담 상담사가
-        <br />
-        영업일 기준 1~2일 내 직접 전화드립니다.
-      </p>
-
       <section className="lead-section">
         <div className="lead-card">
+          <p className="sk-form-lede">
+            연락처를 남겨주시면 키퍼 전담 상담사가
+            <br />
+            영업일 기준 1~2일 내 직접 전화드립니다.
+          </p>
           {status === 'success' ? (
             <div className="lead-success">
               <div className="lead-success-icon">✓</div>
