@@ -1,5 +1,14 @@
 /* SK브로드밴드 종료 고객 전용 키퍼 전환 랜딩 */
 
+.sk-main .brand-ci-logo {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+@media (max-width: 600px) {
+  .sk-main .brand-ci-logo { height: 24px; }
+}
+
 .sk-main .sk-hero {
   max-width: 720px;
   margin: 0 auto;
@@ -68,14 +77,16 @@
   letter-spacing: -0.5px;
   margin-bottom: 18px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 .sk-main .sk-block-title::before {
   content: '';
+  flex-shrink: 0;
   display: inline-block;
   width: 4px;
   height: 18px;
+  margin-top: 4px;
   background: var(--cal-accent);
   border-radius: 2px;
 }
@@ -105,6 +116,7 @@
   color: var(--cal-muted);
   margin-top: 2px;
 }
+.sk-main .sk-list-item .sk-dash { color: var(--cal-muted); }
 
 /* 폼 카드 내부 상단 헤더 문구 */
 .sk-main .lead-card .sk-form-lede {

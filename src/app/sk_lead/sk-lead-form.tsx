@@ -11,12 +11,25 @@ const HERO_IMAGE = '/photo_2026-06-17%2018.57.12.jpeg';
 
 const SWITCH_BENEFITS = [
   {
-    ico: '✅',
-    text: 'QHD 400만 화소 / 4주 영상 보관 업그레이드를 현재 이용 요금 수준으로',
+    ico: '💰',
+    lead: '요금 부담 그대로',
+    text: '지금 수준의 비용으로 400만 화소 QHD·4주 영상 보관까지 업그레이드',
   },
-  { ico: '✅', text: '기본 설치비 무료' },
-  { ico: '✅', text: '빠른 앱 영상 속도와 직원관리 기능까지 무료' },
-  { ico: '✅', text: '약정·렌탈이 아닌 구매 소유형 CCTV' },
+  {
+    ico: '🆓',
+    lead: '설치비 0원 + 앱 기능 무료',
+    text: '빠른 영상 재생, 직원관리 기능까지 추가 비용 없이',
+  },
+  {
+    ico: '🔒',
+    lead: "약정·렌탈 아닌 '구매 소유형'",
+    text: '다 내고 나면 내 장비, 이후 추가 망사용료 없음',
+  },
+  {
+    ico: '🛡',
+    lead: '끝까지 책임',
+    text: '3년 무상 A/S + 안심케어 한화 보험 1년 무료',
+  },
 ];
 
 const WHY_KEEPER = [
@@ -26,8 +39,7 @@ const WHY_KEEPER = [
   },
   {
     ico: '📷',
-    text: '한화비전 자체 기술력 400만 화소 QHD',
-    note: '글로벌 CCTV 제조 기술력 기반',
+    text: '한화비전 자체 기술력 400만 화소 QHD 압도적 화질차이',
   },
   {
     ico: '💾',
@@ -101,8 +113,8 @@ export default function SkLeadForm() {
       <nav className="cal-nav">
         <div className="nav-inner">
           <div className="brand">
-            <span className="brand-logo-text">KEEPER</span>
-            <span className="brand-sub">한화비전 · 매장용 CCTV</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="brand-ci-logo" src="/keeper-ci-logo.png" alt="한화비전 keeper" />
           </div>
         </div>
       </nav>
@@ -117,7 +129,7 @@ export default function SkLeadForm() {
       </section>
 
       <section className="sk-intro">
-        <div className="sk-eyebrow">SK브로드밴드 종료 고객 전용 안내</div>
+        <div className="sk-eyebrow">SK브로드밴드 CCTV 서비스 종료 고객 전용</div>
         <h1>
           지금 내시던 비용 그대로,
           <br />
@@ -139,24 +151,25 @@ export default function SkLeadForm() {
                 <span className="sk-ico" aria-hidden>
                   {b.ico}
                 </span>
-                <span>{b.text}</span>
+                <span>
+                  <strong className="sk-lead">{b.lead}</strong>
+                  <span className="sk-dash"> — </span>
+                  {b.text}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
         <div className="sk-block">
-          <div className="sk-block-title">왜 키퍼인가요?</div>
+          <div className="sk-block-title">글로벌 CCTV 제조사 한화비전이 직접 만들고, 직접 책임집니다.</div>
           <div className="sk-list">
             {WHY_KEEPER.map((b, i) => (
               <div className="sk-list-item" key={i}>
                 <span className="sk-ico" aria-hidden>
                   {b.ico}
                 </span>
-                <span>
-                  {b.text}
-                  {b.note && <span className="sk-note">{b.note}</span>}
-                </span>
+                <span>{b.text}</span>
               </div>
             ))}
           </div>
