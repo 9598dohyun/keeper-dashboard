@@ -137,6 +137,13 @@
   color: var(--cal-accent);
 }
 
+.sk-main .lead-optional {
+  color: var(--cal-muted);
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-left: 3px;
+}
+
 @media (max-width: 600px) {
   .sk-main .sk-block { padding: 22px 18px; }
   .sk-main .sk-list-item { font-size: 14px; }

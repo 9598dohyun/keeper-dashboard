@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { name?: string; phone?: string; agree?: boolean };
+  let body: { name?: string; phone?: string; store?: string; agree?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -28,15 +28,19 @@ export async function POST(request: Request) {
 
   const name = (body.name ?? '').trim();
   const phone = (body.phone ?? '').trim();
+  const store = (body.store ?? '').trim();
 
   if (!name) {
-    return NextResponse.json({ error: '매장명(혹은 성함)을 입력해주세요.' }, { status: 400 });
+    return NextResponse.json({ error: '성함을 입력해주세요.' }, { status: 400 });
   }
   if (!isValidPhone(phone)) {
     return NextResponse.json({ error: '올바른 전화번호 형식이 아닙니다.' }, { status: 400 });
   }
   if (name.length > 40) {
     return NextResponse.json({ error: '이름이 너무 깁니다.' }, { status: 400 });
+  }
+  if (store.length > 40) {
+    return NextResponse.json({ error: '매장명이 너무 깁니다.' }, { status: 400 });
   }
   if (body.agree !== true) {
     return NextResponse.json({ error: '개인정보 수집·이용에 동의해주세요.' }, { status: 400 });
@@ -51,6 +55,9 @@ export async function POST(request: Request) {
     페이지경로: '/sk_lead',
     '개인정보 수집동의': true,
   };
+  if (store) {
+    fields.매장명 = store;
+  }
 
   try {
     const res = await fetch(url, {

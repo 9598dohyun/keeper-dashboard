@@ -70,6 +70,7 @@ function isValidPhone(raw: string) {
 export default function SkLeadForm() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [store, setStore] = useState('');
   const [agree, setAgree] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
@@ -103,6 +104,7 @@ export default function SkLeadForm() {
         body: JSON.stringify({
           name: name.trim(),
           phone: normalizePhone(phone),
+          store: store.trim(),
           agree: true,
         }),
       });
@@ -211,6 +213,7 @@ export default function SkLeadForm() {
                   onClick={() => {
                     setName('');
                     setPhone('');
+                    setStore('');
                     setAgree(false);
                     setStatus('idle');
                   }}
@@ -223,7 +226,7 @@ export default function SkLeadForm() {
             <form onSubmit={handleSubmit} className="lead-form" noValidate>
               <div className="lead-field">
                 <label className="lead-label" htmlFor="sk-name">
-                  매장명 (혹은 성함) <span className="lead-required">*</span>
+                  성함 <span className="lead-required">*</span>
                 </label>
                 <input
                   id="sk-name"
@@ -231,7 +234,7 @@ export default function SkLeadForm() {
                   className="lead-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="예: ○○카페 / 김사장"
+                  placeholder="예: 김사장"
                   maxLength={40}
                   required
                 />
@@ -258,6 +261,21 @@ export default function SkLeadForm() {
               </div>
 
               <div className="lead-field">
+                <label className="lead-label" htmlFor="sk-store">
+                  매장명 <span className="lead-optional">(선택)</span>
+                </label>
+                <input
+                  id="sk-store"
+                  type="text"
+                  className="lead-input"
+                  value={store}
+                  onChange={(e) => setStore(e.target.value)}
+                  placeholder="예: ○○카페"
+                  maxLength={40}
+                />
+              </div>
+
+              <div className="lead-field">
                 <label className="lead-label">
                   개인정보 수집/이용 동의 <span className="lead-required">*</span>
                 </label>
@@ -271,7 +289,7 @@ export default function SkLeadForm() {
                 </button>
                 {showTerms && (
                   <div className="sk-terms-box">
-                    <strong>수집 항목</strong> 매장명(혹은 성함), 연락처
+                    <strong>수집 항목</strong> 성함, 연락처, 매장명(선택)
                     <br />
                     <strong>수집 목적</strong> 한화비전 키퍼 전환 상담 연락
                     <br />
