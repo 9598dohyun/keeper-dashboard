@@ -124,11 +124,17 @@
   padding-bottom: 20px;
   border-bottom: 1px solid var(--cal-line-soft);
   text-align: center;
-  font-size: clamp(15px, 1.8vw, 17px);
+  letter-spacing: -0.4px;
+}
+.sk-main .lead-card .sk-form-hook {
+  display: block;
+  font-size: clamp(16px, 2vw, 18px);
   font-weight: 700;
   color: var(--cal-ink);
-  line-height: 1.55;
-  letter-spacing: -0.4px;
+  line-height: 1.5;
+}
+.sk-main .lead-card .sk-form-hook strong {
+  color: var(--cal-accent);
 }
 
 @media (max-width: 600px) {

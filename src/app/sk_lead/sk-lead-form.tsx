@@ -190,9 +190,10 @@ export default function SkLeadForm() {
       <section className="lead-section" id="sk-lead-form" ref={formRef}>
         <div className="lead-card">
           <p className="sk-form-lede">
-            연락처를 남겨주시면 키퍼 전담 상담사가
-            <br />
-            영업일 기준 1~2일 내 직접 전화드립니다.
+            <span className="sk-form-hook">
+              지금 신청하시면 렌탈·약정 없이
+              <br />한 번 설치로 <strong>평생 내 장비</strong>가 됩니다
+            </span>
           </p>
           {status === 'success' ? (
             <div className="lead-success">
