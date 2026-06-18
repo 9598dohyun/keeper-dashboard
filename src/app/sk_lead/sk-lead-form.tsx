@@ -333,7 +333,7 @@ export default function SkLeadForm() {
 
       {status !== 'success' && showFab && (
         <a href="#sk-lead-form" className="sk-fab">
-          💬 1분이면 신청 끝
+          💬 30초면 신청 끝
         </a>
       )}
     </main>
