@@ -7,7 +7,7 @@ import './sk-lead.css';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
-const HERO_IMAGE = '/%ED%95%9C%ED%99%94%EB%B9%84%EC%A0%84%20%EB%A9%94%EC%9D%B8%ED%8E%98%EC%9D%B4%EC%A7%80.jpeg';
+const HERO_IMAGE = '/%ED%95%9C%ED%99%94%EB%A9%94%EC%9D%B8%EC%9D%B4%EB%AF%B8%EC%A7%80%20%EC%B5%9C%EC%A2%85.jpeg';
 
 const SWITCH_BENEFITS = [
   {
@@ -127,7 +127,7 @@ export default function SkLeadForm() {
         <div className="nav-inner">
           <div className="brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="brand-ci-logo" src="/keeper-ci-logo.png" alt="한화비전 keeper" />
+            <img className="brand-ci-logo" src="/%ED%95%9C%ED%99%94%ED%82%A4%ED%8D%BC%EB%A1%9C%EA%B3%A0.png" alt="한화비전 keeper" />
           </div>
         </div>
       </nav>
