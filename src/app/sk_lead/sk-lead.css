@@ -167,9 +167,8 @@
 html { scroll-behavior: smooth; }
 .sk-main .sk-fab {
   position: fixed;
-  left: 50%;
+  right: 20px;
   bottom: 20px;
-  transform: translateX(-50%);
   z-index: 50;
   display: inline-flex;
   align-items: center;
@@ -185,12 +184,13 @@ html { scroll-behavior: smooth; }
   text-decoration: none;
   white-space: nowrap;
 }
-.sk-main .sk-fab:active { transform: translateX(-50%) scale(0.97); }
+.sk-main .sk-fab:active { transform: scale(0.97); }
 #sk-lead-form { scroll-margin-top: 16px; }
 @media (max-width: 600px) {
   .sk-main .sk-fab {
     font-size: 15px;
     padding: 13px 24px;
+    right: 16px;
     bottom: 16px;
   }
 }

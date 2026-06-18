@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../cal/cal.css';
 import '../cal/lead/lead.css';
 import './sk-lead.css';
@@ -74,8 +74,21 @@ export default function SkLeadForm() {
   const [showTerms, setShowTerms] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [showFab, setShowFab] = useState(true);
+  const formRef = useRef<HTMLElement>(null);
 
   const canSubmit = name.trim().length > 0 && isValidPhone(phone) && agree && status !== 'submitting';
+
+  useEffect(() => {
+    const el = formRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowFab(!entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -174,7 +187,7 @@ export default function SkLeadForm() {
         </div>
       </section>
 
-      <section className="lead-section" id="sk-lead-form">
+      <section className="lead-section" id="sk-lead-form" ref={formRef}>
         <div className="lead-card">
           <p className="sk-form-lede">
             연락처를 남겨주시면 키퍼 전담 상담사가
@@ -299,7 +312,7 @@ export default function SkLeadForm() {
         <div className="footer-line">한화비전 KEEPER · SK브로드밴드 종료 고객 전용 안내</div>
       </footer>
 
-      {status !== 'success' && (
+      {status !== 'success' && showFab && (
         <a href="#sk-lead-form" className="sk-fab">
           💬 1분이면 신청 끝
         </a>
