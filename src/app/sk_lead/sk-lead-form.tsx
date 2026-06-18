@@ -129,9 +129,9 @@ export default function SkLeadForm() {
       <section className="sk-intro">
         <div className="sk-eyebrow">SK브로드밴드 CCTV 서비스 종료 고객 전용</div>
         <h1>
-          지금 내시던 비용 그대로,
+          지금 내시던 비용 그대로
           <br />
-          <span className="accent">한화비전 키퍼</span>로 부담 없이.
+          <span className="accent">한화비전 키퍼</span>로 부담 없이
         </h1>
         <p>
           SK브로드밴드 CCTV 종료 안내를 받으신 고객님께,
@@ -174,7 +174,7 @@ export default function SkLeadForm() {
         </div>
       </section>
 
-      <section className="lead-section">
+      <section className="lead-section" id="sk-lead-form">
         <div className="lead-card">
           <p className="sk-form-lede">
             연락처를 남겨주시면 키퍼 전담 상담사가
@@ -298,6 +298,12 @@ export default function SkLeadForm() {
       <footer className="cal-footer">
         <div className="footer-line">한화비전 KEEPER · SK브로드밴드 종료 고객 전용 안내</div>
       </footer>
+
+      {status !== 'success' && (
+        <a href="#sk-lead-form" className="sk-fab">
+          💬 1분이면 신청 끝
+        </a>
+      )}
     </main>
   );
 }
