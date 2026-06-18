@@ -194,7 +194,7 @@ export default function SkLeadForm() {
           <p className="sk-form-lede">
             <span className="sk-form-hook">
               지금 신청하시면 렌탈·약정 없이
-              <br />한 번 설치로 <strong>평생 내 장비</strong>가 됩니다
+              <br />한 번 설치로 <strong>평생 내 CCTV</strong>가 됩니다
             </span>
           </p>
           {status === 'success' ? (
