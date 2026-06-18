@@ -45,12 +45,10 @@ const WHY_KEEPER = [
     ico: '💾',
     text: '24시간 녹화 영상 / 4주 저장, 해킹 위험으로부터 안전!',
   },
-  { ico: '🔧', text: '3년 무상 A/S' },
   {
     ico: '📱',
     text: '앱으로 매장 실시간 확인 + 문열림 감지 시 앱 알림 (경비모드)',
   },
-  { ico: '🛡', text: '안심케어 한화 보험 1년 무료' },
 ];
 
 function normalizePhone(raw: string) {
