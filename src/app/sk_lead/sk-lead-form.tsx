@@ -7,7 +7,7 @@ import './sk-lead.css';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
-const HERO_IMAGE = '/photo_2026-06-17%2018.57.12.jpeg';
+const HERO_IMAGE = '/%ED%95%9C%ED%99%94%EB%B9%84%EC%A0%84%20%EB%A9%94%EC%9D%B8%ED%8E%98%EC%9D%B4%EC%A7%80.jpeg';
 
 const SWITCH_BENEFITS = [
   {
@@ -333,7 +333,7 @@ export default function SkLeadForm() {
 
       {status !== 'success' && showFab && (
         <a href="#sk-lead-form" className="sk-fab">
-          💬 30초면 신청 끝
+          💬 10초면 신청 끝
         </a>
       )}
     </main>
