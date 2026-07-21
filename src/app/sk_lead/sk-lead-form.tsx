@@ -12,8 +12,8 @@ const HERO_IMAGE = '/%ED%95%9C%ED%99%94%EB%A9%94%EC%9D%B8%EC%9D%B4%EB%AF%B8%EC%A
 const SWITCH_BENEFITS = [
   {
     ico: '💰',
-    lead: '요금 부담 그대로',
-    text: '지금 수준의 비용으로 400만 화소 QHD·4주 영상 보관까지 업그레이드',
+    lead: '합리적인 월 부담으로 전환',
+    text: '400만 화소 QHD·4주 영상 보관까지 업그레이드 (1채널 단독 설치는 별도 견적 상담)',
   },
   {
     ico: '🆓',
@@ -144,14 +144,17 @@ export default function SkLeadForm() {
       <section className="sk-intro">
         <div className="sk-eyebrow">SK브로드밴드 CCTV 서비스 종료 고객 전용</div>
         <h1>
-          지금 내시던 비용 그대로
+          SK브로드밴드 종료 걱정 없이
           <br />
           <span className="accent">한화비전 키퍼</span>로 부담 없이
         </h1>
         <p>
           SK브로드밴드 CCTV 종료 안내를 받으신 고객님께,
           <br />
-          지금 내시던 비용 수준에서 한화비전 키퍼로 부담 없이 전환하실 수 있도록 안내드립니다.
+          한화비전 키퍼로 부담 없이 전환하실 수 있도록 안내드립니다.
+        </p>
+        <p className="sk-note">
+          1채널 단독으로 사용 중이신 고객님은 구성에 따라 요금이 달라질 수 있어, 별도 견적 상담으로 안내드립니다.
         </p>
       </section>
 
