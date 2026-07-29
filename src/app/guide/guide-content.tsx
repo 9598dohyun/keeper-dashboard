@@ -157,8 +157,8 @@ export default function GuideContent() {
 
   return (
     <div className="px-4 py-6">
-      {/* 헤더·검색·탭바: 중앙 max-w-2xl */}
-      <div className="max-w-2xl mx-auto space-y-4">
+      {/* 헤더·검색·탭바: 중앙 800px */}
+      <div className="max-w-[800px] mx-auto space-y-4">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
           <div>
@@ -209,7 +209,7 @@ export default function GuideContent() {
       <div className="relative mt-4">
         {/* 좌측 여백: 퀵 가이드 사이드바 (데스크톱, 중앙 콘텐츠 왼쪽에 배치) */}
         {currentQuickGuide && (
-          <div className="hidden xl:block absolute right-[calc(50%+336px)] w-72" style={{ top: 0 }}>
+          <div className="hidden xl:block absolute right-[calc(50%+400px)] w-72" style={{ top: 0 }}>
             <div data-section className="sticky top-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100 scroll-mt-28">
               <h3 className="text-[13px] font-bold text-gray-900 mb-3">💡 이럴 땐 이렇게</h3>
               {currentQuickGuide}
@@ -217,8 +217,8 @@ export default function GuideContent() {
           </div>
         )}
 
-        {/* 중앙: 탭 콘텐츠 (max-w-2xl, 화면 중앙 고정) */}
-        <div className="max-w-2xl mx-auto">
+        {/* 중앙: 탭 콘텐츠 (800px, 화면 중앙 고정) */}
+        <div className="max-w-[800px] mx-auto">
             {/* 모바일: 퀵가이드를 탭 콘텐츠 상단에 표시 */}
             {currentQuickGuide && (
               <div data-section className="lg:hidden bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4 scroll-mt-28">

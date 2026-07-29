@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 
 const tabs = [
   { href: '/', label: '상담 가이드' },
-  { href: '/dashboard', label: '대시보드' },
+  // 대시보드는 임시 비활성화 (링크만 숨김, /dashboard 라우트는 유지). 노출 재개 시 아래 주석 해제
+  // { href: '/dashboard', label: '대시보드' },
 ];
 
 export default function NavTabs() {
