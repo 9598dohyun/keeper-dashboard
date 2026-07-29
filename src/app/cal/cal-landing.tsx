@@ -21,7 +21,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: '일시불이 부담스럽습니다. 할부 가능한가요?',
-    a: '네. 현대·롯데·삼성카드는 36개월 무이자, KB국민·농협카드는 18개월 무이자, 그 외 카드사는 24개월 무이자 분할이 가능합니다. 36개월 기준 카메라 대당 월 66,000원입니다.',
+    a: '네. 삼성·현대·롯데·국민·하나·신한카드는 36개월 무이자, 우리카드는 24개월, 농협카드는 18개월, BC카드는 12개월 무이자 분할이 가능합니다. 36개월 기준 카메라 대당 월 66,000원입니다.',
   },
   {
     q: '설치 후 A/S는 어떻게 됩니까?',
@@ -239,7 +239,7 @@ export default function CalLanding() {
                   <div>
                     <div className="total-card-label">36개월 무이자 시 월 납입</div>
                     <div className="total-card-value accent num">{formatKRW(totals.m36)}</div>
-                    <div className="total-card-sub">현대·롯데·삼성카드 기준</div>
+                    <div className="total-card-sub">삼성·현대·롯데·국민·하나·신한카드 기준</div>
                   </div>
                 </div>
                 <div className="breakdown">
@@ -353,7 +353,7 @@ export default function CalLanding() {
         </div>
 
         <div className="calc-notes">
-          <strong>비교 기준</strong> — 키퍼: 카메라 대당 396,000원(VAT 포함), NVR(녹화기)·저장공간 무상 제공. 카드 결제 시 36개월 무이자(현대·롯데·삼성), 18개월(KB국민·농협), 그 외 24개월. 렌탈 비교는 입력하신 월 비용을 그대로 누적합니다(렌탈 계약은 일반적으로 3~5년 약정 후 자동 연장 또는 재계약).{' '}
+          <strong>비교 기준</strong> — 키퍼: 카메라 대당 396,000원(VAT 포함), NVR(녹화기)·저장공간 무상 제공. 카드 결제 시 36개월 무이자(삼성·현대·롯데·국민·하나·신한), 24개월(우리), 18개월(농협), 12개월(BC). 렌탈 비교는 입력하신 월 비용을 그대로 누적합니다(렌탈 계약은 일반적으로 3~5년 약정 후 자동 연장 또는 재계약).{' '}
           <strong>카메라는 결제 즉시 사장님 자산</strong>으로 등재됩니다.
         </div>
       </section>

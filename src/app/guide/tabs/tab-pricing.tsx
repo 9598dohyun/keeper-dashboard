@@ -5,10 +5,10 @@ export default function PriceTab() {
   return (
     <div className="space-y-4">
       <SectionCard id="price-installment" title="💰 할부 가격표 (36개월 무이자)">
-        <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·저장공간 포함 | 삼성·현대·롯데·국민·하나 무이자</p>
+        <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·저장공간 포함 | 삼성·현대·롯데·국민·하나·신한 36개월 무이자</p>
         <Alert type="warning">고객 안내 시 반드시 <strong>VAT 포함 금액</strong>으로 안내</Alert>
         <div className="mt-2">
-          <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만 | 8대↑ 5%, 12대↑ 10% 자동 적용</Alert>
+          <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만 | 8대↑ 5%, 12대↑ 10% 자동 적용 (단, <strong>네이버 스마트스토어는 8대 이상 수량 할인 미적용</strong>)</Alert>
         </div>
         <div className="mt-3">
           <Table
@@ -42,11 +42,12 @@ export default function PriceTab() {
           ]}
         />
         <h3 className="text-[14px] font-semibold mt-4 mb-2">이전설치 (철거→재설치)</h3>
+        <p className="text-[13px] text-gray-500 mb-2">대당 132,000원 균일가</p>
         <Table
           headers={['대수', '청구 가격']}
           rows={[
-            ['2대', '400,000원'], ['3대', '520,000원'],
-            ['4대', '640,000원'], ['5대', '760,000원'],
+            ['2대', '264,000원'], ['3대', '396,000원'],
+            ['4대', '528,000원'], ['5대', '660,000원'],
           ]}
         />
       </SectionCard>
@@ -55,9 +56,9 @@ export default function PriceTab() {
         <Table
           headers={['항목', '내용']}
           rows={[
-            ['결제 경로', '앱 내 결제(기본) / 결제 링크(할인 시) / 네이버 스토어(무이자 3개월만)'],
-            ['36개월 무이자', <><strong key="c">삼성·현대·롯데·국민·하나</strong> 개인 신용카드 (법인카드 불가)</>],
-            ['기타 카드', '1~2년 할부 가능'],
+            ['결제 경로', '앱 내 결제(기본) / 결제 링크(할인 시) / 네이버 스마트스토어'],
+            ['카드 무이자', <>36개월: <strong key="c">삼성·현대·롯데·국민·하나·신한</strong> / 24개월: 우리 / 18개월: 농협 / 12개월: BC (모두 개인 신용카드, 법인카드 불가)</>],
+            ['네이버 스마트스토어', <>최대 무이자 <strong key="nv">5개월</strong> · <Tag key="nvt" color="red">8대 이상 수량 할인 미적용</Tag><br/><a href="https://smartstore.naver.com/shopmanager_keeper/products/11980485529" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">구매 링크</a></>],
             ['체크카드', '일시불만 가능'],
             ['카카오톡 결제', '고령·카드 없는 고객 → 알림톡 결제 링크 제공'],
             ['분리 결제', '가능 (예: 3대 일시불 + 2대 할부)'],
