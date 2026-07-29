@@ -45,10 +45,6 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p><QuickGuideTag color="red">주의</QuickGuideTag> <strong>법인은 일시불만</strong> / 개인사업자 할부 가능</p>
         <p className="text-gray-400 mt-1">초반에 법인/개인 확인 필수</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="🖥️" title="&quot;모니터 포함이에요?&quot;">
-        <p><strong>모니터 별도</strong> → 고객이 준비</p>
-        <p className="text-red-500 mt-1">🚨 가격 안내 직후 반드시 안내 (클레임 다수)</p>
-      </QuickGuideItem>
       <QuickGuideItem emoji="💸" title="예산 초과 고객 대응">
         <p>&quot;키퍼 정가 판매라 가격 조정 불가&quot; 솔직 안내</p>
         <p className="mt-1">→ 대수 최적화 제안 or &quot;현장에서 추가/감소 조정 가능&quot;</p>
