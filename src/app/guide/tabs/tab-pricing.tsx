@@ -7,39 +7,28 @@ export default function PriceTab() {
       <SectionCard id="price-installment" title="💰 할부 가격표 (36개월 무이자)">
         <p className="text-[13px] text-gray-500 mb-2">녹화기(NVR)·저장공간 포함 | 삼성·현대·롯데·국민·하나 무이자</p>
         <Alert type="warning">고객 안내 시 반드시 <strong>VAT 포함 금액</strong>으로 안내</Alert>
+        <div className="mt-2">
+          <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만 | 8대↑ 5%, 12대↑ 10% 자동 적용</Alert>
+        </div>
         <div className="mt-3">
           <Table
-            headers={['대수', '월 할부금 (VAT포함)', '총액 (VAT포함)']}
+            headers={['대수', '할인율', '월 할부금 (VAT포함)', '총액 (VAT포함)']}
             rows={[
-              ['2대', <strong key="p2">22,000원</strong>, '792,000원'],
-              ['3대', <strong key="p3">33,000원</strong>, '1,188,000원'],
-              ['4대', <strong key="p4">44,000원</strong>, '1,584,000원'],
-              ['5대', <strong key="p5">55,000원</strong>, '1,980,000원'],
-              ['6대', <strong key="p6">66,000원</strong>, '2,376,000원'],
-              ['7대', <strong key="p7">77,000원</strong>, '2,772,000원'],
-              ['8대', <strong key="p8">88,000원</strong>, '3,168,000원'],
-              ['9대', <strong key="p9">99,000원</strong>, '3,564,000원'],
-              ['10대', <strong key="p10">110,000원</strong>, '3,960,000원'],
-              ['12대', <strong key="p12">132,000원</strong>, '4,752,000원'],
-              ['16대', <strong key="p16">176,000원</strong>, '6,336,000원'],
-              ['20대', <strong key="p20">220,000원</strong>, '7,920,000원'],
+              ['2대', '-', <strong key="p2">22,000원</strong>, '792,000원'],
+              ['3대', '-', <strong key="p3">33,000원</strong>, '1,188,000원'],
+              ['4대', '-', <strong key="p4">44,000원</strong>, '1,584,000원'],
+              ['5대', '-', <strong key="p5">55,000원</strong>, '1,980,000원'],
+              ['6대', '-', <strong key="p6">66,000원</strong>, '2,376,000원'],
+              ['7대', '-', <strong key="p7">77,000원</strong>, '2,772,000원'],
+              ['8대', <Tag key="d8" color="blue">5%</Tag>, <strong key="p8">83,600원</strong>, '3,009,600원'],
+              ['9대', <Tag key="d9" color="blue">5%</Tag>, <strong key="p9">94,050원</strong>, '3,385,800원'],
+              ['10대', <Tag key="d10" color="blue">5%</Tag>, <strong key="p10">104,500원</strong>, '3,762,000원'],
+              ['12대', <Tag key="d12" color="green">10%</Tag>, <strong key="p12">118,800원</strong>, '4,276,800원'],
+              ['16대', <Tag key="d16" color="green">10%</Tag>, <strong key="p16">158,400원</strong>, '5,702,400원'],
+              ['20대', <Tag key="d20" color="green">10%</Tag>, <strong key="p20">198,000원</strong>, '7,128,000원'],
             ]}
           />
         </div>
-      </SectionCard>
-
-      <SectionCard id="price-discount" title="🏷️ 할인 정책">
-        <Alert type="info"><strong>개수 할인</strong>(수량별) = 할부·일시불 모두 적용 | <strong>일시불 할인</strong> = 일시불에서만</Alert>
-        <Table
-          headers={['대수', '할인율', '할인가 (VAT포함)', '절감액']}
-          rows={[
-            ['8대', <Tag key="d8" color="blue">5%</Tag>, '3,009,600원', '158,400원'],
-            ['10대', <Tag key="d10" color="blue">5%</Tag>, '3,762,000원', '198,000원'],
-            ['12대', <Tag key="d12" color="green">10%</Tag>, '4,276,800원', '475,200원'],
-            ['16대', <Tag key="d16" color="green">10%</Tag>, '5,702,400원', '633,600원'],
-            ['20대', <Tag key="d20" color="green">10%</Tag>, '7,128,000원', '792,000원'],
-          ]}
-        />
       </SectionCard>
 
       <SectionCard id="price-relocation" title="🔄 위치변경·이전설치 단가">
