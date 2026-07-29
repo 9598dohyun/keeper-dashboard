@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Tag, SectionCard, Table } from '../components/guide-helpers';
+import { Alert, SectionCard, Table } from '../components/guide-helpers';
 
 export default function AtTab() {
   return (
@@ -18,30 +18,6 @@ export default function AtTab() {
             ]}
           />
         </div>
-      </SectionCard>
-
-      <SectionCard title="📊 딜스테이지">
-        <Table
-          headers={['딜스테이지', '설명', '진입 조건']}
-          rows={[
-            [<Tag key="s1" color="blue">상담예정</Tag>, '첫 통화 전 리드', '리드 유입 시'],
-            [<Tag key="s2" color="blue">전화상담예약</Tag>, '고객과 통화 일시 확정', '콜백 약속 잡힌 경우'],
-            [<Tag key="s3" color="blue">전화상담랜덤</Tag>, '예약 없이 콜 시도 대상', '예약 없는 리드'],
-            [<Tag key="s4" color="yellow">상담완료</Tag>, '첫 통화 완료, 앱 설치/회원가입 유도 중', '첫 상담 완료 시'],
-            [<Tag key="s5" color="green">회원가입</Tag>, '앱 회원가입 완료, 결제 유도 중', '키퍼앱 회원가입 확인'],
-            [<Tag key="s6" color="green">결제완료(영원)</Tag>, '구매 완료', '키퍼 어드민에서 확인'],
-            [<Tag key="s7" color="red">실패</Tag>, '전환 실패', '실패 사유와 함께 처리'],
-          ]}
-        />
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">⏰ 장기 체류 경고</h3>
-        <Table
-          headers={['딜스테이지', '경고', '즉시 조치']}
-          rows={[
-            ['상담예정', <Tag key="w1" color="yellow">2일</Tag>, <Tag key="a1" color="red">3일</Tag>],
-            ['상담완료', <Tag key="w2" color="yellow">5일</Tag>, <Tag key="a2" color="red">7일</Tag>],
-            ['회원가입', <Tag key="w3" color="yellow">3일</Tag>, <Tag key="a3" color="red">5일</Tag>],
-          ]}
-        />
       </SectionCard>
 
       <SectionCard title="❌ 실패 사유">
