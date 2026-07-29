@@ -105,6 +105,7 @@ Next.js (Vercel)
 |------|------|
 | `fetch-airtable.ts` | Airtable API → data/피추천인.json + data/이력관리.json (개인정보 제외) |
 | `compute-and-push.ts` | JSON → 지표 계산 → Vercel KV 저장 (일간 7일TTL + 14일 추이 + 메타) |
+| `keeper-reports/` | **별도 Python 리포트 파이프라인** (위 TS 대시보드와 무관) — 구글 시트용 일/주/월 리포트 생성. `compute_metrics.py`(TS `metrics/index.ts`의 원본), `push_to_sheets.py`, `fetch_snapshot.py`, `requirements.txt` |
 
 ### src/lib/ — 핵심 로직
 
@@ -118,6 +119,7 @@ Next.js (Vercel)
 | `metrics/actions.ts` | 상태변경 이벤트 분석 — 컨택/부재중/첫접촉 시간 판정 |
 | `metrics/lead-time.ts` | 리드타임 통계 — 중앙값/평균/버킷별 분포 |
 | `metrics/channel.ts` | 유입 채널 정규화 — 전체유입경로/진입경로 필드 추출 |
+| `metrics/page.ts` | 랜딩 페이지 경로 정규화 — `진입경로` 우선, `[참고]전체유입경로` 폴백 (`/api/metrics?type=page-trend`가 의존) |
 
 ### src/app/api/ — 백엔드 API
 

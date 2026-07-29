@@ -103,7 +103,7 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p className="text-gray-400 mt-1">3대 이하는 프로모션 안내 금지</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="👤" title="&quot;직원 출퇴근 관리도 돼요?&quot;">
-        <p><strong>월 500원 (곧 무료화 예정)</strong>, 출퇴근 자동 계산</p>
+        <p><strong>무료</strong>, 출퇴근 자동 계산</p>
         <p className="text-gray-400 mt-1">매장형(카페·식당·미용실) 고객 관심 높음 → 선제 안내</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🏗️" title="실외 설치 문의">
@@ -120,15 +120,15 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p>S1·KT는 <strong>렌탈</strong>이라 3년 뒤 카메라 가져갑니다.</p>
         <p>중국산은 A/S 1년이고 해킹 이슈도 걱정되죠.</p>
         <p>키퍼는 <strong>한화비전이 직접 만든 CCTV를 36개월 할부로 사시는 것</strong>이라</p>
-        <p>3년 뒤엔 고객님 소유고 추가 비용도 없습니다.</p>
-        <p>저장 30일, 400만 QHD, A/S 3년 무상 — 이게 차이입니다.&quot;</p>
+        <p>구매라 처음부터 고객님 소유고, 할부만 끝나면 추가 비용도 없습니다.</p>
+        <p>저장 30일, 400만 QHD, 무상 A/S — 이게 차이입니다.&quot;</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🔵" title="&quot;캡스/세콤 알아보고 있어요&quot;">
         <p>&quot;경비 출동이 본업이라 <strong>월 10만+ 영구</strong>. 키퍼는 CCTV 구매라 3년이면 끝&quot;</p>
         <p className="mt-1">&quot;캡스 AI 기능은 대형·무인매장용. 소규모는 CCTV+도어센서면 충분&quot;</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🟠" title="&quot;S1/KT 견적 받았는데요&quot;">
-        <p>&quot;3년 뒤 카메라 가져갑니다. 키퍼는 3년 뒤 <strong>고객님 소유 + 월 0원</strong>&quot;</p>
+        <p>&quot;3년 뒤 카메라 가져갑니다. 키퍼는 구매라 <strong>처음부터 고객님 소유 + 할부 끝나면 월 0원</strong>&quot;</p>
         <p className="mt-1">&quot;S1 저장 17~20일, KT 15일 → 키퍼 <strong>30일</strong>&quot;</p>
         <p className="mt-1"><strong>양도:</strong> &quot;가게 팔 때 권리금에 카메라값 포함 가능&quot; (렌탈은 불가)</p>
       </QuickGuideItem>
@@ -145,8 +145,8 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p className="text-gray-400 mt-1">보이스피싱 의심 고객 증가 → 공식성 강조 필수</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="📋" title="&quot;3년 뒤엔 어떻게 되나요?&quot;">
-        <p>&quot;36개월 완납 후 <strong>고객님 소유</strong>. 렌탈 아닙니다&quot;</p>
-        <p className="mt-1">A/S: 3년 무상 → 3~5년 출장비 8만원 + 부품 유상</p>
+        <p>&quot;구매라 <strong>설치 즉시 고객님 소유</strong>. 렌탈 아닙니다. 카드 할부만 끝나면 낼 게 없습니다&quot;</p>
+        <p className="mt-1">A/S: 무상 A/S 지원</p>
         <p className="mt-1"><strong>양도:</strong> 가게 매매 시 권리금에 포함 가능</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🚨" title="클레임 발생 시 (3단계)">

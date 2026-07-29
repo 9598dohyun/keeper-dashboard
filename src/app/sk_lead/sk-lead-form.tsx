@@ -28,7 +28,7 @@ const SWITCH_BENEFITS = [
   {
     ico: '🛡',
     lead: '끝까지 책임',
-    text: '3년 무상 A/S + 안심케어 한화 보험 1년 무료',
+    text: '무상 A/S + 안심케어 한화 보험 1년 무료',
   },
 ];
 

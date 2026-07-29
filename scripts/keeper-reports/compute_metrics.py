@@ -33,7 +33,7 @@ import statistics
 
 SNAP = Path(os.environ.get(
     'KEEPER_SNAPSHOT_DIR',
-    "/Users/dohyeon/Documents/업무/사바사/한화비전/데이터/airtable_snapshot"
+    "/Users/dohyeon/Documents/업무/한화비전/데이터/airtable_snapshot"
 ))
 KST = timezone(timedelta(hours=9))
 BIZ_START_HOUR = 20  # 영업일 시작: 전날 20:00 KST

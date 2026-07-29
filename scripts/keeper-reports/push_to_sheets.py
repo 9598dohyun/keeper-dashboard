@@ -26,7 +26,7 @@ from pathlib import Path
 # 프로젝트 경로 (로컬 기본값, GitHub Actions에선 환경변수로 덮어쓴다)
 PROJECT = Path(os.environ.get(
     'KEEPER_PROJECT_DIR',
-    "/Users/dohyeon/Documents/업무/사바사/한화비전"
+    "/Users/dohyeon/Documents/업무/한화비전"
 ))
 # compute_metrics는 같은 디렉토리에 있어야 함 (Actions에선 scripts/keeper-reports/)
 sys.path.insert(0, str(Path(__file__).parent))
