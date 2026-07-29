@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 // SK브로드밴드 종료 고객 전용 (/sk_lead 페이지)
 // 별도 베이스: SK브로드밴드 통합관리 (appa2Foo0JnvfPmlp)
 const SK_BASE_ID = process.env.SK_AIRTABLE_BASE_ID;
-const SK_TOKEN = process.env.SK_AIRTABLE_TOKEN;
+const SK_TOKEN = process.env.AIRTABLE_TOKEN; // 한화 통합 토큰 (키퍼+SK 두 베이스 접근)
 const SK_TABLE_ID = 'tbl45D05oiu3wffTT'; // 고객
 
 function isValidPhone(raw: string) {
