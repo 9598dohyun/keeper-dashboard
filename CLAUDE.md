@@ -25,19 +25,19 @@ npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
 
 이 앱은 **두 개의 독립된 기능**을 한 Next.js 프로젝트에 담고 있다.
 
-1. **내부 대시보드** (`/dashboard`, `/guide`) — 에어테이블 CRM 데이터를 12시간 단위로 수집해 KPI를 표시하는 read-only 분석 화면. KV 캐시 기반.
+1. **내부 대시보드** (`/dashboard`, `/guide`) — 에어테이블 CRM 데이터를 하루 1회(KST 23:59) 수집해 KPI를 표시하는 read-only 분석 화면. KV 캐시 기반.
 2. **외부 리드 수집 랜딩** (`/cal`, `/cal/lead`, `/trial`, `/sk_lead`) — 고객 대상 공개 페이지. 폼 제출을 API Route가 받아 에어테이블에 **직접 write**한다 (KV 거치지 않음).
 
 > **두 기능은 서로 다른 에어테이블 베이스를 쓴다 — 절대 혼동 금지.** 아래 "Airtable — 두 개의 베이스" 참조.
 
 ### 대시보드 파이프라인
 
-한화비전 키퍼 인바운드 SDR 대시보드. 에어테이블 CRM 데이터를 12시간 단위(07:59, 19:59 KST)로 수집하여 전환율·소진율·부재율 등 KPI를 표시한다.
+한화비전 키퍼 인바운드 SDR 대시보드. 에어테이블 CRM 데이터를 하루 1회(KST 23:59, 마감 직전)로 수집하여 그날 날짜로 스냅샷을 저장하고 전환율·소진율·부재율 등 KPI를 표시한다. 대시보드에서 날짜 드롭다운으로 과거 스냅샷을 조회할 수 있다.
 
 ### Data Pipeline
 
 ```
-GitHub Actions (12시간 단위 cron: KST 07:59, 19:59)
+GitHub Actions (하루 1회 cron: KST 23:59 = UTC 14:59)
   → scripts/fetch-airtable.ts: Airtable API → data/피추천인.json + data/이력관리.json
   → scripts/compute-and-push.ts: computeRange() → Upstash KV에 결과 저장
 
@@ -71,6 +71,10 @@ Next.js (Vercel)
 | `metrics:weekly:latest` | 최신 주간 결과 | 없음 |
 | `metrics:trend:14d` | TrendEntry[] (14일분) | 1일 |
 | `metrics:meta` | { lastUpdated, dataDate } | 없음 |
+| `v2:latest` | DashboardV2 최신 스냅샷 (= 오늘) | 없음 |
+| `v2:daily:{YYYY-MM-DD}` | DashboardV2 날짜별 스냅샷 (하루 1회 확정) | 30일 |
+| `v2:dates` | 저장된 날짜 목록 (내림차순 string[]) | 없음 |
+| `v2:meta` | { updatedAt, 집계시작, 오늘, counts } | 없음 |
 
 ### Airtable — 두 개의 베이스 (혼동 시 422 에러 / 잘못된 베이스 저장)
 

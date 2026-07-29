@@ -66,12 +66,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function DashboardV2() {
   const [data, setData] = useState<DashboardV2Data | null>(null);
+  const [dates, setDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(''); // '' = 최신
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (date: string) => {
     try {
-      const res = await fetch('/api/metrics-v2');
+      const url = date ? `/api/metrics-v2?date=${date}` : '/api/metrics-v2';
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as DashboardV2Data;
       setData(json);
@@ -83,30 +86,70 @@ export default function DashboardV2() {
     }
   }, []);
 
+  // 저장된 날짜 목록은 최초 1회만 로드
   useEffect(() => {
-    // KV는 하루 2번(cron)만 갱신되므로 페이지 로드 시 1회만 읽는다
-    fetchData();
-  }, [fetchData]);
+    fetch('/api/metrics-v2?type=dates')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list: string[]) => setDates(Array.isArray(list) ? list : []))
+      .catch(() => setDates([]));
+  }, []);
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-400">불러오는 중…</div>;
-  }
-  if (error || !data) {
-    return <div className="p-8 text-center text-red-500">데이터를 불러오지 못했습니다. {error}</div>;
-  }
+  // KV는 하루 1번(cron)만 갱신 — 선택 날짜가 바뀔 때만 읽는다
+  useEffect(() => {
+    setLoading(true);
+    fetchData(selectedDate);
+  }, [fetchData, selectedDate]);
 
-  const 갱신 = data._meta?.updatedAt
+  const 갱신 = data?._meta?.updatedAt
     ? new Date(data._meta.updatedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
     : '';
 
+  const 헤더 = (
+    <header className="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <h1 className="text-lg font-bold">SKB+인바운드 통합 대시보드</h1>
+        {data && (
+          <p className="text-xs text-gray-400">
+            집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준 · 갱신 {갱신}
+          </p>
+        )}
+      </div>
+      {dates.length > 0 && (
+        <select
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
+          aria-label="조회 날짜 선택"
+        >
+          <option value="">최신 ({dates[0]})</option>
+          {dates.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      )}
+    </header>
+  );
+
+  if (loading || error || !data) {
+    return (
+      <div className="max-w-[900px] mx-auto px-4 py-6 space-y-5">
+        {헤더}
+        {loading ? (
+          <div className="p-8 text-center text-gray-400">불러오는 중…</div>
+        ) : (
+          <div className="p-8 text-center text-red-500">
+            데이터를 불러오지 못했습니다. {error}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[900px] mx-auto px-4 py-6 space-y-5">
-      <header>
-        <h1 className="text-lg font-bold">SKB+인바운드 통합 대시보드</h1>
-        <p className="text-xs text-gray-400">
-          집계 {data.집계시작} 이후 · 응대/전환은 오늘({data.오늘}) 기준 · 갱신 {갱신}
-        </p>
-      </header>
+      {헤더}
 
       <Section title="인바운드">
         <ConversionBlock 전환={data.인바운드.전환} />

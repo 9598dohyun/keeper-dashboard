@@ -9,7 +9,7 @@ import path from 'path';
 import { V2Record, DashboardV2 } from '../src/lib/metrics2/types';
 import { computeInbound, computeSkb, computeCount } from '../src/lib/metrics2/compute';
 import { formatDate, toKST } from '../src/lib/metrics/biz-date';
-import { V2_AGGREGATE_START } from '../src/lib/constants';
+import { V2_AGGREGATE_START, KV_DAILY_TTL } from '../src/lib/constants';
 
 const DATA_DIR = path.join(__dirname, '../data');
 const KV_URL = process.env.KV_REST_API_URL!;
@@ -31,6 +31,25 @@ async function kvSet(key: string, value: unknown, exSeconds?: number) {
   if (!res.ok) {
     throw new Error(`KV SET failed: ${res.status} ${await res.text()}`);
   }
+}
+
+async function kvGet<T>(key: string): Promise<T | null> {
+  const res = await fetch(`${KV_URL}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${KV_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(['GET', key]),
+  });
+
+  if (!res.ok) {
+    throw new Error(`KV GET failed: ${res.status} ${await res.text()}`);
+  }
+
+  const json = (await res.json()) as { result: string | null };
+  if (json.result == null) return null;
+  return JSON.parse(json.result) as T;
 }
 
 /** 오늘 날짜 (KST, YYYY-MM-DD) — compute.ts의 kstDate와 동일 변환 사용 */
@@ -81,6 +100,15 @@ async function main() {
     counts: dashboard._meta.counts,
   });
 
+  // 날짜별 스냅샷 — 하루 1회(KST 23:59) 수집 시 그날 날짜로 확정 저장
+  await kvSet(`v2:daily:${오늘}`, dashboard, KV_DAILY_TTL);
+
+  // 저장된 날짜 목록 갱신 (내림차순 정렬, 중복 제거)
+  const 기존날짜 = (await kvGet<string[]>('v2:dates')) ?? [];
+  const 날짜목록 = Array.from(new Set([...기존날짜, 오늘])).sort().reverse();
+  await kvSet('v2:dates', 날짜목록);
+
+  console.log(`v2:daily:${오늘} 저장 완료 (누적 ${날짜목록.length}일)`);
   console.log('v2:latest 저장 완료');
   console.log(`  인바운드: 오늘응대 ${인바운드.전환.응대} / 결제 ${인바운드.전환.결제} / 전환율 ${인바운드.전환.전환율_pct}% / 오늘유입 ${인바운드.유입건수}`);
   console.log(`  SKB: 오늘응대 ${skb.전환.응대} / 결제 ${skb.전환.결제} / 전환율 ${skb.전환.전환율_pct}% / 오늘유입 ${skb.유입건수}`);

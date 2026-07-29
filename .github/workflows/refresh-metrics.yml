@@ -2,10 +2,9 @@ name: Refresh Dashboard Metrics
 
 on:
   schedule:
-    # 12시간 단위 업데이트 (UTC 기준)
-    # KST 07:59 = UTC 22:59, KST 19:59 = UTC 10:59
-    - cron: '59 22 * * *'   # KST 07:59 (매일)
-    - cron: '59 10 * * *'   # KST 19:59 (매일)
+    # 하루 1회, 마감 직전 수집 → 그날 날짜로 스냅샷 저장
+    # KST 23:59 = UTC 14:59
+    - cron: '59 14 * * *'   # KST 23:59 (매일)
   workflow_dispatch: # 수동 실행
 
 jobs:
