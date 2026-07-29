@@ -10,6 +10,7 @@ import VsTab from './tabs/tab-competitor';
 import CsTab from './tabs/tab-customer-service';
 import AtTab from './tabs/tab-airtable';
 import CallTab from './tabs/tab-phone-consultation';
+import CallScriptTab from './tabs/tab-call-script';
 
 /* ── 탭 정의 ── */
 const TAB_DEFS = [
@@ -20,6 +21,7 @@ const TAB_DEFS = [
   { id: 'cs', label: '고객응대' },
   { id: 'at', label: '에어테이블' },
   { id: 'call', label: '전화상담' },
+  { id: 'script', label: '콜 스크립트' },
 ] as const;
 
 type TabId = (typeof TAB_DEFS)[number]['id'];
@@ -96,6 +98,7 @@ export default function GuideContent() {
     cs: <CsTab />,
     at: <AtTab />,
     call: <CallTab />,
+    script: <CallScriptTab />,
   }), []);
 
   const currentQuickGuide = QUICK_GUIDES[activeTab] ?? null;
