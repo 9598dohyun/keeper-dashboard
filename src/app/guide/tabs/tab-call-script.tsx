@@ -203,6 +203,34 @@ export default function CallScriptTab() {
 그때 궁금한 거 정리해서 말씀해주셔도 되고요."`}</TemplateBox>
       </SectionCard>
 
+      <SectionCard title='🏠 "집에 설치하려는데요" — 가정주택 문의'>
+        <Alert type="info">아파트는 별개(설치 불가 → B2B 이관). 여기서는 단독·상가주택 등 개인 주택 기준</Alert>
+        <h3 className="text-[14px] font-semibold mt-3 mb-2">1단계: 설치 가능 안내 + 현장 확인 전제</h3>
+        <TemplateBox>{`"네, 가정집에도 설치 가능하세요.
+다만 주택은 매장이랑 배선이나 타공 구조가 달라서
+현장 확인을 한번 해봐야 정확한 견적이 나와요.
+
+주택은 기본 설치비 외에 대당 8만원 정도 추가 설치비가 붙는 경우가 많은데,
+현장 보고 정확히 안내해 드릴게요.
+도면이나 설치하실 위치 사진 몇 장 보내주시면 그걸 바탕으로 상담드리겠습니다."`}</TemplateBox>
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">2단계: 사업자 여부 확인 (보험·결제 안내 전 필수)</h3>
+        <TemplateBox>{`"혹시 사업자 등록이 되어 있으신 곳인가요, 아니면 순수 가정집이신가요?"`}</TemplateBox>
+        <div className="mt-2">
+          <Alert type="warning"><strong>사업자 있음</strong>(상가주택·재택사업장 등): 일반 매장과 동일 안내 (안심케어 가입·할부 가능) | <strong>사업자 없는 순수 가정집</strong>: 안심케어 보험 가입 불가 (설치·사용은 가능)</Alert>
+        </div>
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">사업자 없는 가정집 안내</h3>
+        <TemplateBox>{`"안심케어 보험은 사업자가 있어야 가입이 되는 상품이라,
+순수 가정집은 보험 가입은 어려우세요.
+CCTV 설치랑 사용은 문제없이 가능하시고요.
+그 부분만 미리 참고해 주시면 됩니다."`}</TemplateBox>
+        <h3 className="text-[14px] font-semibold mt-4 mb-2">3단계: 클로징 (도면·사진 확보)</h3>
+        <TemplateBox>{`"그럼 설치하실 위치 사진이나 도면 먼저 보내주시겠어요?
+보고 나서 대수랑 정확한 견적, 추가비 여부까지 안내해 드리겠습니다."`}</TemplateBox>
+        <div className="mt-2">
+          <Alert type="danger">주택은 현장 편차가 커서 <strong>도면·사진 확보 → 현장 확인 → 견적</strong> 순서 준수. 임의 금액 단정 금지</Alert>
+        </div>
+      </SectionCard>
+
       <SectionCard title="👋 거절 시 후크 멘트 — 마지막 한 마디">
         <Table
           headers={['상황', '후크 멘트']}

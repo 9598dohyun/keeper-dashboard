@@ -28,32 +28,6 @@ export function QuickGuideTag({ color, children }: { color: string; children: Re
 }
 
 export const QUICK_GUIDES: Record<string, React.ReactNode> = {
-  ops: (
-    <>
-      <QuickGuideItem emoji="🚨" title="아파트 설치 문의">
-        <p><strong>설치 불가</strong> → B2B 이관 (임채형 사원 경유)</p>
-        <p className="text-gray-400 mt-1">상업용과 구조 달라 추가비 과도</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="🏭" title="&quot;국산 카메라인가요?&quot;">
-        <p><QuickGuideTag color="red">금지</QuickGuideTag> &quot;국산 카메라&quot; 안내 절대 금지</p>
-        <p className="mt-1">→ &quot;한화비전 자체 기술력, 베트남 OEM 생산&quot;</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="🏗️" title="&quot;인테리어 중인데 언제 설치?&quot;">
-        <p>공사 순서: <strong>철거·사전전기→목공→전기(실사가능)→페인트·바닥마무리→CCTV</strong></p>
-        <p className="mt-1">→ CCTV는 <strong>페인트 이후, 가장 마지막</strong>에 설치 권장</p>
-        <p className="text-gray-400 mt-1 text-[12px]">넓은 면적은 스프레이건 작업 → CCTV 가림 어려움 / 페인트 전 설치 시 철거 후 미도장 부분 발생</p>
-        <p className="text-gray-400 mt-1">도면/사진 먼저 받고 대수 제안</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="🛗" title="엘리베이터 있는 건물">
-        <p><QuickGuideTag color="red">필수</QuickGuideTag> 초반에 &quot;엘리베이터 있나요?&quot; 필수 질문</p>
-        <p className="mt-1">산안법 적용 → <strong>수백만원 추가 시공비 가능</strong> 사전 경고</p>
-        <p className="text-red-500 mt-1">사례: 결제 후 590만원 추가비 통보 → 대형 클레임</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="📞" title="부재중 리드 대응">
-        <p>24시간 내 3회 시도(매회 문자) → 다음 날 오전/오후 각 1회 → 2~3일 뒤 마지막</p>
-      </QuickGuideItem>
-    </>
-  ),
   price: (
     <>
       <QuickGuideItem emoji="💰" title="&quot;얼마예요? 한 대당 / 월 얼마?&quot;">

@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import NavTabs from '../components/nav-tabs';
 import { QUICK_GUIDES } from './components/quick-guide';
-import OpsTab from './tabs/tab-operation';
 import PriceTab from './tabs/tab-pricing';
 import SpecTab from './tabs/tab-spec';
 import VsTab from './tabs/tab-competitor';
@@ -11,16 +10,17 @@ import CsTab from './tabs/tab-customer-service';
 import AtTab from './tabs/tab-airtable';
 import CallTab from './tabs/tab-phone-consultation';
 import CallScriptTab from './tabs/tab-call-script';
+import SmsScriptTab from './tabs/tab-sms-script';
 
 /* ── 탭 정의 ── */
 const TAB_DEFS = [
-  { id: 'ops', label: '내부운영룰' },
   { id: 'price', label: '가격·결제' },
   { id: 'spec', label: '제품스펙' },
   { id: 'vs', label: '경쟁사비교' },
   { id: 'cs', label: '고객응대' },
   { id: 'at', label: '에어테이블' },
   { id: 'call', label: '전화상담' },
+  { id: 'sms', label: '문자 스크립트' },
   { id: 'script', label: '콜 스크립트' },
 ] as const;
 
@@ -82,7 +82,7 @@ function hideSectionsWithoutMatch(root: HTMLElement, query: string) {
 
 /* ── 메인 컴포넌트 ── */
 export default function GuideContent() {
-  const [activeTab, setActiveTab] = useState<TabId>('ops');
+  const [activeTab, setActiveTab] = useState<TabId>('price');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -91,13 +91,13 @@ export default function GuideContent() {
   const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
 
   const tabComponents: Record<TabId, React.ReactNode> = useMemo(() => ({
-    ops: <OpsTab />,
     price: <PriceTab />,
     spec: <SpecTab />,
     vs: <VsTab />,
     cs: <CsTab />,
     at: <AtTab />,
     call: <CallTab />,
+    sms: <SmsScriptTab />,
     script: <CallScriptTab />,
   }), []);
 

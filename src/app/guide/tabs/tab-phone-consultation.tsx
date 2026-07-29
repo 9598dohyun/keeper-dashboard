@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Tag, SectionCard, Table, TemplateBox } from '../components/guide-helpers';
+import { Alert, Tag, SectionCard, Table } from '../components/guide-helpers';
 
 export default function CallTab() {
   return (
@@ -87,71 +87,7 @@ export default function CallTab() {
         />
       </SectionCard>
 
-      <SectionCard title="📋 견적 안내 문자 템플릿">
-        <h3 className="text-[14px] font-semibold mb-2">할부용</h3>
-        <TemplateBox>{`[한화 키퍼 CCTV 견적 안내]
-사장님, 신청하신 CCTV {N}대 도입 견적입니다.
-구매 즉시 사장님 소유가 되어 평생 무료로 사용 가능합니다!
-
-월 이용료: {월 할부금}원 (VAT 포함)
-* 36개월 무이자 할부 기준
-* 설치비 & 저장공간 0원 (무료 제공)
-
-한화 키퍼만의 특별 혜택
-1. 평생 소유: 할부 종료 후 추가 비용 없이 사장님 자산
-2. 한 달 이상 보관: 대용량 저장장치로 4주간 영상 보관
-3. 압도적 화질: 400만 화소(QHD) 선명한 영상
-4. 확실한 AS: 한화 직접 보증, 무상 AS
-5. 무료 보험: 1년간 안심케어 서비스 (최대 1,000만 원 보상)
-
-키퍼앱 다운로드: https://keeper.airbridge.io`}</TemplateBox>
-
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">일시불용</h3>
-        <TemplateBox>{`[한화 키퍼 CCTV 견적 안내]
-사장님, 신청하신 CCTV {N}대 도입 견적입니다.
-구매 즉시 사장님 소유가 되어 평생 무료로 사용 가능합니다!
-
-총금액: {총액}원 (VAT 포함)
-* 카메라 1대 기준 369,000원
-* 설치비 & 저장공간 0원 (무료 제공)
-
-한화 키퍼만의 특별 혜택
-1. 평생 소유: 할부 종료 후 추가 비용 없이 사장님 자산
-2. 한 달 이상 보관: 대용량 저장장치로 4주간 영상 보관
-3. 압도적 화질: 400만 화소(QHD) 선명한 영상
-4. 확실한 AS: 한화 직접 보증, 무상 AS
-5. 무료 보험: 1년간 안심케어 서비스 (최대 1,000만 원 보상)
-
-출동 서비스 없어도 안심!
-마감 후 문열림 감지 시 즉시 앱 알림 전송 및
-앱에서 바로 경찰 출동 요청이 가능합니다.
-
-▶ 키퍼앱 다운로드: https://keeper.airbridge.io`}</TemplateBox>
-
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">일반 견적 (부재중용)</h3>
-        <TemplateBox>{`[한화 키퍼 CCTV 견적 안내]
-사장님, 부재중으로 키퍼 CCTV 간단 견적 안내드립니다.
-구매 즉시 사장님 소유가 되어 평생 무료로 사용 가능합니다!
-
-월 이용료: 카메라 1대당 11,000원 (VAT 포함)
-* 36개월 무이자 할부 기준
-* 설치비 & 저장공간 0원 (무료 제공)
-
-한화 키퍼만의 특별 혜택
-1. 평생 소유: 할부 종료 후 추가 비용 없이 사장님 자산
-2. 한 달 이상 보관: 대용량 저장장치로 4주간 영상 보관
-3. 압도적 화질: 400만 화소(QHD) 선명한 영상
-4. 확실한 AS: 한화 직접 보증, 무상 AS
-5. 무료 보험: 1년간 안심케어 서비스 (최대 1,000만 원 보상)
-
-출동 서비스 없어도 안심!
-마감 후 문열림 감지 시 즉시 앱 알림 전송 및
-앱에서 바로 경찰 출동 요청이 가능합니다.
-
-연락주세요.
-
-▶ 키퍼앱 다운로드: https://keeper.airbridge.io`}</TemplateBox>
-      </SectionCard>
+      <Alert type="info">견적·회원가입·구매·설치 안내 문자 스크립트는 <strong>문자 스크립트 탭</strong>에서 확인하세요.</Alert>
     </div>
   );
 }
