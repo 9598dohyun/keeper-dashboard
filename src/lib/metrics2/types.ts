@@ -64,6 +64,19 @@ export interface CountMetrics {
   건수_오늘이후: number; // 유입시간이 집계시작 이후인 건수
 }
 
+/**
+ * 날짜별 추이 1일치 (누적이 아닌 그날 값)
+ *
+ * v2:daily:{날짜} 스냅샷에서 뽑아 만든다.
+ * 유입건수는 스냅샷상 '집계시작 이후 누적'이라 그대로 쓰면 우상향 곡선이 되므로,
+ * 전날 누적과의 차이로 그날 유입을 역산한다.
+ */
+export interface TrendPoint {
+  날짜: string; // YYYY-MM-DD
+  인바운드: { 응대: number; 결제: number; 전환율_pct: number; 유입: number | null };
+  skb: { 응대: number; 결제: number; 전환율_pct: number; 유입: number | null };
+}
+
 /** KV에 저장하는 대시보드 묶음 */
 export interface DashboardV2 {
   인바운드: InboundMetrics;

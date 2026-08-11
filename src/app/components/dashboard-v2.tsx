@@ -1,26 +1,66 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import MetricCard from './metric-card';
 import ChannelChart from './channel-chart';
-import type { DashboardV2 as DashboardV2Data, ConversionMetrics, AssigneeMetric } from '@/lib/metrics2/types';
+import TrendLines from './trend-lines';
+import type {
+  DashboardV2 as DashboardV2Data,
+  ConversionMetrics,
+  AssigneeMetric,
+  TrendPoint,
+} from '@/lib/metrics2/types';
 
-function ConversionBlock({ 전환 }: { 전환: ConversionMetrics }) {
+type TableKey = '인바운드' | 'skb';
+
+/**
+ * 전환율 헤드라인 — 대시보드가 이끄는 하나의 숫자.
+ * 나머지 분해값은 아래 한 줄로 붙여 위계를 만든다.
+ */
+function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
+  const 분해 = [
+    { label: '결제', value: 전환.분해.결제, tone: 'text-green-700' },
+    { label: '실패', value: 전환.분해.실패, tone: 'text-red-600' },
+    { label: '중복문의', value: 전환.분해.중복문의, tone: 'text-gray-600' },
+    { label: 'B2B', value: 전환.분해.B2B, tone: 'text-gray-600' },
+    { label: '미확정', value: 전환.분해.미확정, tone: 'text-amber-600' },
+  ];
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      <MetricCard
-        title="전환율 (오늘결제 ÷ 오늘응대)"
-        value={전환.전환율_pct}
-        unit="%"
-        sub={`결제 ${전환.결제} / 응대 ${전환.응대}`}
-        color="green"
-      />
-      <MetricCard title="오늘 응대" value={전환.응대} unit="건" color="blue" />
-      <MetricCard title="오늘 결제" value={전환.결제} unit="건" color="green" />
-      <MetricCard title="실패" value={전환.분해.실패} unit="건" color="red" />
-      <MetricCard title="중복문의" value={전환.분해.중복문의} unit="건" color="gray" />
-      <MetricCard title="B2B" value={전환.분해.B2B} unit="건" color="gray" />
-      <MetricCard title="미확정 (진행중)" value={전환.분해.미확정} unit="건" color="yellow" />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <div>
+          <p className="text-xs font-semibold text-gray-500">전환율</p>
+          <p className="flex items-baseline gap-1.5">
+            <span className="text-5xl font-bold tracking-tight text-gray-900 tabular-nums">
+              {전환.전환율_pct}
+            </span>
+            <span className="text-xl font-semibold text-gray-400">%</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            오늘 결제 {전환.결제} ÷ 오늘 응대 {전환.응대}
+          </p>
+        </div>
+
+        <div className="flex gap-6">
+          <div>
+            <p className="text-xs font-semibold text-gray-500">오늘 응대</p>
+            <p className="text-2xl font-bold text-gray-900 tabular-nums">{전환.응대}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">오늘 결제</p>
+            <p className="text-2xl font-bold text-green-700 tabular-nums">{전환.결제}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-3 border-t">
+        {분해.map((d) => (
+          <span key={d.label} className="text-xs">
+            <span className="text-gray-500">{d.label}</span>{' '}
+            <span className={`font-semibold tabular-nums ${d.tone}`}>{d.value}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -29,12 +69,14 @@ function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
   if (!rows || rows.length === 0) {
     return <p className="text-sm text-gray-400">오늘 응대 기록 없음</p>;
   }
+  const max = Math.max(...rows.map((r) => r.응대), 1);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-gray-500 border-b">
             <th className="py-2 pr-4 font-semibold">담당자</th>
+            <th className="py-2 px-4 font-semibold">응대량</th>
             <th className="py-2 px-4 font-semibold text-right">응대</th>
             <th className="py-2 px-4 font-semibold text-right">결제</th>
             <th className="py-2 pl-4 font-semibold text-right">전환율</th>
@@ -43,10 +85,20 @@ function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.담당자} className="border-b border-gray-100">
-              <td className="py-2 pr-4 font-medium">{r.담당자}</td>
-              <td className="py-2 px-4 text-right">{r.응대}</td>
-              <td className="py-2 px-4 text-right">{r.결제}</td>
-              <td className="py-2 pl-4 text-right font-semibold">{r.전환율_pct}%</td>
+              <td className="py-2 pr-4 font-medium whitespace-nowrap">{r.담당자}</td>
+              <td className="py-2 px-4 w-32">
+                <span className="block h-2 bg-gray-100 rounded-sm overflow-hidden">
+                  <span
+                    className="block h-full bg-blue-500 rounded-sm"
+                    style={{ width: `${(r.응대 / max) * 100}%` }}
+                  />
+                </span>
+              </td>
+              <td className="py-2 px-4 text-right tabular-nums">{r.응대}</td>
+              <td className="py-2 px-4 text-right tabular-nums">{r.결제}</td>
+              <td className="py-2 pl-4 text-right font-semibold tabular-nums">
+                {r.전환율_pct}%
+              </td>
             </tr>
           ))}
         </tbody>
@@ -55,10 +107,21 @@ function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  desc,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="bg-white rounded-2xl border shadow-sm p-5 space-y-4">
-      <h2 className="text-base font-bold text-gray-900">{title}</h2>
+    <section className="bg-white rounded-2xl border shadow-sm p-6 space-y-5">
+      <div>
+        <h2 className="text-base font-bold text-gray-900">{title}</h2>
+        {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
+      </div>
       {children}
     </section>
   );
@@ -66,8 +129,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function DashboardV2() {
   const [data, setData] = useState<DashboardV2Data | null>(null);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [dates, setDates] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(''); // '' = 최신
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [table, setTable] = useState<TableKey>('인바운드');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,8 +141,7 @@ export default function DashboardV2() {
       const url = date ? `/api/metrics-v2?date=${date}` : '/api/metrics-v2';
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as DashboardV2Data;
-      setData(json);
+      setData((await res.json()) as DashboardV2Data);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '데이터 조회 실패');
@@ -86,15 +150,18 @@ export default function DashboardV2() {
     }
   }, []);
 
-  // 저장된 날짜 목록은 최초 1회만 로드
   useEffect(() => {
     fetch('/api/metrics-v2?type=dates')
       .then((res) => (res.ok ? res.json() : []))
       .then((list: string[]) => setDates(Array.isArray(list) ? list : []))
       .catch(() => setDates([]));
+
+    fetch('/api/metrics-v2?type=trend&days=30')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list: TrendPoint[]) => setTrend(Array.isArray(list) ? list : []))
+      .catch(() => setTrend([]));
   }, []);
 
-  // KV는 하루 1번(cron)만 갱신 — 선택 날짜가 바뀔 때만 읽는다
   useEffect(() => {
     setLoading(true);
     fetchData(selectedDate);
@@ -105,36 +172,58 @@ export default function DashboardV2() {
     : '';
 
   const 헤더 = (
-    <header className="flex items-start justify-between gap-3 flex-wrap">
-      <div>
-        <h1 className="text-lg font-bold">SKB+인바운드 통합 대시보드</h1>
-        {data && (
-          <p className="text-xs text-gray-400">
-            집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준 · 갱신 {갱신}
-          </p>
+    <header className="space-y-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">SKB+인바운드 통합 대시보드</h1>
+          {data && (
+            <p className="text-xs text-gray-500 mt-1">
+              집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준 · 갱신 {갱신}
+            </p>
+          )}
+        </div>
+        {dates.length > 0 && (
+          <select
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
+            aria-label="조회 날짜 선택"
+          >
+            <option value="">최신 ({dates[0]})</option>
+            {dates.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         )}
       </div>
-      {dates.length > 0 && (
-        <select
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
-          aria-label="조회 날짜 선택"
-        >
-          <option value="">최신 ({dates[0]})</option>
-          {dates.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
+
+      {data && (
+        <div className="flex rounded-lg border overflow-hidden w-fit">
+          {(['인바운드', 'skb'] as TableKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => setTable(k)}
+              className={`px-4 py-1.5 text-xs font-semibold ${
+                table === k ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'
+              }`}
+            >
+              {k === 'skb' ? 'SKB' : '인바운드'}
+              <span className={table === k ? 'opacity-70' : 'text-gray-400'}>
+                {' '}
+                {data[k].전환.전환율_pct}%
+              </span>
+            </button>
           ))}
-        </select>
+        </div>
       )}
     </header>
   );
 
   if (loading || error || !data) {
     return (
-      <div className="max-w-[900px] mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
         {헤더}
         {loading ? (
           <div className="p-8 text-center text-gray-400">불러오는 중…</div>
@@ -147,33 +236,52 @@ export default function DashboardV2() {
     );
   }
 
+  const cur = data[table];
+  const 이름 = table === 'skb' ? 'SKB' : '인바운드';
+
   return (
-    <div className="max-w-[900px] mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
       {헤더}
 
-      <Section title="인바운드">
-        <ConversionBlock 전환={data.인바운드.전환} />
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">담당자별 (오늘 응대)</h3>
-          <AssigneeTable rows={data.인바운드.담당자별} />
-        </div>
-        <MetricCard title="오늘 유입" value={data.인바운드.유입건수} unit="건" color="blue" />
-        <ChannelChart data={data.인바운드.채널_Top} />
+      <Section title={`${이름} · 오늘`} desc={`${data.오늘} 응대 기준`}>
+        <ConversionHero 전환={cur.전환} />
       </Section>
 
-      <Section title="SKB">
-        <ConversionBlock 전환={data.skb.전환} />
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">담당자별 (오늘 응대)</h3>
-          <AssigneeTable rows={data.skb.담당자별} />
-        </div>
-        <MetricCard title="오늘 유입" value={data.skb.유입건수} unit="건" color="blue" />
+      <Section
+        title="날짜별 추이"
+        desc="누적이 아닌 그날 값. 지표마다 단위가 달라 축을 나눠 그린다."
+      >
+        <TrendLines data={trend} table={table} />
       </Section>
 
-      <Section title="레드텔레콤">
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard title="전체" value={data.레드텔레콤.건수_전체} unit="건" color="gray" />
-          <MetricCard title="오늘 이후 유입" value={data.레드텔레콤.건수_오늘이후} unit="건" color="blue" />
+      <Section title="담당자별" desc={`${data.오늘} 응대 기준`}>
+        <AssigneeTable rows={cur.담당자별} />
+      </Section>
+
+      <Section title="유입" desc={`집계 시작(${data.집계시작}) 이후 누적`}>
+        <div className="flex items-baseline gap-2 mb-4">
+          <span className="text-3xl font-bold text-gray-900 tabular-nums">
+            {cur.유입건수.toLocaleString()}
+          </span>
+          <span className="text-sm text-gray-500">건</span>
+        </div>
+        {table === '인바운드' && <ChannelChart data={data.인바운드.채널_Top} />}
+      </Section>
+
+      <Section title="레드텔레콤" desc="규모만 모니터링">
+        <div className="flex gap-8">
+          <div>
+            <p className="text-xs font-semibold text-gray-500">전체</p>
+            <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              {data.레드텔레콤.건수_전체.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">집계 시작 이후</p>
+            <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              {data.레드텔레콤.건수_오늘이후.toLocaleString()}
+            </p>
+          </div>
         </div>
       </Section>
 

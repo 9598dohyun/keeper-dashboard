@@ -128,3 +128,47 @@
     @apply font-sans;
   }
 }
+/* ---------------------------------------------------------------
+   데이터 시각화 토큰 (.viz-root 안에서만 유효)
+   검증 완료: 라이트/다크 모두 통과 (validate_palette.js)
+   - 라이트 #2a78d6 / #eb6834 / #1baf7a — aqua는 대비 3:1 미만이라
+     직접 라벨을 반드시 함께 노출한다(차트에 값 라벨 포함).
+   - 다크   #3987e5 / #d95926 / #199e70
+   --------------------------------------------------------------- */
+.viz-root {
+  color-scheme: light;
+  --surface-1: #ffffff;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #8b8a85;
+  --grid: #ececea;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --grid: #2f2f2d;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+  }
+}
+
+:root[data-theme='dark'] .viz-root {
+  color-scheme: dark;
+  --surface-1: #1a1a19;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --grid: #2f2f2d;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+}

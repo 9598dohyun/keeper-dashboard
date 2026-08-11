@@ -52,9 +52,24 @@ async function kvGet<T>(key: string): Promise<T | null> {
   return JSON.parse(json.result) as T;
 }
 
-/** 오늘 날짜 (KST, YYYY-MM-DD) — compute.ts의 kstDate와 동일 변환 사용 */
-function todayKST(): string {
-  return formatDate(toKST(new Date()));
+/**
+ * 집계 대상일 (KST, YYYY-MM-DD)
+ *
+ * cron은 KST 23:59에 걸려 있으나 GitHub Actions가 스케줄을 수십 분 지연 실행하는 일이 잦다.
+ * 그 결과 자정을 넘겨 실행되면 날짜가 바뀌어 "오늘 응대"가 0건인 빈 스냅샷이 저장된다
+ * (2026-07-30~08-11 스냅샷 12건이 이 문제로 응대·결제 0으로 기록됨).
+ *
+ * 따라서 새벽(00:00~05:59)에 실행되면 전날을 마감 대상으로 본다.
+ * 그 시간대 유입은 야간분이라 어차피 익영업일 처리되므로, 전날로 확정하는 편이 실제에 맞다.
+ */
+const LATE_RUN_CUTOFF_HOUR = 6;
+
+function targetDateKST(): string {
+  const kst = toKST(new Date());
+  if (kst.getHours() < LATE_RUN_CUTOFF_HOUR) {
+    kst.setDate(kst.getDate() - 1);
+  }
+  return formatDate(kst);
 }
 
 function load(name: string): V2Record[] {
@@ -65,7 +80,7 @@ function load(name: string): V2Record[] {
 
 async function main() {
   const 집계시작 = V2_AGGREGATE_START;
-  const 오늘 = todayKST();
+  const 오늘 = targetDateKST();
 
   const inboundRecords = load('인바운드.json');
   const skbRecords = load('SKB.json');
