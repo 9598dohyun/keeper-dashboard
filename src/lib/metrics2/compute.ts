@@ -15,6 +15,7 @@ import {
   InboundMetrics,
   SkbMetrics,
   CountMetrics,
+  DailyCount,
 } from './types';
 
 /** UTC 문자열 → KST 날짜(YYYY-MM-DD). 없으면 null */
@@ -67,6 +68,24 @@ function computeAssignees(records: V2Record[], today: string): AssigneeMetric[] 
     .sort((a, b) => b.응대 - a.응대);
 }
 
+/**
+ * 날짜별 유입 집계 (유입시간 기준, 오름차순)
+ *
+ * 스냅샷 누적값의 차분이 아니라 원본 레코드에서 직접 센다.
+ * 차분 방식은 첫날 값을 못 구하고 스냅샷이 빠진 날 왜곡되므로, 유입은 실집계가 정확하다.
+ */
+function dailyInflow(records: V2Record[], 집계시작: string): DailyCount[] {
+  const map = new Map<string, number>();
+  for (const r of records) {
+    const d = kstDate(r.fields.유입시간);
+    if (d === null || d < 집계시작) continue;
+    map.set(d, (map.get(d) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([날짜, 건수]) => ({ 날짜, 건수 }));
+}
+
 /** 집계시작 이후 유입 리드 */
 function inflowSince(records: V2Record[], 집계시작: string): V2Record[] {
   return records.filter((r) => {
@@ -95,6 +114,7 @@ export function computeInbound(
     담당자별: computeAssignees(records, today),
     유입건수: 유입.length,
     채널_Top,
+    유입_일자별: dailyInflow(records, 집계시작),
   };
 }
 
@@ -107,6 +127,7 @@ export function computeSkb(
     전환: computeConversion(records, today),
     담당자별: computeAssignees(records, today),
     유입건수: inflowSince(records, 집계시작).length,
+    유입_일자별: dailyInflow(records, 집계시작),
   };
 }
 

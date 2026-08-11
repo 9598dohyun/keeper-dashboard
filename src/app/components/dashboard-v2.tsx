@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import ChannelChart from './channel-chart';
 import TrendLines from './trend-lines';
 import type {
@@ -8,6 +9,7 @@ import type {
   ConversionMetrics,
   AssigneeMetric,
   TrendPoint,
+  DailyCount,
 } from '@/lib/metrics2/types';
 
 type TableKey = '인바운드' | 'skb';
@@ -107,6 +109,36 @@ function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
   );
 }
 
+/**
+ * 날짜별 유입 막대.
+ * 누적 숫자 하나로는 "언제 많이 들어왔나"를 알 수 없어 일자 분포를 함께 보여준다.
+ */
+function DailyInflowBars({ data }: { data: DailyCount[] }) {
+  const max = Math.max(...data.map((d) => d.건수), 1);
+  const 최근 = data.slice(-30);
+  return (
+    <div>
+      <div className="flex items-end gap-[2px] h-24" role="img" aria-label="날짜별 유입 분포">
+        {최근.map((d) => (
+          <div key={d.날짜} className="flex-1 group relative flex flex-col justify-end h-full">
+            <div
+              className="w-full bg-blue-500 rounded-t-[2px] min-h-[2px] transition-colors group-hover:bg-blue-600"
+              style={{ height: `${(d.건수 / max) * 100}%` }}
+            />
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 px-1.5 py-0.5 text-[10px] text-white z-10">
+              {d.날짜} · {d.건수}건
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+        <span>{최근[0]?.날짜.slice(5)}</span>
+        <span>{최근[최근.length - 1]?.날짜.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
 function Section({
   title,
   desc,
@@ -182,21 +214,29 @@ export default function DashboardV2() {
             </p>
           )}
         </div>
-        {dates.length > 0 && (
-          <select
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
-            aria-label="조회 날짜 선택"
+        <div className="flex items-center gap-2">
+          {dates.length > 0 && (
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
+              aria-label="조회 날짜 선택"
+            >
+              <option value="">최신 ({dates[0]})</option>
+              {dates.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          )}
+          <Link
+            href="/diagnosis"
+            className="text-sm font-semibold border rounded-lg px-3 py-1.5 bg-white shadow-sm hover:bg-gray-50 whitespace-nowrap"
           >
-            <option value="">최신 ({dates[0]})</option>
-            {dates.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        )}
+            전환율 진단 →
+          </Link>
+        </div>
       </div>
 
       {data && (
@@ -238,6 +278,7 @@ export default function DashboardV2() {
 
   const cur = data[table];
   const 이름 = table === 'skb' ? 'SKB' : '인바운드';
+  const 일자별유입 = cur.유입_일자별 ?? [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -258,13 +299,34 @@ export default function DashboardV2() {
         <AssigneeTable rows={cur.담당자별} />
       </Section>
 
-      <Section title="유입" desc={`집계 시작(${data.집계시작}) 이후 누적`}>
-        <div className="flex items-baseline gap-2 mb-4">
-          <span className="text-3xl font-bold text-gray-900 tabular-nums">
-            {cur.유입건수.toLocaleString()}
-          </span>
-          <span className="text-sm text-gray-500">건</span>
+      <Section title="유입" desc={`집계 시작(${data.집계시작}) 이후`}>
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+          <div>
+            <p className="text-xs font-semibold text-gray-500">누적</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold text-gray-900 tabular-nums">
+                {cur.유입건수.toLocaleString()}
+              </span>
+              <span className="text-sm text-gray-500">건</span>
+            </p>
+          </div>
+          {일자별유입.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500">일 평균</p>
+              <p className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-bold text-gray-900 tabular-nums">
+                  {Math.round(
+                    일자별유입.reduce((s, d) => s + d.건수, 0) / 일자별유입.length
+                  ).toLocaleString()}
+                </span>
+                <span className="text-sm text-gray-500">건</span>
+              </p>
+            </div>
+          )}
         </div>
+
+        {일자별유입.length > 1 && <DailyInflowBars data={일자별유입} />}
+
         {table === '인바운드' && <ChannelChart data={data.인바운드.채널_Top} />}
       </Section>
 

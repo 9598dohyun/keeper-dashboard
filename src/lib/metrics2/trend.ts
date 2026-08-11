@@ -19,34 +19,66 @@ function dailyFromCumulative(today: number, prev: number | undefined): number | 
 
 /**
  * 날짜 오름차순 스냅샷 목록 → 추이 배열
- * 빠진 날짜는 건너뛴다(선을 이어 그리되 점은 찍지 않음).
+ *
+ * 유입은 최신 스냅샷의 `유입_일자별`(원본 실집계)을 우선 사용한다.
+ * 이 값이 있으면 스냅샷이 하루치뿐이어도 날짜별 유입이 그려지고,
+ * 빠진 날짜도 왜곡되지 않는다. 구버전 스냅샷(필드 없음)은 누적 차분으로 대체한다.
+ *
+ * 응대·결제·전환율은 그날 스냅샷에만 있는 값이라 스냅샷이 있는 날짜만 값을 갖는다.
  */
 export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
   const sorted = [...snapshots].sort((a, b) => a.오늘.localeCompare(b.오늘));
-  const out: TrendPoint[] = [];
+  if (sorted.length === 0) return [];
+
+  const latest = sorted[sorted.length - 1];
+  const inflowInbound = new Map(
+    (latest.인바운드.유입_일자별 ?? []).map((d) => [d.날짜, d.건수])
+  );
+  const inflowSkb = new Map((latest.skb.유입_일자별 ?? []).map((d) => [d.날짜, d.건수]));
+
+  // 유입 실집계가 있으면 그 날짜들까지 축에 포함한다(스냅샷이 없는 날도 유입은 보여야 함)
+  const allDates = new Set<string>([
+    ...sorted.map((s) => s.오늘),
+    ...inflowInbound.keys(),
+    ...inflowSkb.keys(),
+  ]);
+  const byDate = new Map(sorted.map((s) => [s.오늘, s]));
 
   let prevInbound: number | undefined;
   let prevSkb: number | undefined;
 
-  for (const s of sorted) {
-    out.push({
-      날짜: s.오늘,
-      인바운드: {
-        응대: s.인바운드.전환.응대,
-        결제: s.인바운드.전환.결제,
-        전환율_pct: s.인바운드.전환.전환율_pct,
-        유입: dailyFromCumulative(s.인바운드.유입건수, prevInbound),
-      },
-      skb: {
-        응대: s.skb.전환.응대,
-        결제: s.skb.전환.결제,
-        전환율_pct: s.skb.전환.전환율_pct,
-        유입: dailyFromCumulative(s.skb.유입건수, prevSkb),
-      },
+  return [...allDates]
+    .sort((a, b) => a.localeCompare(b))
+    .map((날짜) => {
+      const s = byDate.get(날짜);
+      const 유입I = inflowInbound.has(날짜)
+        ? inflowInbound.get(날짜)!
+        : s
+          ? dailyFromCumulative(s.인바운드.유입건수, prevInbound)
+          : null;
+      const 유입S = inflowSkb.has(날짜)
+        ? inflowSkb.get(날짜)!
+        : s
+          ? dailyFromCumulative(s.skb.유입건수, prevSkb)
+          : null;
+      if (s) {
+        prevInbound = s.인바운드.유입건수;
+        prevSkb = s.skb.유입건수;
+      }
+      return {
+        날짜,
+        인바운드: {
+          응대: s?.인바운드.전환.응대 ?? null,
+          결제: s?.인바운드.전환.결제 ?? null,
+          전환율_pct: s?.인바운드.전환.전환율_pct ?? null,
+          유입: 유입I,
+        },
+        skb: {
+          응대: s?.skb.전환.응대 ?? null,
+          결제: s?.skb.전환.결제 ?? null,
+          전환율_pct: s?.skb.전환.전환율_pct ?? null,
+          유입: 유입S,
+        },
+      };
     });
-    prevInbound = s.인바운드.유입건수;
-    prevSkb = s.skb.유입건수;
-  }
-
-  return out;
 }

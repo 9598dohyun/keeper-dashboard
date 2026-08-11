@@ -49,6 +49,8 @@ export interface InboundMetrics {
   담당자별: AssigneeMetric[]; // 응대 많은 순
   유입건수: number; // 유입시간이 집계시작 이후인 건수
   채널_Top: [string, number][]; // 집계시작 이후 유입건의 UTM_source + 진입경로
+  /** 날짜별 유입 (집계시작 이후, 유입시간 기준). 스냅샷 차분이 아닌 실제 집계 */
+  유입_일자별?: DailyCount[];
 }
 
 /** SKB용 지표 (전환 + 담당자별) */
@@ -56,6 +58,14 @@ export interface SkbMetrics {
   전환: ConversionMetrics;
   담당자별: AssigneeMetric[];
   유입건수: number;
+  /** 날짜별 유입 (집계시작 이후, 유입시간 기준). 스냅샷 차분이 아닌 실제 집계 */
+  유입_일자별?: DailyCount[];
+}
+
+/** 날짜 1일치 카운트 */
+export interface DailyCount {
+  날짜: string; // YYYY-MM-DD
+  건수: number;
 }
 
 /** 레드텔레콤용 (레코드 수만) */
@@ -71,10 +81,17 @@ export interface CountMetrics {
  * 유입건수는 스냅샷상 '집계시작 이후 누적'이라 그대로 쓰면 우상향 곡선이 되므로,
  * 전날 누적과의 차이로 그날 유입을 역산한다.
  */
+export interface TrendSeries {
+  응대: number | null;
+  결제: number | null;
+  전환율_pct: number | null;
+  유입: number | null;
+}
+
 export interface TrendPoint {
   날짜: string; // YYYY-MM-DD
-  인바운드: { 응대: number; 결제: number; 전환율_pct: number; 유입: number | null };
-  skb: { 응대: number; 결제: number; 전환율_pct: number; 유입: number | null };
+  인바운드: TrendSeries;
+  skb: TrendSeries;
 }
 
 /** KV에 저장하는 대시보드 묶음 */

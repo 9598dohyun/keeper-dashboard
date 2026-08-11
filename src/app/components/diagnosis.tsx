@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import MetricCard from './metric-card';
 import StaleLeads from './stale-leads';
 import SegmentTable from './segment-table';
@@ -134,12 +135,20 @@ export default function Diagnosis() {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4">
       <header className="space-y-3">
-        <div>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
           <h1 className="text-xl font-bold text-gray-900">전환율 진단</h1>
           <p className="text-xs text-gray-500 mt-1">
             유입 기준 · {data.기간.시작} ~ {data.기간.종료} · 갱신{' '}
             {new Date(data.meta.updatedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
           </p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="text-sm font-semibold border rounded-lg px-3 py-1.5 bg-white shadow-sm hover:bg-gray-50 whitespace-nowrap"
+          >
+            ← 대시보드
+          </Link>
         </div>
 
         <div className="flex flex-wrap gap-2">
