@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { V2Record } from '../src/lib/metrics2/types';
+import { isTestRecord } from '../src/lib/test-lead';
 
 const TOKEN = process.env.AIRTABLE_TOKEN!;
 const BASE_ID = process.env.AIRTABLE_BASE_ID!;
@@ -27,6 +28,7 @@ const DIAGNOSIS_FIELDS = [
   '연락 금지',
 ];
 const INBOUND_FIELDS = [
+  '고객명', // 테스트 리드 판정용 — 저장하지 않고 버린다
   '유입시간',
   'Last Modified',
   '[콜]최종 결과',
@@ -37,6 +39,7 @@ const INBOUND_FIELDS = [
   ...DIAGNOSIS_FIELDS,
 ];
 const SKB_FIELDS = [
+  '이름', // 테스트 리드 판정용 — 저장하지 않고 버린다
   '유입시간',
   'Last Modified',
   '[콜]최종 결과',
@@ -83,18 +86,41 @@ async function fetchAll<TRecord>(tableId: string, fields?: string[]): Promise<TR
   return records;
 }
 
+/**
+ * 테스트 리드를 걸러내고 이름 필드를 제거한다.
+ * 이름은 판정에만 쓰고 저장하지 않는다(개인정보 미수집 원칙).
+ */
+function stripAndFilter(records: V2Record[], label: string): V2Record[] {
+  let dropped = 0;
+  const out: V2Record[] = [];
+  for (const r of records) {
+    const f = r.fields as Record<string, unknown>;
+    if (isTestRecord(f)) {
+      dropped++;
+      continue;
+    }
+    delete f['고객명'];
+    delete f['이름'];
+    out.push(r);
+  }
+  if (dropped > 0) console.log(`  ${label}: 테스트 리드 ${dropped}건 제외`);
+  return out;
+}
+
 async function main() {
   if (!fs.existsSync(OUT_DIR)) {
     fs.mkdirSync(OUT_DIR, { recursive: true });
   }
 
   console.log('Fetching 인바운드...');
-  const inbound = await fetchAll<V2Record>(TABLES.인바운드, INBOUND_FIELDS);
+  const inboundRaw = await fetchAll<V2Record>(TABLES.인바운드, INBOUND_FIELDS);
+  const inbound = stripAndFilter(inboundRaw, '인바운드');
   fs.writeFileSync(path.join(OUT_DIR, '인바운드.json'), JSON.stringify(inbound, null, 0));
   console.log(`인바운드: ${inbound.length}건`);
 
   console.log('Fetching SKB...');
-  const skb = await fetchAll<V2Record>(TABLES.SKB, SKB_FIELDS);
+  const skbRaw = await fetchAll<V2Record>(TABLES.SKB, SKB_FIELDS);
+  const skb = stripAndFilter(skbRaw, 'SKB');
   fs.writeFileSync(path.join(OUT_DIR, 'SKB.json'), JSON.stringify(skb, null, 0));
   console.log(`SKB: ${skb.length}건`);
 
