@@ -279,6 +279,10 @@ export default function DashboardV2() {
   const cur = data[table];
   const 이름 = table === 'skb' ? 'SKB' : '인바운드';
   const 일자별유입 = cur.유입_일자별 ?? [];
+  // 보고 있는 날(data.오늘)의 유입. 날짜 드롭박스로 과거를 보면 그날 값이 나온다.
+  const 선택일 = data.오늘;
+  const 최신일 = dates[0] ?? data.오늘;
+  const 당일유입 = 일자별유입.find((d) => d.날짜 === 선택일)?.건수 ?? null;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -299,13 +303,15 @@ export default function DashboardV2() {
         <AssigneeTable rows={cur.담당자별} />
       </Section>
 
-      <Section title="유입" desc={`집계 시작(${data.집계시작}) 이후`}>
+      <Section title="유입" desc="유입시간 기준 · 일 평균은 집계 시작 이후 전체 평균">
         <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
           <div>
-            <p className="text-xs font-semibold text-gray-500">누적</p>
+            <p className="text-xs font-semibold text-gray-500">
+              {선택일 === 최신일 ? '오늘' : 선택일} 유입
+            </p>
             <p className="flex items-baseline gap-1.5">
               <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                {cur.유입건수.toLocaleString()}
+                {당일유입 === null ? '—' : 당일유입.toLocaleString()}
               </span>
               <span className="text-sm text-gray-500">건</span>
             </p>
