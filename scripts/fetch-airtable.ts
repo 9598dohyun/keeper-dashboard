@@ -18,8 +18,32 @@ const TABLES = {
 };
 
 // 계산에 필요한 필드만 가져옴 (개인정보 연락처 제외)
-const INBOUND_FIELDS = ['유입시간', 'Last Modified', '[콜]최종 결과', '[콜]담당자', 'UTM_source', '진입경로'];
-const SKB_FIELDS = ['유입시간', 'Last Modified', '[콜]최종 결과', '[콜]담당자', 'UTM_source'];
+// 뒤쪽 5개는 진단 대시보드(metrics3)용 — v2는 앞쪽 필드만 읽으므로 영향 없음
+const DIAGNOSIS_FIELDS = [
+  '첫응대시각',
+  '실패사유',
+  '[콜]부재중 상태',
+  '전화번호 중복여부',
+  '연락 금지',
+];
+const INBOUND_FIELDS = [
+  '유입시간',
+  'Last Modified',
+  '[콜]최종 결과',
+  '[콜]담당자',
+  'UTM_source',
+  '진입경로',
+  '[콜]온도감', // 인바운드에만 존재
+  ...DIAGNOSIS_FIELDS,
+];
+const SKB_FIELDS = [
+  '유입시간',
+  'Last Modified',
+  '[콜]최종 결과',
+  '[콜]담당자',
+  'UTM_source',
+  ...DIAGNOSIS_FIELDS,
+];
 const REDTEL_FIELDS = ['유입시간']; // 카운트 + 오늘이후 판정용
 
 type AirtableListResponse<TRecord> = {
