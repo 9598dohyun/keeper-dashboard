@@ -20,6 +20,22 @@ export default function AtTab() {
         </div>
       </SectionCard>
 
+      <SectionCard title="📊 딜스테이지 진행 순서">
+        <Table
+          headers={['단계', '진입 시점']}
+          rows={[
+            ['상담예정', '리드 유입 직후, 첫 통화 전'],
+            ['상담완료', '첫 통화를 마치고 앱 설치·회원가입을 유도하는 중'],
+            ['회원가입', '키퍼앱 회원가입이 확인된 뒤, 결제를 유도하는 중'],
+            ['결제완료', '키퍼 어드민에서 구매가 확인된 시점'],
+            ['실패', '전환 실패. 실패 사유를 반드시 함께 선택'],
+          ]}
+        />
+        <div className="mt-3">
+          <Alert type="info">콜백 약속이 잡히면 <strong>전화상담예약</strong>, 예약 없이 시도하는 건은 <strong>전화상담랜덤</strong>으로 둔다</Alert>
+        </div>
+      </SectionCard>
+
       <SectionCard title="❌ 실패 사유">
         <Table
           headers={['사유', '설명']}

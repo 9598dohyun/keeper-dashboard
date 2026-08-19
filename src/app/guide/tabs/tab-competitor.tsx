@@ -11,19 +11,19 @@ export default function VsTab() {
           <p>• &quot;캡스도 3년 후 기기는 내 것이 되지만, <strong>망사용료가 매달 계속</strong> 나갑니다. 키퍼는 36개월 후 완전 0원이에요.&quot;</p>
           <p>• &quot;캡스 AI 기능은 대형·무인매장에 적합해요. 소규모 매장은 CCTV+도어센서면 충분하고, AI 때문에 렌탈료 계속 내는 건 부담입니다.&quot;</p>
           <p>• &quot;캡스 출동경비는 별도 가입이고, <strong>고객 요청 출동은 건당 2만5천원</strong> 청구돼요.&quot;</p>
-          <p>• &quot;캡스 저장 약 20일, 키퍼 28일. 가격도 캡스는 전화해야 알려주는데, 키퍼는 홈페이지 공개.&quot;</p>
+          <p>• &quot;캡스 저장 약 20일, 키퍼 30일. 가격도 캡스는 전화해야 알려주는데, 키퍼는 홈페이지 공개.&quot;</p>
         </div>
 
         <h3 className="text-[14px] font-semibold mb-2"><Tag color="blue">에스원</Tag> &quot;세콤 알아보고 있어요&quot;</h3>
         <div className="space-y-1.5 text-[13px] text-gray-600 mb-4">
           <p>• &quot;에스원도 3년 후 기기는 내 것이 되지만, <strong>망사용료 계속</strong>. 키퍼는 36개월 후 0원.&quot;</p>
-          <p>• &quot;에스원 카메라 대부분 200만. 키퍼는 400만으로 두 배 선명. 저장도 18일 vs 28일.&quot;</p>
+          <p>• &quot;에스원 카메라 대부분 200만. 키퍼는 400만으로 두 배 선명. 저장도 18일 vs 30일.&quot;</p>
         </div>
 
         <h3 className="text-[14px] font-semibold mb-2"><Tag color="blue">KT</Tag> &quot;KT 견적 받았는데요&quot;</h3>
         <div className="space-y-1.5 text-[13px] text-gray-600 mb-4">
           <p>• &quot;KT 200만 4대 월 4만원, 키퍼도 4만원. 근데 <strong>키퍼는 사는 거고 KT는 빌리는 거</strong>예요.&quot;</p>
-          <p>• &quot;KT 500만은 월 5만5천원. 키퍼가 더 싸고 내 것이 됩니다. 저장도 KT 15일 vs 키퍼 28일.&quot;</p>
+          <p>• &quot;KT 500만은 월 5만5천원. 키퍼가 더 싸고 내 것이 됩니다. 저장도 KT 15일 vs 키퍼 30일.&quot;</p>
         </div>
 
         <h3 className="text-[14px] font-semibold mb-2"><Tag color="blue">중국산</Tag> &quot;인터넷에서 싼 거 봤는데&quot;</h3>
@@ -64,7 +64,7 @@ export default function VsTab() {
                 <td className="p-1.5 border-b border-gray-100">저가<br/>A/S 별도</td>
               </tr>
               <tr className="bg-green-50/30">
-                <td className="p-1.5 border-b border-gray-100 font-semibold sticky left-0 bg-green-50/30 z-10">5년 총비용</td>
+                <td className="p-1.5 border-b border-gray-100 font-semibold sticky left-0 bg-green-50/30 z-10">3년 총비용</td>
                 <td className="p-1.5 border-b border-gray-100 font-bold text-green-700">✅ 약 158만</td>
                 <td className="p-1.5 border-b border-gray-100">300만+ 추정</td>
                 <td className="p-1.5 border-b border-gray-100">300만+ 추정</td>
@@ -81,7 +81,7 @@ export default function VsTab() {
               </tr>
               <tr className="bg-green-50/30">
                 <td className="p-1.5 border-b border-gray-100 font-semibold sticky left-0 bg-green-50/30 z-10">저장기간</td>
-                <td className="p-1.5 border-b border-gray-100 font-bold text-green-700">✅ 약 28일</td>
+                <td className="p-1.5 border-b border-gray-100 font-bold text-green-700">✅ 30일<br/><span className="text-[10px] text-gray-400">(4대 실측 약 28일)</span></td>
                 <td className="p-1.5 border-b border-gray-100">약 20일</td>
                 <td className="p-1.5 border-b border-gray-100">약 18일</td>
                 <td className="p-1.5 border-b border-gray-100">14일 / 15일</td>
@@ -159,7 +159,8 @@ export default function VsTab() {
             ['4대', '40,000원', '50,000원', <strong key="k4" className="text-green-700">✅ 40,000원</strong>],
           ]}
         />
-        <p className="text-[11px] text-gray-400 mt-2">저장: KT 200만 4대 14일 / 500만 4대 15일 / 키퍼 4대 약 28일 | KT 모니터 옵션 월 15,000원 추가</p>
+        <div className="mt-2"><Alert type="warning">이 표는 <strong>VAT 별도</strong> 기준이라 키퍼 금액이 가격 탭(VAT 포함)과 다르게 보인다. 4대 VAT 별도 40,000원 = VAT 포함 44,000원. <strong>고객 안내는 항상 VAT 포함으로</strong> 한다</Alert></div>
+        <p className="text-[11px] text-gray-400 mt-2">저장: KT 200만 4대 14일 / 500만 4대 15일 / 키퍼 4대 실측 약 28일(안내 기준 30일) | KT 모니터 옵션 월 15,000원 추가</p>
       </SectionCard>
 
       {/* ADT캡스 AI 기능 상세 */}

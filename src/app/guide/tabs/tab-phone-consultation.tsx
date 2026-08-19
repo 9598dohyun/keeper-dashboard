@@ -87,7 +87,22 @@ export default function CallTab() {
         />
       </SectionCard>
 
-      <Alert type="info">견적·회원가입·구매·설치 안내 문자 스크립트는 <strong>문자 스크립트 탭</strong>에서 확인하세요.</Alert>
+      <SectionCard title="🔗 팔로업 단계 ↔ 문자 템플릿 매칭">
+        <Table
+          headers={['팔로업 단계', '쓸 템플릿']}
+          rows={[
+            ['선제 문자 (유입 즉시)', '견적 안내 — 일반(부재중용)'],
+            ['1차 팔로업 (통화 직후)', '견적 안내 — 할부용 / 일시불용 (고객 결제 성향에 맞춰)'],
+            ['상담 후 미가입', '회원가입 안내'],
+            ['가입했는데 결제 전', '구매 안내'],
+            ['결제 완료', '설치 안내'],
+            ['2·3차 팔로업', <span key="n" className="text-gray-400">전용 템플릿 없음 — 1차 문안을 상황에 맞게 수정해 발송</span>],
+          ]}
+        />
+        <div className="mt-3">
+          <Alert type="info">문안 전문은 <strong>문자 스크립트 탭</strong>에서 확인하고, 발송 전 {'{N}'}·{'{금액}'} 변수를 실제 값으로 채운다</Alert>
+        </div>
+      </SectionCard>
     </div>
   );
 }

@@ -19,7 +19,7 @@ const TAB_DEFS = [
   { id: 'vs', label: '경쟁사비교' },
   { id: 'cs', label: '고객응대' },
   { id: 'at', label: '에어테이블' },
-  { id: 'call', label: '전화상담' },
+  { id: 'call', label: '콜 운영룰' },
   { id: 'sms', label: '문자 스크립트' },
   { id: 'script', label: '콜 스크립트' },
 ] as const;

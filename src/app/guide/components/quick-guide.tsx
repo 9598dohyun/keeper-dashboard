@@ -86,7 +86,7 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
   vs: (
     <>
       <QuickGuideItem emoji="⭐" title="원샷 포지션 멘트 (암기)">
-        <p>&quot;캡스·세콤은 <strong>경비 출동</strong>이 본업이라 월 10만 원 이상 계속,</p>
+        <p>&quot;캡스·세콤은 <strong>경비 출동</strong>이 본업이라 월 3~5만 원 계속,</p>
         <p>S1·KT는 <strong>렌탈</strong>이라 3년 뒤 카메라 가져갑니다.</p>
         <p>중국산은 A/S 1년이고 해킹 이슈도 걱정되죠.</p>
         <p>키퍼는 <strong>한화비전이 직접 만든 CCTV를 36개월 할부로 사시는 것</strong>이라</p>
@@ -116,13 +116,8 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
       </QuickGuideItem>
       <QuickGuideItem emoji="📋" title="&quot;3년 뒤엔 어떻게 되나요?&quot;">
         <p>&quot;구매라 <strong>설치 즉시 고객님 소유</strong>. 렌탈 아닙니다. 카드 할부만 끝나면 낼 게 없습니다&quot;</p>
-        <p className="mt-1">A/S: 무상 A/S 지원</p>
+        <p className="mt-1">A/S: 3년 무상. 설치 후 30일은 사유 무관 전액 무료</p>
         <p className="mt-1"><strong>양도:</strong> 가게 매매 시 권리금에 포함 가능</p>
-      </QuickGuideItem>
-      <QuickGuideItem emoji="🚨" title="클레임 발생 시 (3단계)">
-        <p>① <strong>감정 수용:</strong> &quot;충분히 화나실 수 있습니다&quot;</p>
-        <p>② <strong>원인 인정:</strong> &quot;커뮤니케이션 전달 오류였습니다&quot;</p>
-        <p>③ <strong>해결 약속:</strong> &quot;내부 검토 후 방향 연락드리겠습니다&quot;</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="👴" title="IT 취약 고객 (고령)">
         <p><strong>BP:</strong> 카카오톡 알림톡 결제 링크 제공</p>
@@ -139,8 +134,9 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
   at: (
     <>
       <QuickGuideItem emoji="📝" title="메모 뭘 써야 하나요?">
-        <p><strong>필수:</strong> 업종 + 카메라 대수 + 특이사항</p>
-        <p className="mt-1">예: &quot;카페 / 4대 / 테라스 있음 / 다음주 오픈&quot;</p>
+        <p><strong>형식:</strong> [한 일] / [알게 된 것] / [다음 할 일]</p>
+        <p className="mt-1">예: &quot;견적 전달 / 카페 4대, 테라스 있음, 다음주 오픈 / D+2 재전화&quot;</p>
+        <p className="text-gray-400 mt-1">업종·대수·특이사항은 &apos;알게 된 것&apos;에 넣는다</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🔄" title="중복 리드 처리">
         <p>전화번호 뒷 8자리 기준 → <strong>마지막 유입 건을 살리고</strong> 나머지 실패 처리</p>
@@ -158,8 +154,8 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p className="text-gray-400 mt-1">실시간 9-11시 / 16:30-19시 = 온도감 유지 핵심</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="📵" title="부재중 3회 후 어떡하죠?">
-        <p>다음 날 오전/오후 각 1회(매회 문자) → 2~3일 뒤 마지막 시도 후 실패 처리</p>
-        <p className="text-gray-400 mt-1">모든 시도에 문자 필수</p>
+        <p>다음 날 오전/오후 각 1회 → 2~3일 뒤 마지막 시도 후 실패 처리</p>
+        <p className="text-red-500 mt-1">전화만 하고 문자 안 남기면 시도로 인정되지 않는다</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="💬" title="가격 저항 대응">
         <p>&quot;월 4만원대면 하루 1,500원, 커피 한 잔 값으로 24시간 보안입니다.&quot;</p>
@@ -167,7 +163,7 @@ export const QUICK_GUIDES: Record<string, React.ReactNode> = {
         <p className="mt-1"><strong>BP:</strong> 대수 최적화 제안 → &quot;화각 105도라 줄여도 커버 가능&quot;</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="🌙" title="야간 리드(21~23시) 대응">
-        <p>채팅 상담 중심 → 전화번호 확보 → 다음 날 오전 콜백</p>
+        <p>채팅 상담 중심 → 전화번호 확보 → 5~10분 내 즉시 응대, 아니면 다음 날 같은 시간대</p>
       </QuickGuideItem>
       <QuickGuideItem emoji="📝" title="인수인계 메모 필수">
         <p>CRM에 &quot;다음 담당자 인수 필수: OOO 재연락&quot; 기록</p>

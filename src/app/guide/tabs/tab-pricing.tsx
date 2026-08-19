@@ -32,24 +32,17 @@ export default function PriceTab() {
       </SectionCard>
 
       <SectionCard id="price-relocation" title="🔄 위치변경·이전설치 단가">
-        <h3 className="text-[14px] font-semibold mb-2">위치변경 (동일 건물 내)</h3>
-        <p className="text-[13px] text-gray-500 mb-2">대당 120,000원 균일가</p>
-        <Table
-          headers={['대수', '청구 가격']}
-          rows={[
-            ['1대', '120,000원'], ['2대', '240,000원'], ['3대', '360,000원'],
-            ['4대', '480,000원'], ['5대', '600,000원'],
-          ]}
-        />
-        <h3 className="text-[14px] font-semibold mt-4 mb-2">이전설치 (철거→재설치)</h3>
-        <p className="text-[13px] text-gray-500 mb-2">대당 132,000원 균일가</p>
-        <Table
-          headers={['대수', '청구 가격']}
-          rows={[
-            ['2대', '264,000원'], ['3대', '396,000원'],
-            ['4대', '528,000원'], ['5대', '660,000원'],
-          ]}
-        />
+        <Alert type="info">위치변경(동일 건물 내 이동)·이전설치(철거 후 재설치) 모두 <strong>대당 132,000원</strong>(VAT 포함) 균일가. 철거비 별도 없음</Alert>
+        <div className="mt-3">
+          <Table
+            headers={['대수', '청구 가격']}
+            rows={[
+              ['1대', '132,000원'], ['2대', '264,000원'], ['3대', '396,000원'],
+              ['4대', '528,000원'], ['5대', '660,000원'],
+            ]}
+          />
+        </div>
+        <div className="mt-3"><Alert type="warning">고객 안내는 금액을 직접 말하지 말고 <strong>1670-5772</strong>로 연결 (현장 상황별 변동)</Alert></div>
       </SectionCard>
 
       <SectionCard id="price-payment" title="💳 결제 안내">
@@ -58,7 +51,7 @@ export default function PriceTab() {
           rows={[
             ['결제 경로', '앱 내 결제(기본) / 결제 링크(할인 시) / 네이버 스마트스토어'],
             ['카드 무이자', <>36개월: <strong key="c">삼성·현대·롯데·국민·하나·신한</strong> / 24개월: 우리 / 18개월: 농협 / 12개월: BC (모두 개인 신용카드, 법인카드 불가)</>],
-            ['네이버 스마트스토어', <>최대 무이자 <strong key="nv">5개월</strong> · <Tag key="nvt" color="red">8대 이상 수량 할인 미적용</Tag><br/><a href="https://smartstore.naver.com/shopmanager_keeper/products/11980485529" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">구매 링크</a></>],
+            ['네이버 스마트스토어', <>최대 무이자 <strong key="nv">12개월</strong> · <Tag key="nvt" color="red">8대 이상 수량 할인 미적용</Tag><br/><a href="https://smartstore.naver.com/shopmanager_keeper/products/11980485529" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">구매 링크</a></>],
             ['체크카드', '일시불만 가능'],
             ['카카오톡 결제', '고령·카드 없는 고객 → 알림톡 결제 링크 제공'],
             ['분리 결제', '가능 (예: 3대 일시불 + 2대 할부)'],
