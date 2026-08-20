@@ -30,29 +30,29 @@ export function QuickGuideTag({ color, children }: { color: string; children: Re
 export const QUICK_GUIDES: Record<string, React.ReactNode> = {
   mainline: (
     <>
-      <QuickGuideItem emoji="\u260e\ufe0f" title="&quot;\uc124\uce58\ud558\uba74 \uc5bc\ub9c8\uc608\uc694?&quot; (\uccab \ub9c8\ub514 \ub300\ubd80\ubd84)">
-        <p>\ubc14\ub85c \ub2f5\ud55c\ub2e4. <strong>&quot;\ud55c \ub300\ub2f9 \uc6d4 11,000\uc6d0, \uba87 \ub300 \uc0dd\uac01\ud558\uc138\uc694?&quot;</strong></p>
-        <p className="mt-1">\uc21c\uc11c: \uc6d4 \uae08\uc561 \u2192 \ub300\uc218 \ud655\uc778 \u2192 \ucd1d\uc561 \u2192 \uc18c\uc720 \uac1c\ub150 \u2192 \uc124\uce58\ube44 \ud3ec\ud568</p>
-        <p className="text-gray-400 mt-1">\uac00\uaca9\uc744 \ubbf8\ub8e8\uba74 \uadf8 \uc790\ub9ac\uc5d0\uc11c \ub04a\uae34\ub2e4</p>
+      <QuickGuideItem emoji="☎️" title="&quot;설치하면 얼마예요?&quot; (첫 마디 대부분)">
+        <p>바로 답한다. <strong>&quot;한 대당 월 11,000원, 몇 대 생각하세요?&quot;</strong></p>
+        <p className="mt-1">순서: 월 금액 → 대수 확인 → 총액 → 소유 개념 → 설치비 포함</p>
+        <p className="text-gray-400 mt-1">가격을 미루면 그 자리에서 끊긴다</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="\U0001f527" title="&quot;A/S\ub294 \uc5b4\ub5bb\uac8c \ub3fc\uc694?&quot;">
-        <p><QuickGuideTag color="green">\uc548\uc804</QuickGuideTag> &quot;\ubb34\uc0c1 A/S \uc9c0\uc6d0\ub429\ub2c8\ub2e4&quot; \uae4c\uc9c0\ub9cc</p>
-        <p><QuickGuideTag color="red">\uae08\uc9c0</QuickGuideTag> \uae30\uac04\u00b7\ubb34\ub8cc \ubc94\uc704\ub97c \uc22b\uc790\ub85c \uc57d\uc18d\ud558\uc9c0 \uc54a\ub294\ub2e4</p>
-        <p className="text-gray-400 mt-1">\uc870\uac74 \ubb38\uc758\ub294 \uace0\uac1d\ub9cc\uc871\uc13c\ud130 1670-5772\ub85c \uc548\ub0b4</p>
+      <QuickGuideItem emoji="🔧" title="&quot;A/S는 어떻게 돼요?&quot;">
+        <p><QuickGuideTag color="green">안전</QuickGuideTag> &quot;무상 A/S 지원됩니다&quot; 까지만</p>
+        <p><QuickGuideTag color="red">금지</QuickGuideTag> 기간·무료 범위를 숫자로 약속하지 않는다</p>
+        <p className="text-gray-400 mt-1">조건 문의는 고객만족센터 1670-5772로 안내</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="\U0001f4f5" title="\ubd80\uc7ac\uc911 \u2014 \ucd1d 3\ud68c\uae4c\uc9c0\ub9cc">
-        <p>\ub2f9\uc77c 2\ud68c(\uc2dc\uac04\ub300 \ubc8c\ub824\uc11c) + \ub2e4\uc74c\ub0a0 1\ud68c \u2192 \uc885\ub8cc</p>
-        <p className="mt-1">\ub9e4 \uc2dc\ub3c4\ub9c8\ub2e4 \ubb38\uc790 \ud544\uc218</p>
-        <p className="text-gray-400 mt-1">\uad11\uace0 \ub9ac\ub4dc \ub8f0(\ucd1d 6\ud68c)\uc744 \uc5ec\uae30 \uc4f0\uba74 \uc548 \ub41c\ub2e4</p>
+      <QuickGuideItem emoji="📵" title="부재중 — 총 3회까지만">
+        <p>당일 2회(시간대 벌려서) + 다음날 1회 → 종료</p>
+        <p className="mt-1">매 시도마다 문자 필수</p>
+        <p className="text-gray-400 mt-1">광고 리드 룰(총 6회)을 여기 쓰면 안 된다</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="\U0001f4dd" title="\uba54\ubaa8 \ud615\uc2dd">
-        <p><strong>\ud55c \uc77c / \uc54c\uac8c \ub41c \uac83 / \ub2e4\uc74c \ud560 \uc77c</strong></p>
-        <p className="mt-1 text-gray-400">\uac00\uaca9 \uc548\ub0b4 / \uce74\ud398 20\ud3c9 \uc2e4\ub0b4 3\ub300 / D+2 \uc7ac\uc804\ud654</p>
+      <QuickGuideItem emoji="📝" title="메모 형식">
+        <p><strong>한 일 / 알게 된 것 / 다음 할 일</strong></p>
+        <p className="mt-1 text-gray-400">가격 안내 / 카페 20평 실내 3대 / D+2 재전화</p>
       </QuickGuideItem>
-      <QuickGuideItem emoji="\U0001f50e" title="\ud604\uc7a5 \uc2e4\uc0ac \ud310\ub2e8">
-        <p><QuickGuideTag color="blue">\ub300\uc0c1</QuickGuideTag> 8\ub300 \uc774\uc0c1 \u00b7 \ub300\ud615 \ubd80\uc9c0 \u00b7 \ubcf5\uce35\u00b7\uace0\uce35</p>
-        <p><QuickGuideTag color="gray">\ubbf8\ub300\uc0c1</QuickGuideTag> 4\ub300 \uc774\ud558 \u2192 \uc0ac\uc9c4\u00b7\ub3c4\uba74\uc73c\ub85c \uc6d0\uaca9</p>
-        <p className="text-gray-400 mt-1">\uc2e4\uc0ac \uac74\uc740 \uae08\uc561 \ub2e8\uc815 \uae08\uc9c0</p>
+      <QuickGuideItem emoji="🔎" title="현장 실사 판단">
+        <p><QuickGuideTag color="blue">대상</QuickGuideTag> 8대 이상 · 대형 부지 · 복층·고층</p>
+        <p><QuickGuideTag color="gray">미대상</QuickGuideTag> 4대 이하 → 사진·도면으로 원격</p>
+        <p className="text-gray-400 mt-1">실사 건은 금액 단정 금지</p>
       </QuickGuideItem>
     </>
   ),
