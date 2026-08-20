@@ -11,9 +11,11 @@ import AtTab from './tabs/tab-airtable';
 import CallTab from './tabs/tab-phone-consultation';
 import CallScriptTab from './tabs/tab-call-script';
 import SmsScriptTab from './tabs/tab-sms-script';
+import MainlineTab from './tabs/tab-mainline';
 
 /* ── 탭 정의 ── */
 const TAB_DEFS = [
+  { id: 'mainline', label: '대표전화' },
   { id: 'price', label: '가격·결제' },
   { id: 'spec', label: '제품스펙' },
   { id: 'vs', label: '경쟁사비교' },
@@ -91,6 +93,7 @@ export default function GuideContent() {
   const [matchingTabs, setMatchingTabs] = useState<TabId[] | null>(null);
 
   const tabComponents: Record<TabId, React.ReactNode> = useMemo(() => ({
+    mainline: <MainlineTab />,
     price: <PriceTab />,
     spec: <SpecTab />,
     vs: <VsTab />,
