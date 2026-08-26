@@ -15,9 +15,28 @@ npm run lint       # ESLint 검사 (= eslint)
 npx tsc --noEmit   # 타입체크 (별도 test 스위트 없음 — 빌드+타입체크가 검증 수단)
 
 # 데이터 파이프라인 (로컬 수동 실행)
+python3 scripts/payment-sync/reconcile.py <결제데이터.xlsx>  # 결제 엑셀 대조 → data/결제대조.json
 npx tsx scripts/fetch-airtable.ts        # Airtable → data/*.json
 npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
 ```
+
+**자동 스케줄은 2026-08-26에 중단했다.** 결제 데이터 엑셀을 오전에 받아 위 3단계로 수동
+반영한다. 절차·트러블슈팅은 `scripts/payment-sync/README.md` 참조. 되살리려면 두 워크플로
+(`refresh-metrics.yml`, `keeper-reports.yml`)의 `schedule` 블록 주석을 해제한다.
+
+### v2 지표 기준 (2026-08-26 변경)
+
+| 지표 | 기준 |
+|------|------|
+| 응대수 | `메모수정시각`이 그날인 건 — 메모 필드가 수정된 것을 응대로 본다 |
+| 결제수 | **결제 데이터 엑셀**이 진짜 소스. 엑셀에 없으면 `[콜]최종 결과`가 '결제 완료'여도 세지 않는다 |
+| 유입 | `유입시간` |
+
+- 이전에는 응대를 `Last Modified`로 봤으나, 필드 아무거나 수정해도 갱신돼 일괄수정이 응대로
+  잡혔다 (인바운드 8/21: 14:53 한 분에 1696건 일괄수정 → 응대 2482건, 유입은 106건).
+  메모 필드만 감시하는 `메모수정시각`(에어테이블 오토메이션)으로 교체했다.
+- 기준이 다른 `MEMO_TS_START`(2026-08-26) 이전 구간은 추이·유입 집계에서 제외한다.
+- `data/결제대조.json`이 없으면 결제수가 에어테이블 기준으로 폴백한다.
 
 환경변수 필요: `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `SK_AIRTABLE_TOKEN`, `SK_AIRTABLE_BASE_ID` (`.env.local`은 gitignore — 운영 환경은 Vercel 프로젝트 env에 별도 등록 필요)
 

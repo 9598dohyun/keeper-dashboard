@@ -1,13 +1,10 @@
 name: Refresh Dashboard Metrics
 
+# 2026-08-26: 자동 스케줄 중단. 결제 데이터를 엑셀로 받아 수동 반영하는 방식으로 전환했다.
+# 되살리려면 아래 schedule 블록의 주석을 해제한다.
 on:
-  schedule:
-    # 하루 1회, 마감 후 수집 → 그날 날짜로 스냅샷 저장
-    # KST 23:20 = UTC 14:20
-    # 23:59로 두면 Actions 스케줄 지연(수십 분)에 자정을 넘겨 날짜가 밀리고
-    # "오늘 응대" 0건인 빈 스냅샷이 저장된다. 여유를 두고 23:20에 실행한다.
-    # (지연으로 자정을 넘겨도 compute 쪽 targetDateKST가 전날로 보정)
-    - cron: '20 14 * * *'   # KST 23:20 (매일)
+  # schedule:
+  #   - cron: '20 14 * * *'   # KST 23:20 (매일)
   workflow_dispatch: # 수동 실행
 
 jobs:

@@ -12,6 +12,7 @@ import { isPaid, isDuplicate, isB2B, isActive } from './status';
 import { normalizeChannel2 } from './channel';
 import {
   V2Record,
+  PaymentReconcile,
   ConversionMetrics,
   AssigneeMetric,
   InboundMetrics,
@@ -42,13 +43,29 @@ function 응대일(r: V2Record): string | null {
   return kstDate(r.fields.메모수정시각);
 }
 
+/**
+ * 결제 판정.
+ *
+ * 결제 데이터 엑셀(오전 수신)이 진짜 소스다. 대조 결과가 있으면 그 목록에 있는지로만 본다 —
+ * 에어테이블 [콜]최종 결과가 '결제 완료'여도 엑셀에 없으면 결제로 세지 않는다.
+ * 대조 결과가 없으면(엑셀 미반영) 기존대로 최종 결과 필드를 쓴다.
+ */
+function 결제판정(r: V2Record, 결제ID: Set<string> | null): boolean {
+  if (결제ID) return 결제ID.has(r.id);
+  return isPaid(r.fields['[콜]최종 결과']);
+}
+
 /** 오늘 응대건(= 응대일이 today)의 전환 지표 */
-function computeConversion(records: V2Record[], today: string): ConversionMetrics {
+function computeConversion(
+  records: V2Record[],
+  today: string,
+  결제ID: Set<string> | null
+): ConversionMetrics {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
   for (const r of 응대건) {
     const f = r.fields['[콜]최종 결과'];
-    if (isPaid(f)) 분해.결제++;
+    if (결제판정(r, 결제ID)) 분해.결제++;
     else if (isDuplicate(f)) 분해.중복문의++;
     else if (isB2B(f)) 분해.B2B++;
     else if (isActive(f)) 분해.미확정++;
@@ -65,14 +82,18 @@ function computeConversion(records: V2Record[], today: string): ConversionMetric
 }
 
 /** 오늘 응대건의 담당자별 응대·결제·전환율 (응대 많은 순) */
-function computeAssignees(records: V2Record[], today: string): AssigneeMetric[] {
+function computeAssignees(
+  records: V2Record[],
+  today: string,
+  결제ID: Set<string> | null
+): AssigneeMetric[] {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const map = new Map<string, { 응대: number; 결제: number }>();
   for (const r of 응대건) {
     const dam = r.fields['[콜]담당자']?.trim() || '(미배정)';
     const cur = map.get(dam) ?? { 응대: 0, 결제: 0 };
     cur.응대++;
-    if (isPaid(r.fields['[콜]최종 결과'])) cur.결제++;
+    if (결제판정(r, 결제ID)) cur.결제++;
     map.set(dam, cur);
   }
   return [...map.entries()]
@@ -116,7 +137,8 @@ function inflowSince(records: V2Record[], 집계시작: string): V2Record[] {
 export function computeInbound(
   records: V2Record[],
   집계시작: string,
-  today: string
+  today: string,
+  결제ID: Set<string> | null = null
 ): InboundMetrics {
   const 유입 = inflowSince(records, 집계시작);
   // 채널 (집계시작 이후 유입 기준)
@@ -129,8 +151,8 @@ export function computeInbound(
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_CHANNELS_COUNT);
   return {
-    전환: computeConversion(records, today),
-    담당자별: computeAssignees(records, today),
+    전환: computeConversion(records, today, 결제ID),
+    담당자별: computeAssignees(records, today, 결제ID),
     유입건수: 유입.length,
     채널_Top,
     유입_일자별: dailyInflow(records, 집계시작),
@@ -140,11 +162,12 @@ export function computeInbound(
 export function computeSkb(
   records: V2Record[],
   집계시작: string,
-  today: string
+  today: string,
+  결제ID: Set<string> | null = null
 ): SkbMetrics {
   return {
-    전환: computeConversion(records, today),
-    담당자별: computeAssignees(records, today),
+    전환: computeConversion(records, today, 결제ID),
+    담당자별: computeAssignees(records, today, 결제ID),
     유입건수: inflowSince(records, 집계시작).length,
     유입_일자별: dailyInflow(records, 집계시작),
   };

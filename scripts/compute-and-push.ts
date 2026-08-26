@@ -2,11 +2,12 @@
  * 로컬 JSON에서 인바운드·SKB·레드텔레콤 데이터를 읽고 v2 지표를 계산하여 Vercel KV에 저장
  * GitHub Actions에서 실행됨
  *
- * 응대·전환: Last Modified가 '오늘'(KST) 기준 / 유입·채널: 유입시간 기준
+ * 응대: 메모수정시각이 '오늘'(KST) 기준 / 유입·채널: 유입시간 기준
+ * 결제: 결제 데이터 엑셀 대조 결과(data/결제대조.json)가 있으면 그것을 진짜 소스로 쓴다.
  */
 import fs from 'fs';
 import path from 'path';
-import { V2Record, DashboardV2 } from '../src/lib/metrics2/types';
+import { V2Record, DashboardV2, PaymentReconcile } from '../src/lib/metrics2/types';
 import { computeInbound, computeSkb, computeCount } from '../src/lib/metrics2/compute';
 import { formatDate, toKST } from '../src/lib/metrics/biz-date';
 import { V2_AGGREGATE_START, KV_DAILY_TTL } from '../src/lib/constants';
@@ -78,6 +79,18 @@ function load(name: string): V2Record[] {
   return JSON.parse(fs.readFileSync(p, 'utf-8')) as V2Record[];
 }
 
+/**
+ * 결제 데이터 엑셀 대조 결과. 없으면 null.
+ *
+ * 이 파일이 있으면 결제수는 엑셀 기준으로 계산된다(에어테이블 최종결과 무시).
+ * scripts/payment-sync/reconcile.py 로 생성한다.
+ */
+function loadReconcile(): PaymentReconcile | null {
+  const p = path.join(DATA_DIR, '결제대조.json');
+  if (!fs.existsSync(p)) return null;
+  return JSON.parse(fs.readFileSync(p, 'utf-8')) as PaymentReconcile;
+}
+
 async function main() {
   const 집계시작 = V2_AGGREGATE_START;
   const 오늘 = targetDateKST();
@@ -86,8 +99,25 @@ async function main() {
   const skbRecords = load('SKB.json');
   const redtelRecords = load('레드텔레콤.json');
 
-  const 인바운드 = computeInbound(inboundRecords, 집계시작, 오늘);
-  const skb = computeSkb(skbRecords, 집계시작, 오늘);
+  const 대조 = loadReconcile();
+  if (대조) {
+    if (대조.기준일 !== 오늘) {
+      console.warn(
+        `주의: 결제대조.json의 기준일(${대조.기준일})이 집계 대상일(${오늘})과 다릅니다. ` +
+          `엑셀이 최신인지 확인하세요.`
+      );
+    }
+    console.log(
+      `결제 소스: 엑셀 ${대조.엑셀파일} (기준일 ${대조.기준일}, 결제 ${대조.결제_전체}건 중 매칭 ${대조.결제_매칭}건)`
+    );
+  } else {
+    console.log('결제 소스: 에어테이블 [콜]최종 결과 (결제대조.json 없음)');
+  }
+  const 인바운드ID = 대조 ? new Set(대조.결제ID_인바운드) : null;
+  const skbID = 대조 ? new Set(대조.결제ID_SKB) : null;
+
+  const 인바운드 = computeInbound(inboundRecords, 집계시작, 오늘, 인바운드ID);
+  const skb = computeSkb(skbRecords, 집계시작, 오늘, skbID);
   const 레드텔레콤 = computeCount(redtelRecords, 집계시작);
 
   const updatedAt = new Date().toISOString();
@@ -104,6 +134,15 @@ async function main() {
         skb: skbRecords.length,
         레드텔레콤: redtelRecords.length,
       },
+      결제소스: 대조
+        ? {
+            종류: 'excel',
+            엑셀파일: 대조.엑셀파일,
+            기준일: 대조.기준일,
+            미매칭_건수: 대조.미매칭_건수,
+            에어테이블만_결제_건수: 대조.에어테이블만_결제_건수,
+          }
+        : { 종류: 'airtable' },
     },
   };
 

@@ -211,6 +211,15 @@ export default function DashboardV2() {
           {data && (
             <p className="text-xs text-gray-500 mt-1">
               집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준(메모 수정 시각) · 갱신 {갱신}
+              {data._meta.결제소스?.종류 === 'excel' ? (
+                <>
+                  {' · 결제는 엑셀 기준'}
+                  {data._meta.결제소스.기준일 !== data.오늘 &&
+                    ` (엑셀 기준일 ${data._meta.결제소스.기준일} — 집계일과 다름)`}
+                </>
+              ) : (
+                ' · 결제는 에어테이블 기준 (엑셀 미반영)'
+              )}
             </p>
           )}
         </div>

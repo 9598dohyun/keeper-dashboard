@@ -63,6 +63,25 @@ export interface SkbMetrics {
   유입_일자별?: DailyCount[];
 }
 
+/**
+ * 결제 데이터 엑셀 대조 결과 (scripts/payment-sync/reconcile.py 산출).
+ *
+ * 결제 여부의 진짜 소스는 오전에 받는 결제 데이터 엑셀이다.
+ * 엑셀에 없으면 결제로 세지 않는다 — 에어테이블의 [콜]최종 결과가 '결제 완료'여도 마찬가지.
+ * 개인정보를 저장소에 남기지 않기 위해 전화번호가 아닌 레코드 ID로 담는다.
+ */
+export interface PaymentReconcile {
+  기준일: string;
+  생성시각: string;
+  엑셀파일: string;
+  결제_전체: number;
+  결제_매칭: number;
+  결제ID_인바운드: string[];
+  결제ID_SKB: string[];
+  미매칭_건수: number;
+  에어테이블만_결제_건수: number;
+}
+
 /** 날짜 1일치 카운트 */
 export interface DailyCount {
   날짜: string; // YYYY-MM-DD
@@ -105,5 +124,13 @@ export interface DashboardV2 {
   _meta: {
     updatedAt: string;
     counts: { 인바운드: number; skb: number; 레드텔레콤: number };
+    /** 결제수 소스. 엑셀 대조를 거치지 않으면 airtable로 남아 화면에 표시된다 */
+    결제소스?: {
+      종류: 'excel' | 'airtable';
+      엑셀파일?: string;
+      기준일?: string;
+      미매칭_건수?: number;
+      에어테이블만_결제_건수?: number;
+    };
   };
 }
