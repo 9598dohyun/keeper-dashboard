@@ -2,6 +2,7 @@ import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import { DashboardV2 } from '@/lib/metrics2/types';
 import { buildTrend } from '@/lib/metrics2/trend';
+import { MEMO_TS_START } from '@/lib/metrics2/compute';
 
 /**
  * SKB+인바운드 통합 대시보드(v2) 데이터.
@@ -24,7 +25,10 @@ export async function GET(request: Request) {
 
     if (type === 'trend') {
       // 날짜별 추이 — 저장된 일간 스냅샷을 모아 하루 단위 시계열로 변환
-      const dates = (await kv.get<string[]>('v2:dates')) ?? [];
+      // 기준 전환일 이전 스냅샷은 Last Modified 기준이라 섞으면 오독되므로 제외
+      const dates = ((await kv.get<string[]>('v2:dates')) ?? []).filter(
+        (d) => d >= MEMO_TS_START
+      );
       const limit = Number(searchParams.get('days') ?? 30);
       const target = dates.slice(0, Math.max(1, Math.min(limit, 90)));
       const snapshots = await Promise.all(

@@ -3,7 +3,7 @@
  * 단일 테이블 필드 기반. 이력 파싱 없음. 부재율 없음. 리드타임 phase 2.
  *
  * 두 날짜 축:
- *  - 응대·전환 지표 = Last Modified 기준 (오늘 수정 = 오늘 응대)
+ *  - 응대·전환 지표 = 메모수정시각 기준 (메모를 남긴 = 응대한). 적용일 이전은 Last Modified 폴백
  *  - 유입 건수·채널 = 유입시간 기준
  */
 
@@ -13,6 +13,7 @@ export interface V2Record {
   fields: {
     유입시간?: string;
     'Last Modified'?: string;
+    메모수정시각?: string;
     '[콜]최종 결과'?: string; // singleSelect (빈값 = 미확정)
     '[콜]담당자'?: string; // singleSelect (빈값 = 미배정)
     UTM_source?: string;
@@ -20,9 +21,9 @@ export interface V2Record {
   };
 }
 
-/** 전환 (오늘 응대 = Last Modified 오늘 기준) */
+/** 전환 (오늘 응대 = 메모수정시각 오늘 기준) */
 export interface ConversionMetrics {
-  응대: number; // Last Modified가 오늘인 전체 (= 분모)
+  응대: number; // 메모수정시각이 오늘인 전체 (= 분모)
   결제: number; // 그중 결제 완료 계열 (= 분자)
   전환율_pct: number; // 결제 / 응대 × 100
   // 오늘 응대건의 최종결과 분해 (투명성)

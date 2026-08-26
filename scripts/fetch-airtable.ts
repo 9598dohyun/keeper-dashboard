@@ -31,6 +31,7 @@ const INBOUND_FIELDS = [
   '고객명', // 테스트 리드 판정용 — 저장하지 않고 버린다
   '유입시간',
   'Last Modified',
+  '메모수정시각',
   '[콜]최종 결과',
   '[콜]담당자',
   'UTM_source',
@@ -42,6 +43,7 @@ const SKB_FIELDS = [
   '이름', // 테스트 리드 판정용 — 저장하지 않고 버린다
   '유입시간',
   'Last Modified',
+  '메모수정시각',
   '[콜]최종 결과',
   '[콜]담당자',
   'UTM_source',

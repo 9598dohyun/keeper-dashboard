@@ -1,7 +1,9 @@
 /**
  * SKB+인바운드 지표 계산 (필드 기반, 단일 테이블)
  *
- * 응대·전환: Last Modified가 '오늘'(KST)인 리드 기준
+ * 응대·전환: 메모수정시각이 '오늘'(KST)인 리드 기준
+ *   Last Modified는 필드 아무거나 수정해도 갱신돼 일괄수정이 응대로 잡혔다(8/21 2503건 등).
+ *   메모 필드만 감시하는 메모수정시각으로 교체. 적용일 이전은 값이 없어 Last Modified로 폴백한다.
  * 유입 건수·채널: 유입시간이 '집계시작' 이후인 리드 기준
  */
 import { parseUTC, toKST, formatDate } from '../metrics/biz-date';
@@ -18,6 +20,16 @@ import {
   DailyCount,
 } from './types';
 
+/**
+ * 메모수정시각 에어테이블 자동화 적용일 = 지표 기준 전환일.
+ *
+ * 이 날 이전 응대 수치는 Last Modified 기준이라 신뢰할 수 없다.
+ * 8/21 인바운드는 14:53 한 분에 1696건이 일괄수정돼 응대 2482건으로 잡혔고(유입 106건),
+ * SKB는 스파이크 없이 상시 2~5배 부풀려져 있었다(8/22 유입 2건에 수정 51건).
+ * 그래서 이 날 이전 구간은 추이에서 제외한다 — 폴백해서 보여주면 잘못된 값을 계속 노출하게 된다.
+ */
+export const MEMO_TS_START = '2026-08-26';
+
 /** UTC 문자열 → KST 날짜(YYYY-MM-DD). 없으면 null */
 function kstDate(s: string | undefined): string | null {
   const dt = parseUTC(s);
@@ -25,9 +37,14 @@ function kstDate(s: string | undefined): string | null {
   return formatDate(toKST(dt));
 }
 
-/** 오늘 응대건(= Last Modified가 today)의 전환 지표 */
+/** 응대일 = 메모 필드가 수정된 날. 메모를 남긴 것을 응대로 본다 */
+function 응대일(r: V2Record): string | null {
+  return kstDate(r.fields.메모수정시각);
+}
+
+/** 오늘 응대건(= 응대일이 today)의 전환 지표 */
 function computeConversion(records: V2Record[], today: string): ConversionMetrics {
-  const 응대건 = records.filter((r) => kstDate(r.fields['Last Modified']) === today);
+  const 응대건 = records.filter((r) => 응대일(r) === today);
   const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
   for (const r of 응대건) {
     const f = r.fields['[콜]최종 결과'];
@@ -49,7 +66,7 @@ function computeConversion(records: V2Record[], today: string): ConversionMetric
 
 /** 오늘 응대건의 담당자별 응대·결제·전환율 (응대 많은 순) */
 function computeAssignees(records: V2Record[], today: string): AssigneeMetric[] {
-  const 응대건 = records.filter((r) => kstDate(r.fields['Last Modified']) === today);
+  const 응대건 = records.filter((r) => 응대일(r) === today);
   const map = new Map<string, { 응대: number; 결제: number }>();
   for (const r of 응대건) {
     const dam = r.fields['[콜]담당자']?.trim() || '(미배정)';
@@ -75,10 +92,12 @@ function computeAssignees(records: V2Record[], today: string): AssigneeMetric[] 
  * 차분 방식은 첫날 값을 못 구하고 스냅샷이 빠진 날 왜곡되므로, 유입은 실집계가 정확하다.
  */
 function dailyInflow(records: V2Record[], 집계시작: string): DailyCount[] {
+  // 추이는 기준 전환일부터만 그린다 (그 이전은 응대가 다른 기준이라 나란히 두면 오독됨)
+  const from = 집계시작 > MEMO_TS_START ? 집계시작 : MEMO_TS_START;
   const map = new Map<string, number>();
   for (const r of records) {
     const d = kstDate(r.fields.유입시간);
-    if (d === null || d < 집계시작) continue;
+    if (d === null || d < from) continue;
     map.set(d, (map.get(d) ?? 0) + 1);
   }
   return [...map.entries()]

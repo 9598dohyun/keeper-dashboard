@@ -210,7 +210,7 @@ export default function DashboardV2() {
           <h1 className="text-xl font-bold text-gray-900">SKB+인바운드 통합 대시보드</h1>
           {data && (
             <p className="text-xs text-gray-500 mt-1">
-              집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준 · 갱신 {갱신}
+              집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준(메모 수정 시각) · 갱신 {갱신}
             </p>
           )}
         </div>
@@ -294,7 +294,7 @@ export default function DashboardV2() {
 
       <Section
         title="날짜별 추이"
-        desc="누적이 아닌 그날 값. 지표마다 단위가 달라 축을 나눠 그린다."
+        desc="누적이 아닌 그날 값. 지표마다 단위가 달라 축을 나눠 그린다. 응대 기준을 메모 수정 시각으로 바꾼 2026-08-26부터 표시한다."
       >
         <TrendLines data={trend} table={table} />
       </Section>
