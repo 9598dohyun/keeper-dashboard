@@ -273,6 +273,14 @@ def main():
     ap.add_argument("excel", help="키퍼 주문정산통합데이터 엑셀 경로")
     ap.add_argument("--date", help="기준일 YYYY-MM-DD (생략 시 파일명 날짜 → 엑셀 최신 주문일)")
     ap.add_argument("--dry-run", action="store_true", help="파일로 저장하지 않고 결과만 출력")
+    ap.add_argument(
+        "--exclude",
+        default="",
+        help=(
+            "결제에서 뺄 건. 주문번호 또는 매장명을 쉼표로 구분. "
+            "엑셀만 봐서는 알 수 없는 건(예: 이전 결제분을 뒤늦게 관리자등록한 건)을 손으로 뺄 때 쓴다."
+        ),
+    )
     args = ap.parse_args()
 
     token = os.environ.get("AIRTABLE_TOKEN")
@@ -295,14 +303,22 @@ def main():
     if dates:
         print(f"  주문일 범위: {dates[0]} ~ {dates[-1]} ({len(dates)}일치 누적)")
 
+    # 기준일 결정.
+    # 파일명 날짜(…_20260827)는 '내려받은 날'이라 주문일과 다를 수 있다
+    # (전날 마감분을 다음날 아침에 받는 경우). 파일명 날짜에 주문이 없으면
+    # 엑셀에 실제로 담긴 최신 주문일로 넘어간다.
     from_name = date_from_filename(args.excel)
-    기준일 = args.date or from_name or (dates[-1] if dates else None)
-    if not 기준일:
-        raise SystemExit("기준일을 정할 수 없습니다. --date 로 지정해 주세요.")
     if args.date:
-        print(f"  기준일: {기준일}")
+        기준일, 출처 = args.date, "지정"
+    elif from_name and from_name in dates:
+        기준일, 출처 = from_name, "파일명"
+    elif dates:
+        기준일, 출처 = dates[-1], "엑셀 최신 주문일"
+        if from_name:
+            print(f"  참고: 파일명 날짜 {from_name} 주문이 없어 엑셀 최신 주문일을 씁니다.")
     else:
-        print(f"  기준일: {기준일} ({'파일명' if from_name else '엑셀 최신 주문일'} 기준)")
+        raise SystemExit("기준일을 정할 수 없습니다. --date 로 지정해 주세요.")
+    print(f"  기준일: {기준일} ({출처} 기준)")
 
     # 기준일 건만 사용 — 파일에는 전체 기간이 담겨 있다
     day = [i for i in all_items if i["결제일"] == 기준일]
@@ -315,13 +331,40 @@ def main():
 
     rows_raw = len(day)
     day = dedupe_orders(day)
+
+    # 손으로 빼는 건 — 엑셀 데이터만으로는 판별할 수 없는 예외를 처리한다.
+    # (예: 이전에 결제된 건을 뒤늦게 '관리자등록'으로 넣어 오늘 주문처럼 보이는 경우)
+    제외키 = {x.strip() for x in args.exclude.split(",") if x.strip()}
+    제외됨 = []
+    if 제외키:
+        keep = []
+        for it in day:
+            if it["주문번호"] in 제외키 or (it["매장명"] and it["매장명"] in 제외키):
+                제외됨.append(it)
+            else:
+                keep.append(it)
+        day = keep
+        미발견 = 제외키 - {i["주문번호"] for i in 제외됨} - {i["매장명"] for i in 제외됨 if i["매장명"]}
+        if 미발견:
+            raise SystemExit(
+                f"--exclude 로 지정한 값을 기준일 주문에서 못 찾았습니다: {', '.join(sorted(미발견))}\n"
+                "  주문번호나 매장명이 정확한지 확인해 주세요."
+            )
     유효 = [i for i in day if not is_cancelled(i)]
     취소 = [i for i in day if is_cancelled(i)]
-    dedup_note = f" (엑셀 {rows_raw}행 → 주문 {len(day)}건)" if rows_raw != len(day) else ""
+    dedup_note = (
+        f" (엑셀 {rows_raw}행 → 주문 {len(day) + len(제외됨)}건)"
+        if rows_raw != len(day) + len(제외됨)
+        else ""
+    )
     print(f"\n{기준일} 주문 {len(day)}건{dedup_note} → 유효 결제 {len(유효)}건 / 취소 {len(취소)}건")
     if 취소:
         상태들 = sorted(set(i["주문상태"] for i in 취소 if i["주문상태"]))
         print(f"  취소 내역: {', '.join(상태들)}")
+    if 제외됨:
+        print(f"  손으로 제외 {len(제외됨)}건: " + ", ".join(
+            f"{i['매장명'] or i['주문번호']}" for i in 제외됨
+        ))
     ch = Counter(i["채널"] or "(없음)" for i in 유효)
     print(f"  유입채널: {', '.join(f'{k} {v}' for k, v in ch.most_common())}")
 
@@ -391,6 +434,11 @@ def main():
         "결제_매칭": len(매칭),
         "취소_건수": len(취소),
         "미매칭_건수": len(미매칭),
+        "수동제외_건수": len(제외됨),
+        "수동제외": sorted(
+            f"{i['주문번호']}({i['매장명']})" if i["매장명"] else str(i["주문번호"])
+            for i in 제외됨
+        ),
         # 개인정보(이름·연락처)는 파일에 남기지 않는다 — 레코드 ID와 건수만
         "결제ID_인바운드": sorted(
             {r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "인바운드"}

@@ -93,7 +93,7 @@ function loadReconcile(): PaymentReconcile | null {
 
 async function main() {
   const 집계시작 = V2_AGGREGATE_START;
-  const 오늘 = targetDateKST();
+  let 오늘 = targetDateKST();
 
   const inboundRecords = load('인바운드.json');
   const skbRecords = load('SKB.json');
@@ -101,11 +101,12 @@ async function main() {
 
   const 대조 = loadReconcile();
   if (대조) {
+    // 엑셀 기준일을 집계일로 삼는다.
+    // 결제 엑셀은 전날 마감분을 다음날 아침에 받는 일이 흔해(8/27에 받은 파일에 8/26 주문),
+    // 실행일로 스냅샷을 찍으면 8/26 결제가 8/27 칸에 들어간다.
     if (대조.기준일 !== 오늘) {
-      console.warn(
-        `주의: 결제대조.json의 기준일(${대조.기준일})이 집계 대상일(${오늘})과 다릅니다. ` +
-          `엑셀이 최신인지 확인하세요.`
-      );
+      console.log(`집계일을 엑셀 기준일에 맞춥니다: ${오늘} → ${대조.기준일}`);
+      오늘 = 대조.기준일;
     }
     console.log(
       `결제 소스: 엑셀 ${대조.엑셀파일} (기준일 ${대조.기준일}, 결제 ${대조.결제_전체}건 중 매칭 ${대조.결제_매칭}건)`
