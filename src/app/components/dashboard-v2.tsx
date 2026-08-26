@@ -4,6 +4,27 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import ChannelChart from './channel-chart';
 import TrendLines from './trend-lines';
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type {
   DashboardV2 as DashboardV2Data,
   ConversionMetrics,
@@ -14,69 +35,83 @@ import type {
 
 type TableKey = '인바운드' | 'skb';
 
+/** 큰 숫자 하나 — 지표 카드의 공통 단위 */
+function Stat({
+  label,
+  value,
+  hint,
+  accent,
+  size = 'lg',
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  accent?: boolean;
+  size?: 'lg' | 'md';
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p
+        className={`font-bold tracking-tight tabular-nums ${
+          size === 'lg' ? 'text-4xl' : 'text-2xl'
+        } ${accent ? 'text-chart-3' : 'text-foreground'}`}
+      >
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
 /**
- * 전환율 헤드라인 — 대시보드가 이끄는 하나의 숫자.
- * 나머지 분해값은 아래 한 줄로 붙여 위계를 만든다.
+ * 응대·결제 지표.
+ * 둘은 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음)
+ * 나눈 값을 전환율로 쓰지 않고 건수를 나란히 둔다.
  */
 function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
-  const 분해 = [
-    { label: '결제', value: 전환.분해.결제, tone: 'text-green-700' },
-    { label: '실패', value: 전환.분해.실패, tone: 'text-red-600' },
-    { label: '중복문의', value: 전환.분해.중복문의, tone: 'text-gray-600' },
-    { label: 'B2B', value: 전환.분해.B2B, tone: 'text-gray-600' },
-    { label: '미확정', value: 전환.분해.미확정, tone: 'text-amber-600' },
-  ];
+  const 분해: { label: string; value: number; variant: 'secondary' | 'destructive' | 'outline' }[] =
+    [
+      { label: '결제', value: 전환.분해.결제, variant: 'secondary' },
+      { label: '실패', value: 전환.분해.실패, variant: 'destructive' },
+      { label: '중복문의', value: 전환.분해.중복문의, variant: 'outline' },
+      { label: 'B2B', value: 전환.분해.B2B, variant: 'outline' },
+      { label: '미확정', value: 전환.분해.미확정, variant: 'outline' },
+    ];
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-x-10 gap-y-3">
-        <div>
-          <p className="text-xs font-semibold text-gray-500">오늘 응대</p>
-          <p className="text-5xl font-bold tracking-tight text-gray-900 tabular-nums">
-            {전환.응대}
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">메모를 남긴 리드 수</p>
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold text-gray-500">오늘 결제</p>
-          <p className="text-5xl font-bold tracking-tight text-green-700 tabular-nums">
-            {전환.결제}
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {전환.전환율_pct === null ? '결제 데이터 엑셀 기준' : '에어테이블 최종결과 기준'}
-          </p>
-        </div>
-
+        <Stat label="오늘 응대" value={전환.응대} hint="메모를 남긴 리드 수" />
+        <Stat
+          label="오늘 결제"
+          value={전환.결제}
+          accent
+          hint={전환.전환율_pct === null ? '결제 데이터 엑셀 기준' : '에어테이블 최종결과 기준'}
+        />
         {전환.전환율_pct !== null && (
-          <div>
-            <p className="text-xs font-semibold text-gray-500">전환율</p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold tracking-tight text-gray-900 tabular-nums">
-                {전환.전환율_pct}
-              </span>
-              <span className="text-lg font-semibold text-gray-400">%</span>
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              결제 {전환.결제} ÷ 응대 {전환.응대}
-            </p>
-          </div>
+          <Stat
+            label="전환율"
+            value={`${전환.전환율_pct}%`}
+            size="md"
+            hint={`결제 ${전환.결제} ÷ 응대 ${전환.응대}`}
+          />
         )}
       </div>
 
       {전환.전환율_pct === null && (
-        <p className="text-xs text-gray-500">
-          응대와 결제는 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음)
-          나눈 값을 전환율로 쓰지 않고 건수만 표시한다.
+        <p className="text-xs text-muted-foreground">
+          응대와 결제는 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음) 나눈 값을
+          전환율로 쓰지 않고 건수만 표시한다.
         </p>
       )}
 
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-3 border-t">
+      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+        <span className="text-xs text-muted-foreground">응대건 처리 상태</span>
         {분해.map((d) => (
-          <span key={d.label} className="text-xs">
-            <span className="text-gray-500">{d.label}</span>{' '}
-            <span className={`font-semibold tabular-nums ${d.tone}`}>{d.value}</span>
-          </span>
+          <Badge key={d.label} variant={d.variant} className="tabular-nums">
+            {d.label} {d.value}
+          </Badge>
         ))}
       </div>
     </div>
@@ -85,42 +120,42 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
 
 function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
   if (!rows || rows.length === 0) {
-    return <p className="text-sm text-gray-400">오늘 응대 기록 없음</p>;
+    return <p className="text-sm text-muted-foreground">오늘 응대 기록 없음</p>;
   }
   const max = Math.max(...rows.map((r) => r.응대), 1);
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-gray-500 border-b">
-            <th className="py-2 pr-4 font-semibold">담당자</th>
-            <th className="py-2 px-4 font-semibold">응대량</th>
-            <th className="py-2 px-4 font-semibold text-right">응대</th>
-            <th className="py-2 px-4 font-semibold text-right">결제</th>
-            <th className="py-2 pl-4 font-semibold text-right">전환율</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>담당자</TableHead>
+            <TableHead className="w-32">응대량</TableHead>
+            <TableHead className="text-right">응대</TableHead>
+            <TableHead className="text-right">결제</TableHead>
+            <TableHead className="text-right">전환율</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((r) => (
-            <tr key={r.담당자} className="border-b border-gray-100">
-              <td className="py-2 pr-4 font-medium whitespace-nowrap">{r.담당자}</td>
-              <td className="py-2 px-4 w-32">
-                <span className="block h-2 bg-gray-100 rounded-sm overflow-hidden">
+            <TableRow key={r.담당자}>
+              <TableCell className="font-medium whitespace-nowrap">{r.담당자}</TableCell>
+              <TableCell>
+                <span className="block h-2 overflow-hidden rounded-sm bg-muted">
                   <span
-                    className="block h-full bg-blue-500 rounded-sm"
+                    className="block h-full rounded-sm bg-chart-1"
                     style={{ width: `${(r.응대 / max) * 100}%` }}
                   />
                 </span>
-              </td>
-              <td className="py-2 px-4 text-right tabular-nums">{r.응대}</td>
-              <td className="py-2 px-4 text-right tabular-nums">{r.결제}</td>
-              <td className="py-2 pl-4 text-right font-semibold tabular-nums">
+              </TableCell>
+              <TableCell className="text-right tabular-nums">{r.응대}</TableCell>
+              <TableCell className="text-right tabular-nums">{r.결제}</TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
                 {r.전환율_pct === null ? '—' : `${r.전환율_pct}%`}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -134,20 +169,28 @@ function DailyInflowBars({ data }: { data: DailyCount[] }) {
   const 최근 = data.slice(-30);
   return (
     <div>
-      <div className="flex items-end gap-[2px] h-24" role="img" aria-label="날짜별 유입 분포">
+      <div
+        className="flex h-24 items-end gap-[2px]"
+        role="img"
+        aria-label="날짜별 유입 분포"
+      >
         {최근.map((d) => (
-          <div key={d.날짜} className="flex-1 group relative flex flex-col justify-end h-full">
+          <div
+            key={d.날짜}
+            className="group relative flex h-full flex-1 flex-col justify-end"
+            style={{ maxWidth: 최근.length < 8 ? 48 : undefined }}
+          >
             <div
-              className="w-full bg-blue-500 rounded-t-[2px] min-h-[2px] transition-colors group-hover:bg-blue-600"
+              className="min-h-[2px] w-full rounded-t-[2px] bg-chart-1 transition-opacity group-hover:opacity-80"
               style={{ height: `${(d.건수 / max) * 100}%` }}
             />
-            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block whitespace-nowrap rounded bg-gray-900 px-1.5 py-0.5 text-[10px] text-white z-10">
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[10px] text-background group-hover:block">
               {d.날짜} · {d.건수}건
             </span>
           </div>
         ))}
       </div>
-      <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
         <span>{최근[0]?.날짜.slice(5)}</span>
         <span>{최근[최근.length - 1]?.날짜.slice(5)}</span>
       </div>
@@ -165,13 +208,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-white rounded-2xl border shadow-sm p-6 space-y-5">
-      <div>
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
-        {desc && <p className="text-xs text-gray-500 mt-0.5">{desc}</p>}
-      </div>
-      {children}
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        {desc && <CardDescription>{desc}</CardDescription>}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -219,85 +262,104 @@ export default function DashboardV2() {
     ? new Date(data._meta.updatedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
     : '';
 
+  const 결제소스 = data?._meta.결제소스;
+  // base-ui Select는 items에 {label, value} 형태를 받는다
+  const 날짜옵션 = [
+    { label: `최신 (${dates[0]})`, value: '__latest__' },
+    ...dates.map((d) => ({ label: d, value: d })),
+  ];
+
   const 헤더 = (
     <header className="space-y-3">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">SKB+인바운드 통합 대시보드</h1>
+          <h1 className="text-xl font-bold text-foreground">SKB+인바운드 통합 대시보드</h1>
           {data && (
-            <p className="text-xs text-gray-500 mt-1">
-              집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준(메모 수정 시각) · 갱신 {갱신}
-              {data._meta.결제소스?.종류 === 'excel' ? (
-                <>
-                  {' · 결제는 엑셀 기준'}
-                  {data._meta.결제소스.기준일 !== data.오늘 &&
-                    ` (엑셀 기준일 ${data._meta.결제소스.기준일} — 집계일과 다름)`}
-                </>
-              ) : (
-                ' · 결제는 에어테이블 기준 (엑셀 미반영)'
-              )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              집계 {data.집계시작} 이후 · 응대/전환은 {data.오늘} 기준(메모 수정 시각) · 갱신{' '}
+              {갱신}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {dates.length > 0 && (
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="text-sm border rounded-lg px-3 py-1.5 bg-white shadow-sm"
-              aria-label="조회 날짜 선택"
+            <Select
+              items={날짜옵션}
+              value={selectedDate || '__latest__'}
+              onValueChange={(v: string | null) =>
+                setSelectedDate(!v || v === '__latest__' ? '' : v)
+              }
             >
-              <option value="">최신 ({dates[0]})</option>
-              {dates.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm" className="w-[180px]" aria-label="조회 날짜 선택">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__latest__">최신 ({dates[0]})</SelectItem>
+                {dates.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           <Link
             href="/diagnosis"
-            className="text-sm font-semibold border rounded-lg px-3 py-1.5 bg-white shadow-sm hover:bg-gray-50 whitespace-nowrap"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             전환율 진단 →
           </Link>
         </div>
       </div>
 
+      {결제소스 && 결제소스.종류 !== 'excel' && (
+        <Alert>
+          <AlertDescription>
+            결제수가 에어테이블 최종결과 기준입니다 (결제 데이터 엑셀 미반영).
+          </AlertDescription>
+        </Alert>
+      )}
+      {결제소스?.종류 === 'excel' && 결제소스.기준일 !== data?.오늘 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            결제 엑셀 기준일({결제소스.기준일})이 집계일({data?.오늘})과 다릅니다.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {data && (
-        <div className="flex rounded-lg border overflow-hidden w-fit">
-          {(['인바운드', 'skb'] as TableKey[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setTable(k)}
-              className={`px-4 py-1.5 text-xs font-semibold ${
-                table === k ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'
-              }`}
-            >
-              {k === 'skb' ? 'SKB' : '인바운드'}
-              <span className={table === k ? 'opacity-70' : 'text-gray-400'}>
-                {' '}
-                {data[k].전환.전환율_pct === null
-                  ? `결제 ${data[k].전환.결제}`
-                  : `${data[k].전환.전환율_pct}%`}
-              </span>
-            </button>
-          ))}
-        </div>
+        <Tabs value={table} onValueChange={(v: string) => setTable(v as TableKey)}>
+          <TabsList>
+            {(['인바운드', 'skb'] as TableKey[]).map((k) => (
+              <TabsTrigger key={k} value={k}>
+                {k === 'skb' ? 'SKB' : '인바운드'}
+                <span className="ml-1.5 text-muted-foreground tabular-nums">
+                  {data[k].전환.전환율_pct === null
+                    ? `결제 ${data[k].전환.결제}`
+                    : `${data[k].전환.전환율_pct}%`}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       )}
     </header>
   );
 
   if (loading || error || !data) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
         {헤더}
         {loading ? (
-          <div className="p-8 text-center text-gray-400">불러오는 중…</div>
-        ) : (
-          <div className="p-8 text-center text-red-500">
-            데이터를 불러오지 못했습니다. {error}
+          <div className="space-y-5">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
           </div>
+        ) : (
+          <Alert variant="destructive">
+            <AlertDescription>데이터를 불러오지 못했습니다. {error}</AlertDescription>
+          </Alert>
         )}
       </div>
     );
@@ -312,7 +374,7 @@ export default function DashboardV2() {
   const 당일유입 = 일자별유입.find((d) => d.날짜 === 선택일)?.건수 ?? null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
       {헤더}
 
       <Section title={`${이름} · 오늘`} desc={`${data.오늘} 응대 기준`}>
@@ -331,58 +393,44 @@ export default function DashboardV2() {
       </Section>
 
       <Section title="유입" desc="유입시간 기준 · 일 평균은 집계 시작 이후 전체 평균">
-        <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
-          <div>
-            <p className="text-xs font-semibold text-gray-500">
-              {선택일 === 최신일 ? '오늘' : 선택일} 유입
-            </p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                {당일유입 === null ? '—' : 당일유입.toLocaleString()}
-              </span>
-              <span className="text-sm text-gray-500">건</span>
-            </p>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+            <Stat
+              label={`${선택일 === 최신일 ? '오늘' : 선택일} 유입`}
+              value={당일유입 === null ? '—' : `${당일유입.toLocaleString()}건`}
+              size="md"
+            />
+            {일자별유입.length > 0 && (
+              <Stat
+                label="일 평균"
+                value={`${Math.round(
+                  일자별유입.reduce((s, d) => s + d.건수, 0) / 일자별유입.length
+                ).toLocaleString()}건`}
+                size="md"
+              />
+            )}
           </div>
-          {일자별유입.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-gray-500">일 평균</p>
-              <p className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                  {Math.round(
-                    일자별유입.reduce((s, d) => s + d.건수, 0) / 일자별유입.length
-                  ).toLocaleString()}
-                </span>
-                <span className="text-sm text-gray-500">건</span>
-              </p>
-            </div>
-          )}
+
+          {일자별유입.length > 1 && <DailyInflowBars data={일자별유입} />}
+
+          {table === '인바운드' && <ChannelChart data={data.인바운드.채널_Top} />}
         </div>
-
-        {일자별유입.length > 1 && <DailyInflowBars data={일자별유입} />}
-
-        {table === '인바운드' && <ChannelChart data={data.인바운드.채널_Top} />}
       </Section>
 
       <Section title="레드텔레콤" desc="규모만 모니터링">
         <div className="flex gap-8">
-          <div>
-            <p className="text-xs font-semibold text-gray-500">전체</p>
-            <p className="text-2xl font-bold text-gray-900 tabular-nums">
-              {data.레드텔레콤.건수_전체.toLocaleString()}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500">집계 시작 이후</p>
-            <p className="text-2xl font-bold text-gray-900 tabular-nums">
-              {data.레드텔레콤.건수_오늘이후.toLocaleString()}
-            </p>
-          </div>
+          <Stat label="전체" value={data.레드텔레콤.건수_전체.toLocaleString()} size="md" />
+          <Stat
+            label="집계 시작 이후"
+            value={data.레드텔레콤.건수_오늘이후.toLocaleString()}
+            size="md"
+          />
         </div>
       </Section>
 
-      <div className="text-center text-[10px] text-gray-300 pb-4">
+      <p className="pb-4 text-center text-[10px] text-muted-foreground">
         한화비전 키퍼 · SKB+인바운드 통합관리
-      </div>
+      </p>
     </div>
   );
 }

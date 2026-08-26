@@ -48,13 +48,13 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <p className="text-sm text-gray-600">
-          미확정 <span className="font-bold text-gray-900">{총건.toLocaleString()}</span>건 중
+        <p className="text-sm text-muted-foreground">
+          미확정 <span className="font-bold text-foreground">{총건.toLocaleString()}</span>건 중
           15일 이상 경과{' '}
-          <span className="font-bold text-red-600">{조치대상.toLocaleString()}</span>건
+          <span className="font-bold text-destructive">{조치대상.toLocaleString()}</span>건
         </p>
         {제외건수 > 0 && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             중복·연락금지 {제외건수}건은 제외
           </p>
         )}
@@ -71,8 +71,8 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
                 active ? 'opacity-100' : 'opacity-90 hover:opacity-100'
               }`}
             >
-              <span className="w-16 shrink-0 text-xs font-medium text-gray-600">{b.버킷}</span>
-              <span className="flex-1 h-6 bg-gray-100 rounded overflow-hidden relative">
+              <span className="w-16 shrink-0 text-xs font-medium text-muted-foreground">{b.버킷}</span>
+              <span className="flex-1 h-6 bg-muted rounded overflow-hidden relative">
                 <span
                   className={`block h-full rounded transition-all ${
                     b.조치대상 ? 'bg-red-500' : 'bg-blue-400'
@@ -82,13 +82,13 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
               </span>
               <span
                 className={`w-20 shrink-0 text-right text-sm font-semibold tabular-nums ${
-                  b.조치대상 ? 'text-red-600' : 'text-gray-700'
+                  b.조치대상 ? 'text-destructive' : 'text-foreground'
                 }`}
               >
                 {b.건수.toLocaleString()}건
               </span>
               {b.조치대상 && (
-                <span className="shrink-0 text-[10px] font-bold text-red-600 border border-red-300 rounded px-1 py-0.5">
+                <span className="shrink-0 text-[10px] font-bold text-destructive border border-red-300 rounded px-1 py-0.5">
                   조치 필요
                 </span>
               )}
@@ -100,14 +100,14 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
       <div className="flex items-center gap-3 pt-1">
         <button
           onClick={downloadCsv}
-          className="text-xs font-semibold border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50"
+          className="text-xs font-semibold border border-border rounded px-3 py-1.5 hover:bg-muted/50"
         >
           CSV 내려받기 ({selected ? `${selected} ${rows.length}건` : `전체 ${리드.length}건`})
         </button>
         {selected && (
           <button
             onClick={() => setSelected(null)}
-            className="text-xs text-gray-500 hover:text-gray-700"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             선택 해제
           </button>
@@ -116,15 +116,15 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
 
       {selected && (
         <div className="border-t pt-3">
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-muted-foreground mb-2">
             {selected} 구간 {rows.length.toLocaleString()}건
             {rows.length > MAX_ROWS && ` (상위 ${MAX_ROWS}건 표시 — 전체는 CSV로 확인)`}
             {' · 경과일 내림차순'}
           </p>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-white">
-                <tr className="text-left text-gray-500 border-b">
+              <thead className="sticky top-0 bg-card">
+                <tr className="text-left text-muted-foreground border-b">
                   <th className="py-1.5 pr-3 font-semibold">유입일</th>
                   <th className="py-1.5 px-3 font-semibold text-right">경과</th>
                   <th className="py-1.5 px-3 font-semibold">시간대</th>
@@ -137,17 +137,17 @@ export default function StaleLeads({ 버킷, 리드, 제외건수 }: Props) {
               </thead>
               <tbody>
                 {rows.slice(0, MAX_ROWS).map((l) => (
-                  <tr key={l.id} className="border-b border-gray-50">
+                  <tr key={l.id} className="border-b border-border">
                     <td className="py-1.5 pr-3 tabular-nums">{l.유입일}</td>
-                    <td className="py-1.5 px-3 text-right tabular-nums font-semibold text-red-600">
+                    <td className="py-1.5 px-3 text-right tabular-nums font-semibold text-destructive">
                       {l.경과일}일
                     </td>
-                    <td className="py-1.5 px-3 text-gray-600">{l.시간대}</td>
-                    <td className="py-1.5 px-3 text-gray-600">{l.매체}</td>
-                    <td className="py-1.5 px-3 text-gray-600">{l.유입페이지}</td>
-                    <td className="py-1.5 px-3 text-gray-600">{l.담당자}</td>
-                    <td className="py-1.5 px-3 text-gray-600">{l.부재중상태}</td>
-                    <td className="py-1.5 pl-3 text-gray-600">{l.온도감}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{l.시간대}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{l.매체}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{l.유입페이지}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{l.담당자}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{l.부재중상태}</td>
+                    <td className="py-1.5 pl-3 text-muted-foreground">{l.온도감}</td>
                   </tr>
                 ))}
               </tbody>

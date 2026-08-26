@@ -18,8 +18,8 @@ interface Props {
 /** 전환율에 따른 색상 — 10% 미만은 경고 */
 function rateColor(pct: number): string {
   if (pct >= 15) return 'text-green-700';
-  if (pct >= 10) return 'text-gray-800';
-  return 'text-red-600';
+  if (pct >= 10) return 'text-foreground';
+  return 'text-destructive';
 }
 
 export default function SegmentTable({
@@ -38,7 +38,7 @@ export default function SegmentTable({
     .reduce((s, r) => s + r.유입, 0);
 
   if (visible.length === 0) {
-    return <p className="text-sm text-gray-400">데이터 없음</p>;
+    return <p className="text-sm text-muted-foreground">데이터 없음</p>;
   }
 
   return (
@@ -46,7 +46,7 @@ export default function SegmentTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b">
+            <tr className="text-left text-muted-foreground border-b">
               <th className="py-2 pr-3 font-semibold">{keyLabel}</th>
               <th className="py-2 px-3 font-semibold text-right">유입</th>
               <th className="py-2 px-3 font-semibold text-right">결제</th>
@@ -67,10 +67,10 @@ export default function SegmentTable({
               return (
               <tr
                 key={r.key}
-                className={`border-b border-gray-100 ${unknown ? 'bg-gray-50/70' : ''}`}
+                className={`border-b border-border ${unknown ? 'bg-muted/50/70' : ''}`}
               >
                 <td className="py-2 pr-3 font-medium">
-                  <span className={unknown ? 'text-gray-500' : ''}>{r.key}</span>
+                  <span className={unknown ? 'text-muted-foreground' : ''}>{r.key}</span>
                 </td>
                 <td className="py-2 px-3 text-right tabular-nums">{r.유입.toLocaleString()}</td>
                 <td className="py-2 px-3 text-right tabular-nums">{r.결제.toLocaleString()}</td>
@@ -81,22 +81,22 @@ export default function SegmentTable({
                 >
                   {r.유입대비_pct}%
                 </td>
-                <td className="py-2 px-3 text-right tabular-nums text-gray-600">
+                <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
                   {r.종결대비_pct}%
                 </td>
-                <td className="py-2 px-3 text-right tabular-nums text-gray-600">
+                <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
                   {r.미확정률_pct}%
                 </td>
                 {showStale && (
                   <>
                     <td
                       className={`py-2 px-3 text-right tabular-nums font-semibold ${
-                        r.방치_15일 > 0 ? 'text-red-600' : 'text-gray-400'
+                        r.방치_15일 > 0 ? 'text-destructive' : 'text-muted-foreground'
                       }`}
                     >
                       {r.방치_15일.toLocaleString()}
                     </td>
-                    <td className="py-2 pl-3 text-right tabular-nums text-gray-600">
+                    <td className="py-2 pl-3 text-right tabular-nums text-muted-foreground">
                       {r.평균경과일}일
                     </td>
                   </>
@@ -109,15 +109,15 @@ export default function SegmentTable({
       </div>
       <div className="mt-2 space-y-0.5">
         {truncated > 0 && (
-          <p className="text-xs text-gray-400">상위 {visible.length}개 표시 · {truncated}개 더 있음</p>
+          <p className="text-xs text-muted-foreground">상위 {visible.length}개 표시 · {truncated}개 더 있음</p>
         )}
         {hidden > 0 && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             유입 {minVolume}건 미만 {hidden}개 항목은 표본 부족으로 숨김
           </p>
         )}
         {미확인건 > 0 && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             (미확인) {미확인건.toLocaleString()}건은 유입 출처가 기록되지 않은 건으로,
             대표전화·지인추천 등 추적이 붙지 않는 경로가 섞여 있어 다른 항목과 직접 비교할 수 없음
           </p>

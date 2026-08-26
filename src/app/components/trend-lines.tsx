@@ -1,6 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { TrendPoint } from '@/lib/metrics2/types';
 
 type TableKey = '인바운드' | 'skb';
@@ -16,157 +32,69 @@ interface Props {
  * 지표마다 단위가 달라(건수 vs %) 한 축에 겹치지 않는다.
  * 이중 축 대신 지표별로 차트를 나눠 그린다.
  */
-type Metric = {
-  key: '유입' | '응대' | '결제' | '전환율_pct';
-  label: string;
-  unit: string;
-  color: string;
-};
+type MetricKey = '유입' | '응대' | '결제' | '전환율_pct';
 
-const METRICS: Metric[] = [
-  { key: '유입', label: '유입', unit: '건', color: 'var(--series-1)' },
-  { key: '응대', label: '응대', unit: '건', color: 'var(--series-2)' },
-  { key: '결제', label: '결제', unit: '건', color: 'var(--series-3)' },
-  { key: '전환율_pct', label: '전환율', unit: '%', color: 'var(--series-1)' },
+const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] = [
+  { key: '유입', label: '유입', unit: '건', color: 'var(--color-chart-1)' },
+  { key: '응대', label: '응대', unit: '건', color: 'var(--color-chart-2)' },
+  { key: '결제', label: '결제', unit: '건', color: 'var(--color-chart-3)' },
+  { key: '전환율_pct', label: '전환율', unit: '%', color: 'var(--color-chart-1)' },
 ];
 
-const W = 560;
-const H = 140;
-const PAD = { top: 12, right: 12, bottom: 22, left: 36 };
+function MetricChart({
+  metric,
+  rows,
+}: {
+  metric: (typeof METRICS)[number];
+  rows: { 날짜: string; value: number | null }[];
+}) {
+  const config = {
+    value: { label: metric.label, color: metric.color },
+  } satisfies ChartConfig;
 
-function Sparkline({ points, metric }: { points: { x: string; y: number | null }[]; metric: Metric }) {
-  const [hover, setHover] = useState<number | null>(null);
-
-  const valid = points.filter((p) => p.y !== null) as { x: string; y: number }[];
-  const max = Math.max(...valid.map((p) => p.y), metric.unit === '%' ? 5 : 1);
-  const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
-
-  const xOf = (i: number) =>
-    PAD.left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
-  const yOf = (v: number) => PAD.top + innerH - (v / max) * innerH;
-
-  // null 구간에서 선을 끊는다 (없는 데이터를 이어 그리면 거짓 추세가 된다)
-  const segments: string[] = [];
-  let cur: string[] = [];
-  points.forEach((p, i) => {
-    if (p.y === null) {
-      if (cur.length) segments.push(cur.join(' '));
-      cur = [];
-      return;
-    }
-    cur.push(`${cur.length ? 'L' : 'M'}${xOf(i).toFixed(1)},${yOf(p.y).toFixed(1)}`);
-  });
-  if (cur.length) segments.push(cur.join(' '));
-
-  const last = [...points].reverse().find((p) => p.y !== null);
-  const ticks = [0, max / 2, max];
+  const last = [...rows].reverse().find((r) => r.value !== null);
 
   return (
     <figure className="m-0">
-      <figcaption className="flex items-baseline justify-between mb-1">
-        <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
-          {metric.label}
-        </span>
-        <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-          최근 {last?.y ?? '—'}
+      <figcaption className="mb-1 flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-foreground">{metric.label}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          최근 {last?.value ?? '—'}
           {metric.unit}
         </span>
       </figcaption>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto"
-        role="img"
-        aria-label={`${metric.label} 날짜별 추이`}
-        onMouseLeave={() => setHover(null)}
-      >
-        {ticks.map((t) => (
-          <g key={t}>
-            <line
-              x1={PAD.left}
-              x2={W - PAD.right}
-              y1={yOf(t)}
-              y2={yOf(t)}
-              stroke="var(--grid)"
-              strokeWidth={1}
-            />
-            <text
-              x={PAD.left - 6}
-              y={yOf(t) + 3}
-              textAnchor="end"
-              fontSize={9}
-              fill="var(--text-muted)"
-            >
-              {metric.unit === '%' ? t.toFixed(0) : Math.round(t)}
-            </text>
-          </g>
-        ))}
-
-        {segments.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={metric.color} strokeWidth={2} strokeLinecap="round" />
-        ))}
-
-        {points.map((p, i) =>
-          p.y === null ? null : (
-            <circle
-              key={p.x}
-              cx={xOf(i)}
-              cy={yOf(p.y)}
-              r={hover === i ? 4 : 2.5}
-              fill={metric.color}
-              stroke="var(--surface-1)"
-              strokeWidth={2}
-            />
-          )
-        )}
-
-        {/* 히트 영역 — 마크보다 넓게 */}
-        {points.map((p, i) => (
-          <rect
-            key={`hit-${p.x}`}
-            x={xOf(i) - innerW / Math.max(points.length, 1) / 2}
-            y={PAD.top}
-            width={Math.max(innerW / Math.max(points.length, 1), 8)}
-            height={innerH}
-            fill="transparent"
-            onMouseEnter={() => setHover(i)}
+      <ChartContainer config={config} className="aspect-[4/1] w-full">
+        <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -4 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis
+            dataKey="날짜"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            minTickGap={24}
+            tickFormatter={(v: string) => v.slice(5)}
           />
-        ))}
-
-        {hover !== null && points[hover] && (
-          <line
-            x1={xOf(hover)}
-            x2={xOf(hover)}
-            y1={PAD.top}
-            y2={PAD.top + innerH}
-            stroke="var(--text-muted)"
-            strokeWidth={1}
-            strokeDasharray="3 3"
+          <YAxis tickLine={false} axisLine={false} width={44} allowDecimals={false} />
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                formatter={(value) => `${value}${metric.unit}`}
+                labelFormatter={(label) => String(label)}
+              />
+            }
           />
-        )}
-
-        {/* x축 — 처음·중간·마지막만 (라벨 충돌 방지) */}
-        {[0, Math.floor(points.length / 2), points.length - 1]
-          .filter((i, idx, a) => i >= 0 && a.indexOf(i) === idx && points[i])
-          .map((i) => (
-            <text
-              key={`x-${i}`}
-              x={xOf(i)}
-              y={H - 6}
-              textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'}
-              fontSize={9}
-              fill="var(--text-muted)"
-            >
-              {points[i].x.slice(5)}
-            </text>
-          ))}
-      </svg>
-      {hover !== null && points[hover] && (
-        <p className="text-xs mt-1 tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-          {points[hover].x} · {points[hover].y ?? '—'}
-          {points[hover].y !== null && metric.unit}
-        </p>
-      )}
+          {/* connectNulls=false — 없는 데이터를 이어 그리면 거짓 추세가 된다 */}
+          <Line
+            dataKey="value"
+            type="monotone"
+            stroke="var(--color-value)"
+            strokeWidth={2}
+            dot={{ r: 2.5 }}
+            activeDot={{ r: 4 }}
+            connectNulls={false}
+          />
+        </LineChart>
+      </ChartContainer>
     </figure>
   );
 }
@@ -178,65 +106,62 @@ export default function TrendLines({ data, table }: Props) {
     () =>
       METRICS.map((m) => ({
         metric: m,
-        points: data.map((d) => ({ x: d.날짜, y: d[table][m.key] as number | null })),
+        rows: data.map((d) => ({ 날짜: d.날짜, value: d[table][m.key] as number | null })),
       })),
     [data, table]
   );
 
   if (data.length === 0) {
     return (
-      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+      <p className="text-sm text-muted-foreground">
         추이를 그리려면 날짜별 스냅샷이 2일 이상 필요합니다.
       </p>
     );
   }
 
   return (
-    <div className="viz-root space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-5">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
         {series.map((s) => (
-          <Sparkline key={s.metric.key} points={s.points} metric={s.metric} />
+          <MetricChart key={s.metric.key} metric={s.metric} rows={s.rows} />
         ))}
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => setShowTable((v) => !v)}
-          className="text-xs font-semibold border rounded px-3 py-1.5 hover:bg-gray-50"
-        >
+        <Button variant="outline" size="sm" onClick={() => setShowTable((v) => !v)}>
           {showTable ? '표 닫기' : '표로 보기'}
-        </button>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        </Button>
+        <span className="text-xs text-muted-foreground">
           날짜별 값(누적 아님) · 유입은 전날 누적과의 차이로 산출
         </span>
       </div>
 
       {showTable && (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left border-b" style={{ color: 'var(--text-secondary)' }}>
-                <th className="py-1.5 pr-3 font-semibold">날짜</th>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>날짜</TableHead>
                 {METRICS.map((m) => (
-                  <th key={m.key} className="py-1.5 px-3 font-semibold text-right">
+                  <TableHead key={m.key} className="text-right">
                     {m.label}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {[...data].reverse().map((d) => (
-                <tr key={d.날짜} className="border-b border-gray-100">
-                  <td className="py-1.5 pr-3 tabular-nums">{d.날짜}</td>
+                <TableRow key={d.날짜}>
+                  <TableCell className="tabular-nums">{d.날짜}</TableCell>
                   {METRICS.map((m) => (
-                    <td key={m.key} className="py-1.5 px-3 text-right tabular-nums">
+                    <TableCell key={m.key} className="text-right tabular-nums">
                       {d[table][m.key] ?? '—'}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

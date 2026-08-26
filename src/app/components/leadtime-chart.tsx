@@ -20,9 +20,9 @@ export default function LeadTimeChart({ data, 집계시작 }: Props) {
 
   if (신규합 + 적체합 === 0) {
     return (
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-muted-foreground">
         <p>집계 중 ({집계시작}~)</p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           첫 응대 시각 자동화 적용 이후 데이터가 쌓이면 표시됩니다.
         </p>
       </div>
@@ -47,29 +47,29 @@ export default function LeadTimeChart({ data, 집계시작 }: Props) {
       <div className="space-y-2">
         {data.map((d) => (
           <div key={d.버킷} className="flex items-center gap-2">
-            <span className="w-20 shrink-0 text-xs text-gray-600">{d.버킷}</span>
+            <span className="w-20 shrink-0 text-xs text-muted-foreground">{d.버킷}</span>
             <div className="flex-1 space-y-0.5">
-              <div className="h-3 bg-gray-100 rounded-sm overflow-hidden">
+              <div className="h-3 bg-muted rounded-sm overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-sm"
                   style={{ width: `${(d.신규유입분 / max) * 100}%` }}
                 />
               </div>
-              <div className="h-3 bg-gray-100 rounded-sm overflow-hidden">
+              <div className="h-3 bg-muted rounded-sm overflow-hidden">
                 <div
                   className="h-full bg-amber-400 rounded-sm"
                   style={{ width: `${(d.적체소화분 / max) * 100}%` }}
                 />
               </div>
             </div>
-            <span className="w-20 shrink-0 text-right text-xs tabular-nums text-gray-600">
+            <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
               {d.신규유입분} / {d.적체소화분}
             </span>
           </div>
         ))}
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-muted-foreground">
         적체 소화분 = 유입 다음 날 이후에 첫 응대한 건. 응대 속도 판단은 신규 유입분으로 할 것.
       </p>
     </div>

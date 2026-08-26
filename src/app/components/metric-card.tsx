@@ -13,7 +13,7 @@ const colorMap = {
   green: 'bg-green-50 border-green-200 text-green-700',
   yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
   red: 'bg-red-50 border-red-200 text-red-700',
-  gray: 'bg-gray-50 border-gray-200 text-gray-700',
+  gray: 'bg-muted/50 border-border text-foreground',
 };
 
 export default function MetricCard({ title, value, unit, sub, color = 'gray' }: MetricCardProps) {
