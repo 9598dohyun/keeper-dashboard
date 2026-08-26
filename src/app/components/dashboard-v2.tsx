@@ -29,31 +29,47 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+      <div className="flex flex-wrap items-end gap-x-10 gap-y-3">
         <div>
-          <p className="text-xs font-semibold text-gray-500">전환율</p>
-          <p className="flex items-baseline gap-1.5">
-            <span className="text-5xl font-bold tracking-tight text-gray-900 tabular-nums">
-              {전환.전환율_pct}
-            </span>
-            <span className="text-xl font-semibold text-gray-400">%</span>
+          <p className="text-xs font-semibold text-gray-500">오늘 응대</p>
+          <p className="text-5xl font-bold tracking-tight text-gray-900 tabular-nums">
+            {전환.응대}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">메모를 남긴 리드 수</p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-gray-500">오늘 결제</p>
+          <p className="text-5xl font-bold tracking-tight text-green-700 tabular-nums">
+            {전환.결제}
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
-            오늘 결제 {전환.결제} ÷ 오늘 응대 {전환.응대}
+            {전환.전환율_pct === null ? '결제 데이터 엑셀 기준' : '에어테이블 최종결과 기준'}
           </p>
         </div>
 
-        <div className="flex gap-6">
+        {전환.전환율_pct !== null && (
           <div>
-            <p className="text-xs font-semibold text-gray-500">오늘 응대</p>
-            <p className="text-2xl font-bold text-gray-900 tabular-nums">{전환.응대}</p>
+            <p className="text-xs font-semibold text-gray-500">전환율</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-bold tracking-tight text-gray-900 tabular-nums">
+                {전환.전환율_pct}
+              </span>
+              <span className="text-lg font-semibold text-gray-400">%</span>
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              결제 {전환.결제} ÷ 응대 {전환.응대}
+            </p>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500">오늘 결제</p>
-            <p className="text-2xl font-bold text-green-700 tabular-nums">{전환.결제}</p>
-          </div>
-        </div>
+        )}
       </div>
+
+      {전환.전환율_pct === null && (
+        <p className="text-xs text-gray-500">
+          응대와 결제는 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음)
+          나눈 값을 전환율로 쓰지 않고 건수만 표시한다.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-3 border-t">
         {분해.map((d) => (
@@ -99,7 +115,7 @@ function AssigneeTable({ rows }: { rows: AssigneeMetric[] }) {
               <td className="py-2 px-4 text-right tabular-nums">{r.응대}</td>
               <td className="py-2 px-4 text-right tabular-nums">{r.결제}</td>
               <td className="py-2 pl-4 text-right font-semibold tabular-nums">
-                {r.전환율_pct}%
+                {r.전환율_pct === null ? '—' : `${r.전환율_pct}%`}
               </td>
             </tr>
           ))}
@@ -261,7 +277,9 @@ export default function DashboardV2() {
               {k === 'skb' ? 'SKB' : '인바운드'}
               <span className={table === k ? 'opacity-70' : 'text-gray-400'}>
                 {' '}
-                {data[k].전환.전환율_pct}%
+                {data[k].전환.전환율_pct === null
+                  ? `결제 ${data[k].전환.결제}`
+                  : `${data[k].전환.전환율_pct}%`}
               </span>
             </button>
           ))}

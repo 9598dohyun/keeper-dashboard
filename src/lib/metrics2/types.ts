@@ -25,7 +25,11 @@ export interface V2Record {
 export interface ConversionMetrics {
   응대: number; // 메모수정시각이 오늘인 전체 (= 분모)
   결제: number; // 그중 결제 완료 계열 (= 분자)
-  전환율_pct: number; // 결제 / 응대 × 100
+  /**
+   * 결제 / 응대 × 100.
+   * 결제 엑셀 기준일 때는 null — 응대와 결제의 모집단이 달라 비율로 성립하지 않는다.
+   */
+  전환율_pct: number | null;
   // 오늘 응대건의 최종결과 분해 (투명성)
   분해: {
     결제: number;
@@ -41,7 +45,7 @@ export interface AssigneeMetric {
   담당자: string; // 빈값이면 '(미배정)'
   응대: number;
   결제: number;
-  전환율_pct: number;
+  전환율_pct: number | null; // 결제 엑셀 기준일 때는 null
 }
 
 /** 인바운드용 지표 (전환 + 담당자별 + 유입 + 채널) */
