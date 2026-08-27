@@ -46,12 +46,40 @@ function daysBetween(from: Date, to: Date): number {
   return Math.floor((b.getTime() - a.getTime()) / 86400000);
 }
 
-function conversionOf(records: D3Record[]): ConversionStat {
+/**
+ * 결제 판정.
+ *
+ * 결제 여부의 진짜 소스는 결제 데이터 엑셀이다. 다만 원장은 엑셀을 받은 날부터 쌓이므로
+ * 그 이전 유입분까지 엑셀 기준으로 세면 과거 결제가 통째로 누락된다(90일 결제 312 → 22).
+ *
+ * 그래서 **원장이 덮는 기간에 유입된 리드만** 엑셀 기준으로 판정하고,
+ * 그 이전 유입분은 기존대로 에어테이블 최종결과를 쓴다.
+ * 전체 기간 엑셀을 --all 로 한 번 넣으면 커버 범위가 과거까지 넓어져 전부 엑셀 기준이 된다.
+ */
+function paidOf(r: D3Record, ctx: PaidContext): boolean {
+  if (ctx.ids) {
+    const d = kstOf(r.fields['유입시간']);
+    const day = d ? formatDate(d) : null;
+    if (day !== null && (ctx.since === null || day >= ctx.since)) {
+      return ctx.ids.has(r.id);
+    }
+  }
+  return isPaid(r.fields['[콜]최종 결과']);
+}
+
+/** 결제 판정에 필요한 것 — 원장 ID와 원장이 덮기 시작하는 날 */
+export interface PaidContext {
+  ids: Set<string> | null;
+  /** 이 날짜 이후 유입분만 원장으로 판정. null이면 전체 기간 */
+  since: string | null;
+}
+
+function conversionOf(records: D3Record[], paid: PaidContext): ConversionStat {
   const 유입 = records.length;
   let 결제 = 0;
   let 미확정 = 0;
   for (const r of records) {
-    if (isPaid(r.fields['[콜]최종 결과'])) 결제++;
+    if (paidOf(r, paid)) 결제++;
     if (isUnresolved(r)) 미확정++;
   }
   const 종결 = 유입 - 미확정;
@@ -66,8 +94,13 @@ function conversionOf(records: D3Record[]): ConversionStat {
 }
 
 /** 세그먼트 1그룹의 행 생성 */
-function segmentRowOf(key: string, records: D3Record[], today: Date): SegmentRow {
-  const base = conversionOf(records);
+function segmentRowOf(
+  key: string,
+  records: D3Record[],
+  today: Date,
+  paid: PaidContext
+): SegmentRow {
+  const base = conversionOf(records, paid);
   let 방치 = 0;
   let 경과합 = 0;
   let 미확정수 = 0;
@@ -148,7 +181,7 @@ function computeLeadTime(records: D3Record[]): LeadTimeStat[] {
   }));
 }
 
-function computeFailReasons(records: D3Record[]): {
+function computeFailReasons(records: D3Record[], paid: PaidContext): {
   rows: FailReasonRow[];
   기재: number;
   실패총건: number;
@@ -157,7 +190,7 @@ function computeFailReasons(records: D3Record[]): {
   const 실패건 = records.filter((r) => {
     const f = r.fields['[콜]최종 결과'];
     if (!f || f.trim() === '') return false;
-    if (isPaid(f)) return false;
+    if (paidOf(r, paid)) return false;
     return f !== '중복문의' && f !== 'B2B';
   });
   const withReason = 실패건.filter((r) => r.fields['실패사유']);
@@ -206,12 +239,23 @@ export interface ComputeOptions {
   until?: string;
   /** 방치 리드 목록 최대 건수 */
   staleLimit?: number;
+  /**
+   * 결제 판정 소스 — 결제 데이터 엑셀 원장.
+   * 생략하면 에어테이블 [콜]최종 결과로 판정한다.
+   */
+  paid?: PaidContext;
 }
 
 /** 테이블 1개의 진단 결과 산출 */
 export function computeDiagnosis(
   allRecords: D3Record[],
-  { today, since, until, staleLimit = 500 }: ComputeOptions
+  {
+    today,
+    since,
+    until,
+    staleLimit = 500,
+    paid = { ids: null, since: null },
+  }: ComputeOptions
 ): DiagnosisTable {
   const records = allRecords.filter((r) => {
     const d = kstOf(r.fields['유입시간']);
@@ -225,12 +269,12 @@ export function computeDiagnosis(
       const d = kstOf(r.fields['유입시간']);
       return d !== null && timeSegmentOf(d) === seg;
     });
-    return segmentRowOf(seg, sub, today);
+    return segmentRowOf(seg, sub, today, paid);
   }).filter((row) => row.유입 > 0);
 
   const bySource = (keyFn: (r: D3Record) => string) =>
     [...groupBy(records, keyFn).entries()]
-      .map(([k, v]) => segmentRowOf(k, v, today))
+      .map(([k, v]) => segmentRowOf(k, v, today, paid))
       .sort((a, b) => b.유입 - a.유입);
 
   const 매체별 = bySource(utmSourceOf);
@@ -240,7 +284,7 @@ export function computeDiagnosis(
   const 담당자별 = [
     ...groupBy(records, (r) => r.fields['[콜]담당자']?.trim() || '(미배정)').entries(),
   ]
-    .map(([k, v]) => segmentRowOf(k, v, today))
+    .map(([k, v]) => segmentRowOf(k, v, today, paid))
     .sort((a, b) => b.유입 - a.유입);
 
   // 방치 버킷 집계 (제외 대상 뺀 미확정만)
@@ -258,10 +302,10 @@ export function computeDiagnosis(
     bucketCount.set(b, (bucketCount.get(b) ?? 0) + 1);
   }
 
-  const fail = computeFailReasons(records);
+  const fail = computeFailReasons(records, paid);
 
   return {
-    전체: conversionOf(records),
+    전체: conversionOf(records, paid),
     방치버킷: STALE_BUCKET_ORDER.map((b) => ({
       버킷: b,
       건수: bucketCount.get(b) ?? 0,

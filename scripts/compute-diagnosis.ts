@@ -27,6 +27,44 @@ import { D3_SNAPSHOT_START, D3_RANGES, KV_D3_DAILY_TTL } from '../src/lib/consta
 import { listPeriods, PeriodKind } from '../src/lib/metrics3/period';
 
 const DATA_DIR = path.join(__dirname, '../data');
+
+/**
+ * 누적 결제 원장 → 결제로 인정할 레코드 ID.
+ *
+ * 결제 여부의 진짜 소스는 결제 데이터 엑셀이다(reconcile.py 가 원장에 쌓는다).
+ * 원장이 없으면 null 을 돌려 기존대로 에어테이블 최종결과 기준으로 계산된다.
+ */
+function loadLedgerIds(): {
+  inbound: Set<string> | null;
+  skb: Set<string> | null;
+  orders: number;
+  /** 원장이 덮는 가장 이른 결제일. 이 날 이후 유입분만 엑셀로 판정한다 */
+  coversSince: string | null;
+} {
+  const p = path.join(DATA_DIR, '결제원장.json');
+  if (!fs.existsSync(p)) return { inbound: null, skb: null, orders: 0, coversSince: null };
+  const ledger = JSON.parse(fs.readFileSync(p, 'utf8')) as {
+    주문: Record<
+      string,
+      { 취소?: boolean; 결제일?: string | null; 인바운드ID?: string[]; skbID?: string[] }
+    >;
+  };
+  const inbound = new Set<string>();
+  const skb = new Set<string>();
+  let earliest: string | null = null;
+  for (const rec of Object.values(ledger.주문 ?? {})) {
+    if (rec.결제일 && (earliest === null || rec.결제일 < earliest)) earliest = rec.결제일;
+    if (rec.취소) continue;
+    for (const id of rec.인바운드ID ?? []) inbound.add(id);
+    for (const id of rec.skbID ?? []) skb.add(id);
+  }
+  return {
+    inbound,
+    skb,
+    orders: Object.keys(ledger.주문 ?? {}).length,
+    coversSince: earliest,
+  };
+}
 /** 방치 리드 목록 상한 — KV 용량과 화면 렌더 비용을 고려 */
 const STALE_LIMIT = 1000;
 
@@ -55,18 +93,39 @@ async function main() {
   const skb = readTable('SKB');
   const today = todayKST();
   const todayStr = formatDate(today);
+  const ledger = loadLedgerIds();
+  console.log(
+    ledger.inbound
+      ? `결제 소스: 엑셀 원장 ${ledger.coversSince}~ (인바운드 ${ledger.inbound.size} · SKB ${ledger.skb!.size}) / 그 이전 유입분은 에어테이블 기준`
+      : '결제 소스: 에어테이블 [콜]최종 결과 (결제원장.json 없음)'
+  );
+  const paidInbound = { ids: ledger.inbound, since: ledger.coversSince };
+  const paidSkb = { ids: ledger.skb, since: ledger.coversSince };
 
   for (const days of D3_RANGES) {
     const since = formatDate(minusDays(today, days));
     const result: DiagnosisResult = {
       집계일: todayStr,
       기간: { 시작: since, 종료: todayStr, 일수: days },
-      인바운드: computeDiagnosis(inbound, { today, since, staleLimit: STALE_LIMIT }),
-      skb: computeDiagnosis(skb, { today, since, staleLimit: STALE_LIMIT }),
+      인바운드: computeDiagnosis(inbound, {
+        today,
+        since,
+        staleLimit: STALE_LIMIT,
+        paid: paidInbound,
+      }),
+      skb: computeDiagnosis(skb, {
+        today,
+        since,
+        staleLimit: STALE_LIMIT,
+        paid: paidSkb,
+      }),
       meta: {
         updatedAt: new Date().toISOString(),
         리드타임_집계시작: LEADTIME_START,
         스냅샷_시작: D3_SNAPSHOT_START,
+        결제소스: ledger.inbound ? 'excel' : 'airtable',
+        원장_주문수: ledger.orders,
+        원장_시작일: ledger.coversSince,
       },
     };
 
@@ -96,17 +155,22 @@ async function main() {
           since: p.시작,
           until: p.종료,
           staleLimit: STALE_LIMIT,
+          paid: paidInbound,
         }),
         skb: computeDiagnosis(skb, {
           today,
           since: p.시작,
           until: p.종료,
           staleLimit: STALE_LIMIT,
+          paid: paidSkb,
         }),
         meta: {
           updatedAt: new Date().toISOString(),
           리드타임_집계시작: LEADTIME_START,
           스냅샷_시작: D3_SNAPSHOT_START,
+          결제소스: ledger.inbound ? 'excel' : 'airtable',
+          원장_주문수: ledger.orders,
+          원장_시작일: ledger.coversSince,
         },
       };
       await kv.set(`d3:period:${kind}:${p.id}`, result, { ex: KV_D3_DAILY_TTL });

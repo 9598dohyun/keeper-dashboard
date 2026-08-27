@@ -142,5 +142,11 @@ export interface DiagnosisResult {
     리드타임_집계시작: string;
     /** 날짜별 스냅샷 축적 시작일 — 이전 날짜는 조회 불가 */
     스냅샷_시작: string;
+    /** 결제수를 무엇으로 셌는지. 엑셀 원장이 없으면 airtable */
+    결제소스?: 'excel' | 'airtable';
+    /** 원장에 담긴 주문 수 (결제소스가 excel일 때) */
+    원장_주문수?: number;
+    /** 원장이 덮는 시작일. 이 날 이후 유입분만 엑셀 기준으로 판정된다 */
+    원장_시작일?: string | null;
   };
 }

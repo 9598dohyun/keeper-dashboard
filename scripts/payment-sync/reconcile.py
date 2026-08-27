@@ -33,6 +33,9 @@ from openpyxl import load_workbook
 KST = timezone(timedelta(hours=9))
 BASE_DIR = Path(__file__).resolve().parents[2]
 OUT_PATH = BASE_DIR / "data" / "결제대조.json"
+# 누적 결제 원장 — 엑셀을 받을 때마다 여기에 쌓인다.
+# 하루치 파일만 와도 과거분이 남아 있어야 진단(유입 코호트)이 엑셀 기준으로 계산된다.
+LEDGER_PATH = BASE_DIR / "data" / "결제원장.json"
 
 INBOUND_TABLE = "tbljFHOl4PzAWmb1f"
 SKB_TABLE = "tblb5APohbhFixfHB"
@@ -246,6 +249,63 @@ def dedupe_orders(items):
     return order
 
 
+def load_ledger():
+    """누적 결제 원장. 없으면 빈 원장"""
+    if not LEDGER_PATH.exists():
+        return {"주문": {}, "갱신이력": []}
+    return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+
+
+def update_ledger(ledger, orders, index, 엑셀파일):
+    """
+    원장에 이번 엑셀의 주문을 반영한다.
+
+    같은 주문번호는 덮어쓴다 — 어제 결제였다가 오늘 취소된 건이 취소로 갱신돼야 한다.
+    개인정보는 남기지 않고 결제일·취소여부·매칭된 레코드 ID만 저장한다.
+    """
+    주문 = ledger.setdefault("주문", {})
+    added = updated = 0
+    for it in orders:
+        no = it["주문번호"]
+        if not no:
+            continue
+        hit = index.get(it["키"], [])
+        rec = {
+            "결제일": it["결제일"],
+            "취소": is_cancelled(it),
+            "인바운드ID": sorted({r["id"] for r in hit if r["테이블"] == "인바운드"}),
+            "skbID": sorted({r["id"] for r in hit if r["테이블"] == "SKB"}),
+            "매칭": bool(hit),
+        }
+        if no in 주문:
+            if 주문[no] != rec:
+                주문[no] = rec
+                updated += 1
+        else:
+            주문[no] = rec
+            added += 1
+    ledger["갱신이력"] = (ledger.get("갱신이력", []) + [
+        {
+            "시각": datetime.now(KST).isoformat(),
+            "엑셀파일": 엑셀파일,
+            "신규": added,
+            "갱신": updated,
+        }
+    ])[-30:]
+    return added, updated
+
+
+def ledger_payment_ids(ledger):
+    """원장 → 결제로 인정되는 레코드 ID 집합 (취소 제외)"""
+    inb, skb = set(), set()
+    for rec in ledger.get("주문", {}).values():
+        if rec.get("취소"):
+            continue
+        inb.update(rec.get("인바운드ID", []))
+        skb.update(rec.get("skbID", []))
+    return inb, skb
+
+
 def airtable_fetch(base, token, table, fields, progress=None):
     """테이블 전체 조회 (페이징). 인바운드는 1만 건대라 수십 초 걸린다"""
     out = []
@@ -273,6 +333,14 @@ def main():
     ap.add_argument("excel", help="키퍼 주문정산통합데이터 엑셀 경로")
     ap.add_argument("--date", help="기준일 YYYY-MM-DD (생략 시 파일명 날짜 → 엑셀 최신 주문일)")
     ap.add_argument("--dry-run", action="store_true", help="파일로 저장하지 않고 결과만 출력")
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        help=(
+            "엑셀에 담긴 전체 기간을 원장에 반영한다. "
+            "전체 기간이 담긴 파일을 처음 넣을 때(소급 적용) 사용."
+        ),
+    )
     ap.add_argument(
         "--exclude",
         default="",
@@ -322,13 +390,17 @@ def main():
 
     # 기준일 건만 사용 — 파일에는 전체 기간이 담겨 있다
     day = [i for i in all_items if i["결제일"] == 기준일]
-    if not day:
+    if not day and not args.all:
         raise SystemExit(
             f"기준일 {기준일} 주문이 엑셀에 없습니다.\n"
             f"  엑셀에 담긴 최근 날짜: {', '.join(dates[-5:]) if dates else '(없음)'}\n"
             "  --date 로 다른 날짜를 지정하거나 파일을 확인해 주세요."
         )
 
+    # --all 이면 파일에 담긴 전체 기간을 원장에 넣는다 (소급 적용)
+    if args.all:
+        day = all_items
+        print(f"\n--all: 전체 기간 {len(dates)}일치를 원장에 반영합니다.")
     rows_raw = len(day)
     day = dedupe_orders(day)
 
@@ -426,6 +498,20 @@ def main():
         if len(취소) > 10:
             print(f"  … 외 {len(취소) - 10}건")
 
+    # 누적 원장 갱신 — 진단(유입 코호트)이 과거 결제까지 엑셀 기준으로 보게 한다
+    ledger = load_ledger()
+    added, updated = update_ledger(ledger, day, index, Path(args.excel).name)
+    inb_ids, skb_ids = ledger_payment_ids(ledger)
+    if not args.dry_run:
+        LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LEDGER_PATH.write_text(
+            json.dumps(ledger, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    print(
+        f"\n원장: 주문 {len(ledger['주문'])}건 (신규 {added} / 갱신 {updated})"
+        f" → 결제 인정 인바운드 {len(inb_ids)} · SKB {len(skb_ids)}"
+    )
+
     payload = {
         "기준일": 기준일,
         "생성시각": datetime.now(KST).isoformat(),
@@ -444,6 +530,10 @@ def main():
             {r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "인바운드"}
         ),
         "결제ID_SKB": sorted({r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "SKB"}),
+        # 원장 누적분 — 진단 화면이 과거 코호트를 엑셀 기준으로 셀 때 쓴다
+        "원장_주문수": len(ledger["주문"]),
+        "원장_결제ID_인바운드": sorted(inb_ids),
+        "원장_결제ID_SKB": sorted(skb_ids),
     }
 
     if args.dry_run:

@@ -37,6 +37,10 @@ npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
   메모 필드만 감시하는 `메모수정시각`(에어테이블 오토메이션)으로 교체했다.
 - 기준이 다른 `MEMO_TS_START`(2026-08-26) 이전 구간은 추이·유입 집계에서 제외한다.
 - `data/결제대조.json`이 없으면 결제수가 에어테이블 기준으로 폴백한다.
+- **진단 화면(metrics3)도 엑셀 기준**이다. `data/결제원장.json`(reconcile.py가 누적)에 쌓인
+  결제건으로 판정하되, **원장이 덮는 기간에 유입된 리드만** 적용하고 그 이전은 에어테이블
+  기준을 쓴다. 전체를 엑셀 기준으로 맞추려면 전체 기간 파일을 `--all` 로 한 번 넣으면 된다.
+- 진단 조회 기간은 일간·주별(월~일)·월별. `d3:period:{kind}:{id}` 키에 저장된다.
 
 환경변수 필요: `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `SK_AIRTABLE_TOKEN`, `SK_AIRTABLE_BASE_ID` (`.env.local`은 gitignore — 운영 환경은 Vercel 프로젝트 env에 별도 등록 필요)
 
