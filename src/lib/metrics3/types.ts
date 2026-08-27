@@ -125,7 +125,15 @@ export interface DiagnosisTable {
 /** KV에 저장하는 진단 대시보드 묶음 */
 export interface DiagnosisResult {
   집계일: string;
-  기간: { 시작: string; 종료: string; 일수: number };
+  기간: {
+    시작: string;
+    종료: string;
+    일수: number;
+    /** 일간·주별·월별로 조회한 경우에만 채워진다 ("최근 N일"에는 없음) */
+    종류?: 'day' | 'week' | 'month';
+    id?: string;
+    라벨?: string;
+  };
   인바운드: DiagnosisTable;
   skb: DiagnosisTable;
   meta: {

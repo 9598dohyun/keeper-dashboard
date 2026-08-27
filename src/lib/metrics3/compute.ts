@@ -202,6 +202,8 @@ export interface ComputeOptions {
   today: Date;
   /** 유입시간이 이 날짜 이후인 리드만 (YYYY-MM-DD) */
   since: string;
+  /** 유입시간이 이 날짜 이하인 리드만 (YYYY-MM-DD). 주별·월별처럼 끝이 닫힌 기간에 쓴다 */
+  until?: string;
   /** 방치 리드 목록 최대 건수 */
   staleLimit?: number;
 }
@@ -209,11 +211,13 @@ export interface ComputeOptions {
 /** 테이블 1개의 진단 결과 산출 */
 export function computeDiagnosis(
   allRecords: D3Record[],
-  { today, since, staleLimit = 500 }: ComputeOptions
+  { today, since, until, staleLimit = 500 }: ComputeOptions
 ): DiagnosisTable {
   const records = allRecords.filter((r) => {
     const d = kstOf(r.fields['유입시간']);
-    return d !== null && formatDate(d) >= since;
+    if (d === null) return false;
+    const day = formatDate(d);
+    return day >= since && (until === undefined || day <= until);
   });
 
   const 시간대별 = SEGMENT_ORDER.map((seg) => {

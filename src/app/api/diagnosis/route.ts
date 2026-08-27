@@ -10,10 +10,13 @@ import { D3_RANGES } from '@/lib/constants';
  * GET /api/diagnosis?type=dates               → 스냅샷 보유 날짜 목록 (내림차순)
  * GET /api/diagnosis?type=meta                → 갱신 시각·집계 시작일
  * GET /api/diagnosis?date=YYYY-MM-DD&range=60 → 그날 마감 시점 스냅샷
+ * GET /api/diagnosis?kind=week                → 고를 수 있는 주차 목록
+ * GET /api/diagnosis?kind=week&period=2026-W35 → 그 주(월~일) 지표
  *
  * metrics2(/api/metrics-v2)와 분모가 다른 별개 지표다. 혼용 금지.
  */
 const ALLOWED = D3_RANGES.map(String);
+const KINDS = ['day', 'week', 'month'] as const;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,6 +25,30 @@ export async function GET(request: Request) {
   const range = searchParams.get('range') ?? '90';
 
   try {
+    // 일간·주별·월별 — 경계가 고정된 기간
+    const kind = searchParams.get('kind');
+    if (kind) {
+      if (!KINDS.includes(kind as (typeof KINDS)[number])) {
+        return NextResponse.json(
+          { error: `kind는 ${KINDS.join(', ')} 중 하나여야 합니다.` },
+          { status: 400 }
+        );
+      }
+      const period = searchParams.get('period');
+      if (!period) {
+        const list = await kv.get(`d3:periods:${kind}`);
+        return NextResponse.json(list ?? []);
+      }
+      if (!/^[0-9]{4}-(W[0-9]{2}|[0-9]{2}|[0-9]{2}-[0-9]{2})$/.test(period)) {
+        return NextResponse.json({ error: '기간 형식 오류' }, { status: 400 });
+      }
+      const snap = await kv.get<DiagnosisResult>(`d3:period:${kind}:${period}`);
+      if (!snap) {
+        return NextResponse.json({ error: '해당 기간 데이터가 없습니다.' }, { status: 404 });
+      }
+      return NextResponse.json(snap);
+    }
+
     if (type === 'dates') {
       const dates = await kv.get<string[]>('d3:dates');
       return NextResponse.json(dates ?? []);

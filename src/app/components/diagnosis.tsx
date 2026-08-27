@@ -18,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -30,7 +29,6 @@ import {
 type TableKey = '인바운드' | 'skb';
 type SegFilter = '전체' | TimeSegment;
 
-const RANGES = [30, 60, 90] as const;
 /** 채널·담당자 표에서 표본 부족 행을 감추는 기준 */
 const MIN_VOLUME = 30;
 
@@ -54,22 +52,40 @@ function Section({
   );
 }
 
+type PeriodKind = 'day' | 'week' | 'month';
+interface PeriodOpt {
+  id: string;
+  label: string;
+  시작: string;
+  종료: string;
+}
+
+const KIND_LABEL: Record<PeriodKind, string> = {
+  day: '일간',
+  week: '주별',
+  month: '월별',
+};
+
 export default function Diagnosis() {
-  const [range, setRange] = useState<number>(90);
+  const [kind, setKind] = useState<PeriodKind>('day');
+  const [periods, setPeriods] = useState<PeriodOpt[]>([]);
+  /**
+   * 선택된 기간을 종류와 함께 들고 있는다.
+   * 따로 두면 종류를 바꾼 직후 목록이 오기 전에 이전 종류의 id로 조회해 404가 난다.
+   */
+  const [sel, setSel] = useState<{ kind: PeriodKind; id: string } | null>(null);
   const [table, setTable] = useState<TableKey>('인바운드');
   const [seg, setSeg] = useState<SegFilter>('전체');
   const [axis, setAxis] = useState<SourceAxis>('utm');
-  const [dates, setDates] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(''); // '' = 최신
   const [data, setData] = useState<DiagnosisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async (r: number, date: string) => {
+  const fetchData = useCallback(async (k: PeriodKind, id: string) => {
+    if (!id) return;
     setLoading(true);
     try {
-      const qs = new URLSearchParams({ range: String(r) });
-      if (date) qs.set('date', date);
+      const qs = new URLSearchParams({ kind: k, period: id });
       const res = await fetch(`/api/diagnosis?${qs}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -84,17 +100,33 @@ export default function Diagnosis() {
     }
   }, []);
 
+  // 기간 종류가 바뀌면 목록을 새로 받고 가장 최근 기간을 고른다
   useEffect(() => {
-    fetchData(range, selectedDate);
-  }, [fetchData, range, selectedDate]);
-
-  // 스냅샷 날짜 목록은 최초 1회만 로드
-  useEffect(() => {
-    fetch('/api/diagnosis?type=dates')
+    let alive = true;
+    fetch(`/api/diagnosis?kind=${kind}`)
       .then((r) => (r.ok ? r.json() : []))
-      .then((d: string[]) => setDates(Array.isArray(d) ? d : []))
-      .catch(() => setDates([]));
-  }, []);
+      .then((list: PeriodOpt[]) => {
+        if (!alive) return;
+        const arr = Array.isArray(list) ? list : [];
+        setPeriods(arr);
+        setSel(arr[0] ? { kind, id: arr[0].id } : null);
+      })
+      .catch(() => {
+        if (alive) {
+          setPeriods([]);
+          setSel(null);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [kind]);
+
+  useEffect(() => {
+    // sel.kind !== kind 인 순간(종류 전환 직후)은 목록을 기다린다
+    if (!sel || sel.kind !== kind) return;
+    fetchData(sel.kind, sel.id);
+  }, [fetchData, kind, sel]);
 
   const t: DiagnosisTable | null = data ? data[table] : null;
 
@@ -138,7 +170,7 @@ export default function Diagnosis() {
         <Alert variant="destructive">
           <AlertDescription>오류: {error}</AlertDescription>
         </Alert>
-        <Button variant="outline" size="sm" onClick={() => fetchData(range, selectedDate)}>
+        <Button variant="outline" size="sm" onClick={() => sel && fetchData(sel.kind, sel.id)}>
           다시 시도
         </Button>
       </div>
@@ -166,15 +198,34 @@ export default function Diagnosis() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Tabs value={String(range)} onValueChange={(v: string) => setRange(Number(v))}>
+          <Tabs value={kind} onValueChange={(v: string) => setKind(v as PeriodKind)}>
             <TabsList>
-              {RANGES.map((r) => (
-                <TabsTrigger key={r} value={String(r)}>
-                  최근 {r}일
+              {(['day', 'week', 'month'] as PeriodKind[]).map((k) => (
+                <TabsTrigger key={k} value={k}>
+                  {KIND_LABEL[k]}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
+
+          {periods.length > 0 && (
+            <Select
+              items={periods.map((p) => ({ label: p.label, value: p.id }))}
+              value={sel?.id ?? ''}
+              onValueChange={(v: string | null) => v && setSel({ kind, id: v })}
+            >
+              <SelectTrigger size="sm" className="w-[180px]" aria-label="기간 선택">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Tabs value={table} onValueChange={(v: string) => setTable(v as TableKey)}>
             <TabsList>
@@ -203,45 +254,10 @@ export default function Diagnosis() {
           </Tabs>
         </div>
 
-        {dates.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Label htmlFor="d3-date" className="text-xs font-semibold">
-              기준일
-            </Label>
-            <Select
-              items={[
-                { label: '최신', value: '__latest__' },
-                ...dates.map((d) => ({ label: d, value: d })),
-              ]}
-              value={selectedDate || '__latest__'}
-              onValueChange={(v: string | null) =>
-                setSelectedDate(!v || v === '__latest__' ? '' : v)
-              }
-            >
-              <SelectTrigger id="d3-date" size="sm" className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__latest__">최신</SelectItem>
-                {dates.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedDate && (
-              <span className="text-[11px] text-muted-foreground">
-                {selectedDate} 마감 시점 스냅샷
-              </span>
-            )}
-          </div>
-        )}
-
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          이 화면은 유입 시점 기준으로 리드의 처리 상태를 봅니다. 대시보드의 당일 성과 지표
-          (오늘 결제 ÷ 오늘 응대)와는 분모가 달라 수치가 일치하지 않습니다.
-          {' '}날짜별 스냅샷은 {data.meta.스냅샷_시작}부터 하루 1건(KST 23:59 마감)씩 쌓입니다.
+          이 화면은 유입 시점 기준으로 리드의 처리 상태를 봅니다. 고른 기간에 유입된 리드가
+          지금까지 어떻게 처리됐는지를 보는 것이라, 대시보드의 당일 응대·결제 건수와는 세는
+          대상이 달라 수치가 일치하지 않습니다. 결제 여부는 에어테이블 최종 결과 기준입니다.
         </p>
       </header>
 
