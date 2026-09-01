@@ -71,7 +71,7 @@ export default function VideoCompare() {
         <div className="vc-grid">
           <div className="vc-card vc-card-keeper">
             <div className="vc-card-label">
-              Keeper · 한화비전
+              Keeper
               <span className="vc-card-badge">105° 광화각</span>
             </div>
             <video

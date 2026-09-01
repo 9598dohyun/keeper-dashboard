@@ -25,15 +25,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: '설치 후 A/S는 어떻게 됩니까?',
-    a: '한화비전 본사가 직접 운영하는 어플과 고객센터를 통해 사후 지원이 이루어지며, 보증 기간 내에는 무상 점검·교체가 가능합니다. 보증 기간 출장비 기준은 별도 안내드립니다.',
+    a: '제조사가 직접 운영하는 어플과 고객센터를 통해 사후 지원이 이루어지며, 보증 기간 내에는 무상 점검·교체가 가능합니다. 보증 기간 출장비 기준은 별도 안내드립니다.',
   },
   {
     q: '기존 보안업체(출동보안)와 같이 써도 되나요?',
     a: '네. 키퍼는 매장 영상 감시·녹화에 특화된 솔루션으로 출동 보안과 병행하여 사용할 수 있습니다. 기존 출동 계약을 해지하지 않고도 키퍼만 추가 도입하실 수 있습니다.',
-  },
-  {
-    q: '세금계산서 발행이 가능한가요?',
-    a: '네. 사업자 결제 시 전자세금계산서가 자동 발행됩니다. 가격은 모두 VAT 포함 기준이므로 매입세액 공제도 받으실 수 있습니다.',
   },
   {
     q: '설치 기간은 얼마나 걸리나요?',
@@ -98,7 +94,7 @@ export default function CalLanding() {
         <div className="nav-inner">
           <div className="brand">
             <span className="brand-logo-text">KEEPER</span>
-            <span className="brand-sub">한화비전 · 매장용 CCTV</span>
+            <span className="brand-sub">매장용 CCTV</span>
           </div>
           <Link className="nav-cta" href="/cal/lead">
             견적 신청하기
@@ -122,7 +118,7 @@ export default function CalLanding() {
           내 매장 비용으로 비교하기
         </a>
         <div className="hero-trust">
-          <span>한화비전 자체 제품</span>
+          <span>제조사 자체 제품</span>
           <span>NVR 무상 제공</span>
           <span>최대 36개월 무이자</span>
           <span>결제 즉시 매장 자산</span>
@@ -368,7 +364,7 @@ export default function CalLanding() {
           그동안 살아있을 회사·시스템인지가 가장 중요합니다.
         </h2>
         <p className="section-lede">
-          한화비전(구 삼성테크윈)은 방산·반도체 광학 기술을 기반으로 한 글로벌 영상감시 솔루션 기업입니다. 외주 OEM이 아닌 자체 R&amp;D·자체 어플 운영 체계를 갖추고 있습니다.
+          키퍼는 방산·반도체 광학 기술을 기반으로 한 글로벌 영상감시 솔루션 기업이 만든 제품입니다. 외주 OEM이 아닌 자체 R&amp;D·자체 어플 운영 체계를 갖추고 있습니다.
         </p>
         <div className="benefits-grid">
           {[
@@ -398,9 +394,9 @@ export default function CalLanding() {
             },
             {
               n: '05',
-              title: '한화비전\n직접 운영 어플',
+              title: '제조사\n직접 운영 어플',
               desc:
-                '렌탈사가 외주 맡긴 어플은 1~2년 뒤 업데이트가 끊기는 경우가 많습니다. 키퍼는 한화비전 내부팀이 직접 운영하여 폰 OS와 무관하게 호환성이 유지됩니다.',
+                '렌탈사가 외주 맡긴 어플은 1~2년 뒤 업데이트가 끊기는 경우가 많습니다. 키퍼는 제조사 내부팀이 직접 운영하여 폰 OS와 무관하게 호환성이 유지됩니다.',
             },
             {
               n: '06',
@@ -487,7 +483,7 @@ export default function CalLanding() {
       </section>
 
       <footer className="cal-footer">
-        <div className="footer-line">한화비전 KEEPER · CCTV 매장용 검토 자료</div>
+        <div className="footer-line">KEEPER · CCTV 매장용 검토 자료</div>
         <div className="footer-line">
           <Link href="/cal/lead">상담 신청하기</Link>
         </div>

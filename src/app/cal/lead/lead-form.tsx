@@ -66,7 +66,7 @@ export default function LeadForm() {
         <div className="nav-inner">
           <Link href="/cal" className="brand" style={{ cursor: 'pointer' }}>
             <span className="brand-logo-text">KEEPER</span>
-            <span className="brand-sub">한화비전 · 매장용 CCTV</span>
+            <span className="brand-sub">매장용 CCTV</span>
           </Link>
           <Link className="nav-cta" href="/cal">
             계산기로 돌아가기
@@ -186,7 +186,7 @@ export default function LeadForm() {
       </section>
 
       <footer className="cal-footer">
-        <div className="footer-line">한화비전 KEEPER · CCTV 매장용 검토 자료</div>
+        <div className="footer-line">KEEPER · CCTV 매장용 검토 자료</div>
         <div className="footer-line">
           <Link href="/cal">← 계산기로 돌아가기</Link>
         </div>
