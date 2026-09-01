@@ -273,6 +273,7 @@ def update_ledger(ledger, orders, index, 엑셀파일):
         rec = {
             "결제일": it["결제일"],
             "취소": is_cancelled(it),
+            "채널": it["채널"],
             "인바운드ID": sorted({r["id"] for r in hit if r["테이블"] == "인바운드"}),
             "skbID": sorted({r["id"] for r in hit if r["테이블"] == "SKB"}),
             "매칭": bool(hit),
@@ -481,6 +482,11 @@ def main():
     )
     print(f"  에어테이블 미매칭 {len(미매칭)}건" + ("  <== 리드 없이 결제된 건" if 미매칭 else ""))
 
+    ch_매칭 = Counter(m["채널"] or "(없음)" for m in 매칭)
+    print("\n[유입채널별 결제]")
+    for k, v in ch.most_common():
+        print(f"  {k:12} 유효 {v}건  (매칭 {ch_매칭.get(k, 0)}건)")
+
     if 미매칭:
         print("\n[미매칭 — 엑셀에 있으나 에어테이블에 리드 없음]")
         for m in 미매칭[:20]:
@@ -525,6 +531,11 @@ def main():
             f"{i['주문번호']}({i['매장명']})" if i["매장명"] else str(i["주문번호"])
             for i in 제외됨
         ),
+        # 유입채널별 결제건 — 엑셀 `주문유입채널` 기준.
+        # 전체는 유효 결제, 매칭은 그중 리드가 붙은 것(대시보드 결제수와 같은 기준)
+        "채널별_결제": dict(ch.most_common()),
+        "채널별_결제_매칭": dict(Counter(m["채널"] or "(없음)" for m in 매칭).most_common()),
+        "채널별_취소": dict(Counter(c["채널"] or "(없음)" for c in 취소).most_common()),
         # 개인정보(이름·연락처)는 파일에 남기지 않는다 — 레코드 ID와 건수만
         "결제ID_인바운드": sorted(
             {r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "인바운드"}
