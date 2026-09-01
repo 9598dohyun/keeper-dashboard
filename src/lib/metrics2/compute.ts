@@ -10,6 +10,7 @@ import { parseUTC, toKST, formatDate } from '../metrics/biz-date';
 import { TOP_CHANNELS_COUNT } from '../constants';
 import { isPaid, isDuplicate, isB2B, isActive } from './status';
 import { normalizeChannel2 } from './channel';
+import { ContactHistory, splitRecontact } from './recontact';
 import {
   V2Record,
   PaymentReconcile,
@@ -70,7 +71,8 @@ function 결제판정(r: V2Record, 결제ID: Set<string> | null): boolean {
 function computeConversion(
   records: V2Record[],
   today: string,
-  결제ID: Set<string> | null
+  결제ID: Set<string> | null,
+  이력: ContactHistory | null
 ): ConversionMetrics {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
@@ -94,6 +96,13 @@ function computeConversion(
     // 응대와 결제는 모집단이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있다)
     // 나눈 값은 비율이 아니다 — 100%를 넘기도 한다. 엑셀 기준일 때는 내보내지 않는다.
     전환율_pct: 결제ID ? null : 응대 > 0 ? Math.round((결제 / 응대) * 1000) / 10 : 0,
+    // 응대건을 신규/재컨택으로 분해. 이력 파일이 없으면 계산하지 않는다(전부 신규로 보이면 오독).
+    재컨택: 이력
+      ? splitRecontact(
+          응대건.map((r) => [r.id, today] as [string, string]),
+          이력
+        )
+      : undefined,
     분해,
   };
 }
@@ -157,7 +166,8 @@ export function computeInbound(
   records: V2Record[],
   집계시작: string,
   today: string,
-  결제ID: Set<string> | null = null
+  결제ID: Set<string> | null = null,
+  이력: ContactHistory | null = null
 ): InboundMetrics {
   const 유입 = inflowSince(records, 집계시작);
   // 채널 (집계시작 이후 유입 기준)
@@ -170,7 +180,7 @@ export function computeInbound(
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_CHANNELS_COUNT);
   return {
-    전환: computeConversion(records, today, 결제ID),
+    전환: computeConversion(records, today, 결제ID, 이력),
     담당자별: computeAssignees(records, today, 결제ID),
     유입건수: 유입.length,
     채널_Top,
@@ -182,10 +192,11 @@ export function computeSkb(
   records: V2Record[],
   집계시작: string,
   today: string,
-  결제ID: Set<string> | null = null
+  결제ID: Set<string> | null = null,
+  이력: ContactHistory | null = null
 ): SkbMetrics {
   return {
-    전환: computeConversion(records, today, 결제ID),
+    전환: computeConversion(records, today, 결제ID, 이력),
     담당자별: computeAssignees(records, today, 결제ID),
     유입건수: inflowSince(records, 집계시작).length,
     유입_일자별: dailyInflow(records, 집계시작),

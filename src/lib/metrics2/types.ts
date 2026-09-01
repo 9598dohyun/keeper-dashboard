@@ -7,6 +7,8 @@
  *  - 유입 건수·채널 = 유입시간 기준
  */
 
+import { RecontactSplit } from './recontact';
+
 /** 새 베이스의 리드 레코드 (개인정보 연락처 제외) */
 export interface V2Record {
   id: string;
@@ -30,6 +32,11 @@ export interface ConversionMetrics {
    * 결제 엑셀 기준일 때는 null — 응대와 결제의 모집단이 달라 비율로 성립하지 않는다.
    */
   전환율_pct: number | null;
+  /**
+   * 오늘 응대건을 신규 접촉 / 재컨택으로 분해한 값.
+   * 접촉이력 스냅샷(data/접촉이력.json)이 쌓인 뒤부터 의미를 갖는다 — 이력이 비면 전부 신규.
+   */
+  재컨택?: RecontactSplit;
   // 오늘 응대건의 최종결과 분해 (투명성)
   분해: {
     결제: number;

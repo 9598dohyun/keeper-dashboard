@@ -82,7 +82,15 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-x-10 gap-y-3">
-        <Stat label="오늘 응대" value={전환.응대} hint="메모를 남긴 리드 수" />
+        <Stat
+          label="오늘 응대"
+          value={전환.응대}
+          hint={
+            전환.재컨택 && !전환.재컨택.이력없음
+              ? `신규 ${전환.재컨택.신규} · 재컨택 ${전환.재컨택.재컨택}`
+              : '메모를 남긴 리드 수'
+          }
+        />
         <Stat
           label="오늘 결제"
           value={전환.결제}
@@ -97,13 +105,41 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
             hint={`결제 ${전환.결제} ÷ 응대 ${전환.응대}`}
           />
         )}
+        {/* 재컨택률은 응대건 안에서의 비율이라 모집단이 같다 — 전환율과 달리 비율로 성립한다 */}
+        {전환.재컨택 && !전환.재컨택.이력없음 && (
+          <Stat
+            label="재컨택률"
+            value={`${전환.재컨택.재컨택률_pct}%`}
+            size="md"
+            hint={`재컨택 ${전환.재컨택.재컨택} ÷ 응대 ${전환.응대}`}
+          />
+        )}
       </div>
+
+      {전환.재컨택?.이력없음 && (
+        <p className="text-xs text-muted-foreground">
+          재컨택은 접촉이력이 쌓인 다음 날부터 집계된다. 오늘은 이력 첫 수집일이라 전부 신규로
+          잡힌다.
+        </p>
+      )}
 
       {전환.전환율_pct === null && (
         <p className="text-xs text-muted-foreground">
           응대와 결제는 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음) 나눈 값을
           전환율로 쓰지 않고 건수만 표시한다.
         </p>
+      )}
+
+      {전환.재컨택 && !전환.재컨택.이력없음 && (
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-xs text-muted-foreground">응대건 접촉 구분</span>
+          <Badge variant="outline" className="tabular-nums">
+            신규 {전환.재컨택.신규}
+          </Badge>
+          <Badge variant="secondary" className="tabular-nums">
+            재컨택 {전환.재컨택.재컨택}
+          </Badge>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2 border-t pt-3">
