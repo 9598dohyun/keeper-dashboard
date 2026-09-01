@@ -249,6 +249,38 @@ def dedupe_orders(items):
     return order
 
 
+def is_paid_result(최종결과):
+    """
+    최종결과가 결제 완료인지. 테이블마다 문구가 달라 접두어로 본다
+    (인바운드 '결제 완료 (영원)' / SKB '결제 완료').
+    """
+    return str(최종결과 or "").startswith("결제 완료")
+
+
+def pick_lead(hit):
+    """
+    주문 1건에 붙은 리드 여러 개 중 결제로 인정할 **하나**를 고른다.
+
+    같은 고객이 여러 번 문의하면 같은 전화번호로 리드가 중복 생성된다. 붙은 리드를
+    모두 결제로 세면 주문 1건이 리드 수만큼 계상된다
+    (2026-09-01: 주문 24건 → 리드 32개. 인바운드 15→21, SKB 9→11로 부풀었다).
+
+    선정 기준 (2026-09-02 확정):
+      1) 최종결과가 '결제 완료'인 리드 우선
+      2) 그중 유입시간이 가장 늦은 것 (= 마지막 유입 건)
+      3) 결제 완료가 없으면 전체에서 유입시간이 가장 늦은 것
+
+    테이블이 갈리는 경우(인바운드·SKB 양쪽에 같은 번호)는 **SKB의 결제 완료로 귀속**한다.
+    """
+    결제완료 = [r for r in hit if is_paid_result(r["최종결과"])]
+    후보 = 결제완료 or hit
+    skb_결제완료 = [r for r in 결제완료 if r["테이블"] == "SKB"]
+    if skb_결제완료:
+        후보 = skb_결제완료
+    # 유입시간 내림차순 — 값이 없으면 빈 문자열이라 가장 뒤로 밀린다
+    return max(후보, key=lambda r: r.get("유입시간") or "")
+
+
 def load_ledger():
     """누적 결제 원장. 없으면 빈 원장"""
     if not LEDGER_PATH.exists():
@@ -270,12 +302,14 @@ def update_ledger(ledger, orders, index, 엑셀파일):
         if not no:
             continue
         hit = index.get(it["키"], [])
+        # 주문 1건 = 결제 1건. 중복 리드가 붙어도 대표 1개만 원장에 남긴다
+        대표 = [pick_lead(hit)] if hit else []
         rec = {
             "결제일": it["결제일"],
             "취소": is_cancelled(it),
             "채널": it["채널"],
-            "인바운드ID": sorted({r["id"] for r in hit if r["테이블"] == "인바운드"}),
-            "skbID": sorted({r["id"] for r in hit if r["테이블"] == "SKB"}),
+            "인바운드ID": sorted({r["id"] for r in 대표 if r["테이블"] == "인바운드"}),
+            "skbID": sorted({r["id"] for r in 대표 if r["테이블"] == "SKB"}),
             "매칭": bool(hit),
         }
         if no in 주문:
@@ -443,9 +477,15 @@ def main():
 
     print("\n에어테이블 조회 중...")
     inbound = airtable_fetch(
-        base, token, INBOUND_TABLE, ["연락처", "고객명", "[콜]최종 결과"], "인바운드"
+        base,
+        token,
+        INBOUND_TABLE,
+        ["연락처", "고객명", "[콜]최종 결과", "유입시간"],
+        "인바운드",
     )
-    skb = airtable_fetch(base, token, SKB_TABLE, ["연락처", "이름", "[콜]최종 결과"], "SKB")
+    skb = airtable_fetch(
+        base, token, SKB_TABLE, ["연락처", "이름", "[콜]최종 결과", "유입시간"], "SKB"
+    )
     print(f"  인바운드 {len(inbound)}건 / SKB {len(skb)}건")
 
     index = {}
@@ -461,14 +501,20 @@ def main():
                     "id": r["id"],
                     "고객명": f.get(name_field),
                     "최종결과": f.get("[콜]최종 결과"),
+                    "유입시간": f.get("유입시간") or "",
                 }
             )
 
     매칭, 미매칭 = [], []
+    중복리드 = []
     for it in 유효:
         hit = index.get(it["키"])
         if hit:
-            매칭.append({**it, "리드": hit})
+            # 주문 1건 = 결제 1건. 중복 리드가 붙어도 대표 1개만 결제로 센다
+            대표 = pick_lead(hit)
+            if len(hit) > 1:
+                중복리드.append((it, hit, 대표))
+            매칭.append({**it, "리드": [대표]})
         else:
             미매칭.append(it)
 
@@ -481,6 +527,15 @@ def main():
         + (f"  ({', '.join(f'{k} {v}' for k, v in sorted(by_table.items()))})" if by_table else "")
     )
     print(f"  에어테이블 미매칭 {len(미매칭)}건" + ("  <== 리드 없이 결제된 건" if 미매칭 else ""))
+
+    if 중복리드:
+        print(f"\n[중복 리드 — 주문 1건에 리드 여러 개, 대표 1개만 결제로 셈] {len(중복리드)}건")
+        for it, hit, 대표 in 중복리드:
+            others = Counter(r["테이블"] for r in hit)
+            print(
+                f"  {it['매장명'] or it['주문번호']}  리드 {len(hit)}개({dict(others)})"
+                f" → {대표['테이블']} {대표['최종결과'] or '(결과없음)'}"
+            )
 
     ch_매칭 = Counter(m["채널"] or "(없음)" for m in 매칭)
     print("\n[유입채널별 결제]")
