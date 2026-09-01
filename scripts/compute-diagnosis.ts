@@ -82,6 +82,27 @@ function todayKST(): Date {
   return new Date(kst.getFullYear(), kst.getMonth(), kst.getDate());
 }
 
+/**
+ * 집계 기준일. `--date YYYY-MM-DD` 로 과거 날짜를 지정할 수 있다.
+ *
+ * 결제 엑셀이 여러 날짜를 한 파일로 올 때(8/27~9/1) 날짜별로 스냅샷을 채우려면
+ * 실행일이 아닌 지정일로 계산해야 한다. 생략하면 종전대로 KST 오늘을 쓴다.
+ *
+ * 주의: 유입·방치 판정은 에어테이블 현재 상태를 쓰므로, 과거 날짜로 돌린 스냅샷은
+ * '그날 마감 시점'이 아니라 '그날을 종료일로 본 현재 시점' 값이다.
+ * 소급 채움에만 쓰고, 매일 운영에서는 인자 없이 돌린다.
+ */
+function baseDate(): Date {
+  const i = process.argv.indexOf('--date');
+  if (i === -1) return todayKST();
+  const v = process.argv[i + 1];
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    throw new Error(`--date 형식 오류: ${v ?? '(없음)'} — YYYY-MM-DD 로 지정해 주세요.`);
+  }
+  const [y, m, d] = v.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function minusDays(d: Date, days: number): Date {
   const x = new Date(d);
   x.setDate(x.getDate() - days);
@@ -91,7 +112,7 @@ function minusDays(d: Date, days: number): Date {
 async function main() {
   const inbound = readTable('인바운드');
   const skb = readTable('SKB');
-  const today = todayKST();
+  const today = baseDate();
   const todayStr = formatDate(today);
   const ledger = loadLedgerIds();
   console.log(
