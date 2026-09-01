@@ -87,7 +87,9 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
           value={전환.응대}
           hint={
             전환.재컨택 && !전환.재컨택.이력없음
-              ? `신규 ${전환.재컨택.신규} · 재컨택 ${전환.재컨택.재컨택}`
+              ? `신규 ${전환.재컨택.신규} · 재컨택 ${전환.재컨택.재컨택} · 같은날재수정 ${
+                  전환.응대 - 전환.재컨택.신규 - 전환.재컨택.재컨택
+                }`
               : '메모를 남긴 리드 수'
           }
         />
@@ -105,13 +107,17 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
             hint={`결제 ${전환.결제} ÷ 응대 ${전환.응대}`}
           />
         )}
-        {/* 재컨택률은 응대건 안에서의 비율이라 모집단이 같다 — 전환율과 달리 비율로 성립한다 */}
+        {/*
+          분모는 응대 전체가 아니라 신규+재컨택이다.
+          응대건 중 '같은 날 메모를 다시 고친 건'은 신규·재컨택 어느 쪽도 아니라 빠져 있어
+          (신규+재컨택) < 응대 가 된다. 힌트에 응대를 쓰면 화면 숫자와 계산이 어긋난다.
+        */}
         {전환.재컨택 && !전환.재컨택.이력없음 && (
           <Stat
             label="재컨택률"
             value={`${전환.재컨택.재컨택률_pct}%`}
             size="md"
-            hint={`재컨택 ${전환.재컨택.재컨택} ÷ 응대 ${전환.응대}`}
+            hint={`재컨택 ${전환.재컨택.재컨택} ÷ (신규+재컨택) ${전환.재컨택.신규 + 전환.재컨택.재컨택}`}
           />
         )}
       </div>
@@ -139,6 +145,11 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
           <Badge variant="secondary" className="tabular-nums">
             재컨택 {전환.재컨택.재컨택}
           </Badge>
+          {/* 세 갈래를 다 보여야 응대 합계와 맞는다 — 두 개만 보이면 합이 안 맞아 보인다 */}
+          <Badge variant="outline" className="tabular-nums text-muted-foreground">
+            같은날 재수정 {전환.응대 - 전환.재컨택.신규 - 전환.재컨택.재컨택}
+          </Badge>
+          <span className="text-xs text-muted-foreground">= 응대 {전환.응대}</span>
         </div>
       )}
 
