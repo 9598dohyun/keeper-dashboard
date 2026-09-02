@@ -40,9 +40,12 @@ function loadLedgerIds(): {
   orders: number;
   /** 원장이 덮는 가장 이른 결제일. 이 날 이후 유입분만 엑셀로 판정한다 */
   coversSince: string | null;
+  /** 리드ID → 결제일. 첫상담/재상담 분해용 */
+  payDates: Map<string, string>;
 } {
   const p = path.join(DATA_DIR, '결제원장.json');
-  if (!fs.existsSync(p)) return { inbound: null, skb: null, orders: 0, coversSince: null };
+  if (!fs.existsSync(p))
+    return { inbound: null, skb: null, orders: 0, coversSince: null, payDates: new Map() };
   const ledger = JSON.parse(fs.readFileSync(p, 'utf8')) as {
     주문: Record<
       string,
@@ -51,18 +54,26 @@ function loadLedgerIds(): {
   };
   const inbound = new Set<string>();
   const skb = new Set<string>();
+  const payDates = new Map<string, string>();
   let earliest: string | null = null;
   for (const rec of Object.values(ledger.주문 ?? {})) {
     if (rec.결제일 && (earliest === null || rec.결제일 < earliest)) earliest = rec.결제일;
     if (rec.취소) continue;
-    for (const id of rec.인바운드ID ?? []) inbound.add(id);
-    for (const id of rec.skbID ?? []) skb.add(id);
+    for (const id of rec.인바운드ID ?? []) {
+      inbound.add(id);
+      if (rec.결제일) payDates.set(id, rec.결제일);
+    }
+    for (const id of rec.skbID ?? []) {
+      skb.add(id);
+      if (rec.결제일) payDates.set(id, rec.결제일);
+    }
   }
   return {
     inbound,
     skb,
     orders: Object.keys(ledger.주문 ?? {}).length,
     coversSince: earliest,
+    payDates,
   };
 }
 /** 방치 리드 목록 상한 — KV 용량과 화면 렌더 비용을 고려 */
@@ -120,8 +131,12 @@ async function main() {
       ? `결제 소스: 엑셀 원장 ${ledger.coversSince}~ (인바운드 ${ledger.inbound.size} · SKB ${ledger.skb!.size}) / 그 이전 유입분은 에어테이블 기준`
       : '결제 소스: 에어테이블 [콜]최종 결과 (결제원장.json 없음)'
   );
-  const paidInbound = { ids: ledger.inbound, since: ledger.coversSince };
-  const paidSkb = { ids: ledger.skb, since: ledger.coversSince };
+  const paidInbound = {
+    ids: ledger.inbound,
+    since: ledger.coversSince,
+    payDates: ledger.payDates,
+  };
+  const paidSkb = { ids: ledger.skb, since: ledger.coversSince, payDates: ledger.payDates };
 
   for (const days of D3_RANGES) {
     const since = formatDate(minusDays(today, days));

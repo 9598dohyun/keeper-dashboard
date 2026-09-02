@@ -27,6 +27,7 @@ import {
   LeadTimeBucket,
   FailReasonRow,
   DiagnosisTable,
+  상담차수Stat,
 } from './types';
 
 /** 첫응대시각 에어테이블 자동화 적용일. 이전 유입분은 리드타임 측정 불가 */
@@ -72,6 +73,56 @@ export interface PaidContext {
   ids: Set<string> | null;
   /** 이 날짜 이후 유입분만 원장으로 판정. null이면 전체 기간 */
   since: string | null;
+  /** 리드ID → 결제일(YYYY-MM-DD). 첫상담/재상담 분해에 쓴다. 없으면 분해 불가 */
+  payDates?: Map<string, string> | null;
+}
+
+/**
+ * 결제건을 첫상담 / 재상담으로 가른다.
+ *
+ * 기준 (2026-09-02 확정): **첫응대일과 유입일이 모두 결제일과 같으면** 첫상담 구매,
+ * 그 밖은 전부 재상담 구매. 유입된 날 바로 응대해 그 자리에서 결제된 것만 첫상담으로 본다.
+ *
+ * 에어테이블에 상담 횟수 필드가 없어 날짜 일치로 판정한다. 한계:
+ *   - `첫응대시각`은 2026-08-11부터 쌓여(LEADTIME_START) 그 이전 유입분은 값이 없다.
+ *     값이 없으면 첫상담 조건을 만족할 수 없어 재상담으로 떨어진다 → 재상담이 과다 집계된다.
+ *   - 그래서 값이 없어 재상담으로 간 건수를 `첫응대시각없음`으로 따로 세어 함께 노출한다.
+ */
+function 상담차수Of단건(r: D3Record, ctx: PaidContext): '첫상담' | '재상담' | null {
+  const 결제일 = ctx.payDates?.get(r.id);
+  if (!결제일) return null;
+  const 첫응대 = kstOf(r.fields['첫응대시각']);
+  const 유입 = kstOf(r.fields['유입시간']);
+  if (!첫응대 || !유입) return '재상담';
+  return formatDate(첫응대) === 결제일 && formatDate(유입) === 결제일 ? '첫상담' : '재상담';
+}
+
+/** 결제건을 첫상담/재상담으로 분해. 결제일을 모르면(원장 없음) null */
+function 상담차수Of(records: D3Record[], paid: PaidContext): 상담차수Stat | null {
+  if (!paid.payDates || paid.payDates.size === 0) return null;
+  let 첫상담 = 0;
+  let 재상담 = 0;
+  let 첫응대시각없음 = 0;
+  let 분해불가 = 0;
+  for (const r of records) {
+    if (!paidOf(r, paid)) continue;
+    const v = 상담차수Of단건(r, paid);
+    if (v === '첫상담') 첫상담++;
+    else if (v === '재상담') {
+      재상담++;
+      if (!r.fields['첫응대시각']) 첫응대시각없음++;
+    } else 분해불가++;
+  }
+  const 결제 = 첫상담 + 재상담;
+  return {
+    첫상담,
+    재상담,
+    결제,
+    첫상담_pct: pct(첫상담, 결제),
+    재상담_pct: pct(재상담, 결제),
+    첫응대시각없음,
+    분해불가,
+  };
 }
 
 function conversionOf(records: D3Record[], paid: PaidContext): ConversionStat {
@@ -325,5 +376,6 @@ export function computeDiagnosis(
       기재율_pct: pct(fail.기재, fail.실패총건),
     },
     방치_제외건수: 제외건수,
+    상담차수: 상담차수Of(records, paid),
   };
 }
