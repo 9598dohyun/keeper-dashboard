@@ -13,6 +13,7 @@ import type {
   SourceAxis,
 } from '@/lib/metrics3/types';
 import { SEGMENT_LABEL, SEGMENT_ORDER } from '@/lib/metrics3/time-segment';
+import { 상담차수_집계시작 } from '@/lib/constants';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -308,7 +309,7 @@ export default function Diagnosis() {
       {t.상담차수 && t.상담차수.결제 > 0 && (
         <Section
           title="첫상담 / 재상담 주문"
-          desc="유입된 날 바로 응대해 그 자리에서 결제된 건을 첫상담으로, 그 밖을 재상담으로 본다."
+          desc={`유입된 날 바로 응대해 그 자리에서 결제된 건을 첫상담으로, 그 밖을 재상담으로 본다. ${상담차수_집계시작}부터 집계.`}
         >
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
@@ -341,8 +342,8 @@ export default function Diagnosis() {
               <p>
                 이 기간 결제 {t.전체.결제.toLocaleString()}건 중{' '}
                 {t.상담차수.결제.toLocaleString()}건만 분해했다. 나머지{' '}
-                {t.상담차수.분해불가.toLocaleString()}건은 결제일 기록이 없어(결제 데이터 반영
-                이전분) 첫상담·재상담을 가릴 수 없다.
+                {t.상담차수.분해불가.toLocaleString()}건은 {상담차수_집계시작} 이전에 결제돼
+                결제일 기록이 없다. 조회 기간을 {상담차수_집계시작} 이후로 좁히면 전건 분해된다.
               </p>
             )}
             {t.상담차수.첫응대시각없음 > 0 && (
