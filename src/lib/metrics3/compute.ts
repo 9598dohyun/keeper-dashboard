@@ -80,21 +80,26 @@ export interface PaidContext {
 /**
  * 결제건을 첫상담 / 재상담으로 가른다.
  *
- * 기준 (2026-09-02 확정): **첫응대일과 유입일이 모두 결제일과 같으면** 첫상담 구매,
- * 그 밖은 전부 재상담 구매. 유입된 날 바로 응대해 그 자리에서 결제된 것만 첫상담으로 본다.
+ * 기준 (2026-09-03 변경): **유입일이 결제일과 같으면** 첫상담, 그 밖은 재상담.
  *
- * 에어테이블에 상담 횟수 필드가 없어 날짜 일치로 판정한다. 한계:
- *   - `첫응대시각`은 2026-08-11부터 쌓여(LEADTIME_START) 그 이전 유입분은 값이 없다.
- *     값이 없으면 첫상담 조건을 만족할 수 없어 재상담으로 떨어진다 → 재상담이 과다 집계된다.
- *   - 그래서 값이 없어 재상담으로 간 건수를 `첫응대시각없음`으로 따로 세어 함께 노출한다.
+ * 종전 기준은 `첫응대시각`까지 결제일과 같아야 첫상담으로 봤다. 그런데 이 필드는
+ * 상담 시점에 찍히는 게 아니라 **결제를 처리하면서 소급 입력**되는 경우가 많다 —
+ * 결제건 167건 중 27건이 결제시각과 5분 이내이고, 메모에 "실통화 8월24일"이라 적힌 건의
+ * 첫응대시각이 9/2(결제일)로 찍힌 사례도 있다. 즉 이 필드로는 실제 첫 통화일을 알 수 없다.
+ * 게다가 LEADTIME_START(8/11) 이전 유입분은 값이 아예 없어 무조건 재상담으로 떨어졌다
+ * (결제 167건 중 30건). 두 문제 모두 이 필드를 판정에서 빼면 사라진다.
+ *
+ * 한계: 상담 횟수를 센 것이 아니라 **유입에서 결제까지 날이 넘어갔는지**를 본다.
+ * 에어테이블에 상담 횟수 필드가 없고, 접촉이력은 리드당 마지막 접촉일 1개만 남는
+ * 덮어쓰기 구조라 횟수를 소급 계산할 수 없다. 같은 날 여러 번 상담해 결제된 건도
+ * 첫상담으로 잡힌다 — 이 지표는 "당일에 끝났는지"까지만 답한다.
  */
 function 상담차수Of단건(r: D3Record, ctx: PaidContext): '첫상담' | '재상담' | null {
   const 결제일 = ctx.payDates?.get(r.id);
   if (!결제일) return null;
-  const 첫응대 = kstOf(r.fields['첫응대시각']);
   const 유입 = kstOf(r.fields['유입시간']);
-  if (!첫응대 || !유입) return '재상담';
-  return formatDate(첫응대) === 결제일 && formatDate(유입) === 결제일 ? '첫상담' : '재상담';
+  if (!유입) return null; // 유입일을 모르면 판정 불가 — 재상담으로 단정하지 않는다
+  return formatDate(유입) === 결제일 ? '첫상담' : '재상담';
 }
 
 /** 결제건을 첫상담/재상담으로 분해. 결제일을 모르면(원장 없음) null */
@@ -102,17 +107,30 @@ function 상담차수Of(records: D3Record[], paid: PaidContext): 상담차수Sta
   if (!paid.payDates || paid.payDates.size === 0) return null;
   let 첫상담 = 0;
   let 재상담 = 0;
-  let 첫응대시각없음 = 0;
   let 분해불가 = 0;
+  // 재상담 건의 유입→결제 소요일. "며칠 걸려 돌아왔나"를 함께 보여준다
+  const 소요일: number[] = [];
   for (const r of records) {
     if (!paidOf(r, paid)) continue;
     const v = 상담차수Of단건(r, paid);
     if (v === '첫상담') 첫상담++;
     else if (v === '재상담') {
       재상담++;
-      if (!r.fields['첫응대시각']) 첫응대시각없음++;
+      const 유입 = kstOf(r.fields['유입시간']);
+      const 결제일 = paid.payDates.get(r.id);
+      if (유입 && 결제일) {
+        const [y, m, d] = 결제일.split('-').map(Number);
+        소요일.push(daysBetween(유입, new Date(y, m - 1, d)));
+      }
     } else 분해불가++;
   }
+  소요일.sort((a, b) => a - b);
+  const mid = 소요일.length >> 1;
+  const 중앙 = 소요일.length
+    ? 소요일.length % 2
+      ? 소요일[mid]
+      : Math.round((소요일[mid - 1] + 소요일[mid]) / 2)
+    : null;
   const 결제 = 첫상담 + 재상담;
   return {
     첫상담,
@@ -120,7 +138,8 @@ function 상담차수Of(records: D3Record[], paid: PaidContext): 상담차수Sta
     결제,
     첫상담_pct: pct(첫상담, 결제),
     재상담_pct: pct(재상담, 결제),
-    첫응대시각없음,
+    재상담_소요일_중앙: 중앙,
+    재상담_소요일_최대: 소요일.length ? 소요일[소요일.length - 1] : null,
     분해불가,
   };
 }
