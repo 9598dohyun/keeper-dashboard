@@ -3,6 +3,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DailyComment } from '@/lib/metrics3/comment';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 /**
  * 일자별 진단 코멘트.
@@ -63,6 +71,78 @@ export default function DailyCommentPanel({ data }: { data: DailyComment | null 
             </li>
           ))}
         </ul>
+
+        {data.결제추적 && (
+          <div className="rounded-md border border-border p-3">
+            <div className="mb-2">
+              <p className="text-sm font-semibold text-foreground">
+                이날 결제 {data.결제추적.주문}건 전수 추적
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                결제일로 묶은 것이라 위 표(유입일 기준)와 세는 대상이 다르다. 인바운드·SKB를
+                합친 값이며, 리드가 붙지 않은 채널(오가닉·아웃바운드 등)은 유입일을 알 수 없어
+                미매칭으로 남긴다.
+              </p>
+            </div>
+
+            <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
+              <span>
+                당일 유입 결제{' '}
+                <strong className="text-foreground">{data.결제추적.당일결제}</strong>건
+              </span>
+              <span>
+                소요일 중앙{' '}
+                <strong className="text-foreground">{data.결제추적.소요일_중앙 ?? '—'}</strong>일
+              </span>
+              <span>
+                최대{' '}
+                <strong className="text-foreground">{data.결제추적.소요일_최대 ?? '—'}</strong>일
+              </span>
+              <span>
+                유입일 불명{' '}
+                <strong className="text-foreground">{data.결제추적.미매칭}</strong>건
+              </span>
+            </div>
+
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {data.결제추적.채널별.map((c) => (
+                <span
+                  key={c.채널}
+                  className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {c.채널} {c.건수}
+                </span>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>채널</TableHead>
+                    <TableHead>리드</TableHead>
+                    <TableHead>유입일</TableHead>
+                    <TableHead className="text-right">소요일</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.결제추적.건.map((b, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{b.채널}</TableCell>
+                      <TableCell className="text-muted-foreground">{b.테이블}</TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">
+                        {b.유입일 ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {b.소요일 === null ? '—' : `${b.소요일}일`}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           {응대외결제 > 0 && (
