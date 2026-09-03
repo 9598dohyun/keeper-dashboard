@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import ChannelChart from './channel-chart';
+import ChannelPayCard from './channel-pay-card';
 import TrendLines from './trend-lines';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -454,16 +455,11 @@ export default function DashboardV2() {
         </div>
       </Section>
 
-      <Section title="레드텔레콤" desc="규모만 모니터링">
-        <div className="flex gap-8">
-          <Stat label="전체" value={data.레드텔레콤.건수_전체.toLocaleString()} size="md" />
-          <Stat
-            label="집계 시작 이후"
-            value={data.레드텔레콤.건수_오늘이후.toLocaleString()}
-            size="md"
-          />
-        </div>
-      </Section>
+      {/*
+        채널별 결제는 인바운드/SKB 탭과 무관하게 엑셀 전량을 보여주므로 탭 분기 밖에 둔다.
+        리드가 없는 채널(오가닉·키퍼맨 등)은 어느 테이블에도 속하지 않는다.
+      */}
+      <ChannelPayCard />
 
       <p className="pb-4 text-center text-[10px] text-muted-foreground">
         한화비전 키퍼 · SKB+인바운드 통합관리

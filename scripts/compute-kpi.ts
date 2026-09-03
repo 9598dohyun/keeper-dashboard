@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import { kv } from '@vercel/kv';
 import { computeKpi } from '../src/lib/kpi/compute';
+import { ChannelPay, ChannelPayResult } from '../src/lib/kpi/types';
 
 const DATA_DIR = path.join(__dirname, '../data');
 
@@ -25,7 +26,50 @@ function 인자(name: string): string | undefined {
   return i === -1 ? undefined : process.argv[i + 1];
 }
 
-/** 결제 원장 → 날짜별 결제 건수 (인바운드 + SKB, 취소 제외) */
+/** 결제 원장 원본 읽기 */
+function 원장(): Record<string, { 결제일?: string | null; 취소?: boolean; 채널?: string; 매칭?: boolean }> {
+  const p = path.join(DATA_DIR, '결제원장.json');
+  if (!fs.existsSync(p)) throw new Error(`${p} 없음 — reconcile.py를 먼저 실행하세요.`);
+  return (JSON.parse(fs.readFileSync(p, 'utf8')).주문 ?? {}) as ReturnType<typeof 원장>;
+}
+
+/**
+ * 채널별 결제 집계.
+ *
+ * 리드가 없는 채널(오가닉·키퍼맨·B2B 영업 등)도 센다 — 대시보드 결제수는 에어테이블
+ * 리드에 매칭된 건만 세므로 이 채널들이 통째로 빠진다. 그 규모를 `리드없음`으로 드러낸다.
+ */
+function 채널별(월: string, 기준일: string): ChannelPayResult {
+  const 시작 = `${월}-01`;
+  const acc = new Map<string, { 결제: number; 리드있음: number; 리드없음: number }>();
+  let 총결제 = 0;
+  for (const o of Object.values(원장())) {
+    if (o.취소 || !o.결제일) continue;
+    if (o.결제일 < 시작 || o.결제일 > 기준일) continue;
+    const c = o.채널 || '(채널없음)';
+    const v = acc.get(c) ?? { 결제: 0, 리드있음: 0, 리드없음: 0 };
+    v.결제++;
+    if (o.매칭) v.리드있음++;
+    else v.리드없음++;
+    acc.set(c, v);
+    총결제++;
+  }
+  const 행: ChannelPay[] = [...acc.entries()]
+    .map(([채널, v]) => ({
+      채널,
+      ...v,
+      비중_pct: 총결제 > 0 ? Math.round((v.결제 / 총결제) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.결제 - a.결제);
+  return {
+    기간: { 시작, 종료: 기준일 },
+    총결제,
+    총리드없음: 행.reduce((s, r) => s + r.리드없음, 0),
+    행,
+  };
+}
+
+/** 결제 원장 → 날짜별 결제 건수 (채널 무관 전량, 취소 제외) */
 function 실적맵(): Record<string, number> {
   const p = path.join(DATA_DIR, '결제원장.json');
   if (!fs.existsSync(p)) throw new Error(`${p} 없음 — reconcile.py를 먼저 실행하세요.`);
@@ -65,6 +109,10 @@ async function main() {
   const k = computeKpi(월, 목표, 기준일, 실적맵());
   await kv.set(`kpi:month:${월}`, k);
 
+  // 채널별 결제 — 대시보드에서 리드 없는 채널까지 보이게 한다
+  const ch = 채널별(월, 기준일);
+  await kv.set(`kpi:channel:${월}`, ch);
+
   const months = (await kv.get<string[]>('kpi:months')) ?? [];
   if (!months.includes(월)) {
     months.push(월);
@@ -81,6 +129,16 @@ async function main() {
     `잔여 ${k.잔여}건 / 남은 영업일 ${k.잔여영업일}일 → 하루 ${k.필요일평균 ?? '—'}건 필요` +
       ` · 현재 속도 예상착지 ${k.예상착지}건`
   );
+  console.log(
+    `채널별 결제 ${ch.총결제}건 (리드없음 ${ch.총리드없음}건 — 대시보드 결제수엔 안 잡힘):`
+  );
+  for (const r of ch.행) {
+    console.log(
+      `  ${r.채널.padEnd(10)} ${String(r.결제).padStart(3)}건 (${r.비중_pct}%)` +
+        (r.리드없음 > 0 ? ` · 리드없음 ${r.리드없음}` : '')
+    );
+  }
+
   const 공휴일 = k.일별.filter((d) => d.공휴일);
   if (공휴일.length) {
     console.log('공휴일: ' + 공휴일.map((d) => `${d.날짜}(${d.공휴일})`).join(', '));

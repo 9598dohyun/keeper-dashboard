@@ -1,12 +1,13 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
-import { KpiMonth } from '@/lib/kpi/types';
+import { KpiMonth, ChannelPayResult } from '@/lib/kpi/types';
 
 /**
  * 월 KPI 목표 대비 달성.
  * GET /api/kpi                 → 최신 월
  * GET /api/kpi?month=2026-09   → 그 달
  * GET /api/kpi?type=months     → KPI가 있는 월 목록
+ * GET /api/kpi?type=channel     → 채널별 결제 (엑셀 기준, 리드 없는 채널 포함)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,6 +17,22 @@ export async function GET(request: Request) {
   try {
     if (type === 'months') {
       return NextResponse.json((await kv.get<string[]>('kpi:months')) ?? []);
+    }
+
+    if (type === 'channel') {
+      let 월 = month;
+      if (!월) {
+        const months = (await kv.get<string[]>('kpi:months')) ?? [];
+        월 = months[0];
+      }
+      if (!월 || !/^\d{4}-\d{2}$/.test(월)) {
+        return NextResponse.json({ error: '월 형식 오류 (YYYY-MM)' }, { status: 400 });
+      }
+      const ch = await kv.get<ChannelPayResult>(`kpi:channel:${월}`);
+      if (!ch) {
+        return NextResponse.json({ error: `${월} 채널 데이터가 없습니다.` }, { status: 404 });
+      }
+      return NextResponse.json(ch);
     }
 
     let 월 = month;

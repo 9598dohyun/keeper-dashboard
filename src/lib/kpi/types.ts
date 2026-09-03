@@ -63,3 +63,33 @@ export interface KpiMonth {
   예상착지: number;
   일별: KpiDay[];
 }
+
+/**
+ * 채널별 결제 추적 (엑셀 원장 기준).
+ *
+ * 대시보드의 채널 차트는 `UTM_source` 기준 **유입** 분포라 축이 다르다.
+ * 여기는 엑셀 `주문유입채널` 기준 **결제**이고, 에어테이블에 리드가 없는
+ * 채널(오가닉·키퍼맨·B2B 영업 등)까지 센다 — 대시보드 결제수에는 안 잡히는 물량이다.
+ */
+export interface ChannelPay {
+  채널: string;
+  /** 기간 내 결제 건수 (취소 제외) */
+  결제: number;
+  /** 그중 에어테이블 리드가 붙은 건 */
+  리드있음: number;
+  /** 리드가 없어 대시보드 결제수에는 안 잡히는 건 */
+  리드없음: number;
+  /** 전체 결제 대비 비중 */
+  비중_pct: number;
+}
+
+/** 채널별 결제 묶음 */
+export interface ChannelPayResult {
+  /** 집계 기간 (YYYY-MM 또는 시작~종료) */
+  기간: { 시작: string; 종료: string };
+  /** 기간 내 총 결제 */
+  총결제: number;
+  /** 리드가 없어 대시보드에 안 잡히는 총 건수 */
+  총리드없음: number;
+  행: ChannelPay[];
+}
