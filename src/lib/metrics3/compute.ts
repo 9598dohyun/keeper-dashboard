@@ -152,15 +152,32 @@ function 재컨택Of(
 function conversionOf(records: D3Record[], paid: PaidContext): ConversionStat {
   const 유입 = records.length;
   let 결제 = 0;
+  let 당일결제 = 0;
+  let 재컨택결제 = 0;
   let 미확정 = 0;
   for (const r of records) {
-    if (paidOf(r, paid)) 결제++;
+    if (paidOf(r, paid)) {
+      결제++;
+      /*
+       * 유입된 날 바로 결제됐는지로 가른다. 결제일은 원장에만 있어(2026-08-26~)
+       * 그 이전 결제는 판정할 수 없다 — 어느 쪽에도 넣지 않는다.
+       * 그래서 당일결제 + 재컨택결제 ≤ 결제다.
+       */
+      const 결제일 = paid.payDates?.get(r.id);
+      const ing = kstOf(r.fields['유입시간']);
+      if (결제일 && ing) {
+        if (formatDate(ing) === 결제일) 당일결제++;
+        else 재컨택결제++;
+      }
+    }
     if (isUnresolved(r)) 미확정++;
   }
   const 종결 = 유입 - 미확정;
   return {
     유입,
     결제,
+    당일결제,
+    재컨택결제,
     미확정,
     유입대비_pct: pct(결제, 유입),
     종결대비_pct: pct(결제, 종결),

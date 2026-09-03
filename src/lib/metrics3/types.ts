@@ -47,6 +47,16 @@ export type SourceAxis = 'utm' | 'entry' | 'cross';
 export interface ConversionStat {
   유입: number;
   결제: number;
+  /**
+   * 결제 중 유입된 날 바로 결제된 건.
+   * 유입일 = 결제일. 당일결제 + 재컨택결제 = 결제.
+   */
+  당일결제: number;
+  /**
+   * 결제 중 날이 넘어가 결제된 건 — 재컨택을 거쳐 돌아온 것.
+   * 결제일을 모르는 건(원장 이전 결제)은 어느 쪽에도 넣지 않아 합이 결제보다 작을 수 있다.
+   */
+  재컨택결제: number;
   미확정: number;
   /** 결제 ÷ 유입 */
   유입대비_pct: number;

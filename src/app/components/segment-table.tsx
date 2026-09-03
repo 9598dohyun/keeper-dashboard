@@ -50,6 +50,8 @@ export default function SegmentTable({
               <th className="py-2 pr-3 font-semibold">{keyLabel}</th>
               <th className="py-2 px-3 font-semibold text-right">유입</th>
               <th className="py-2 px-3 font-semibold text-right">결제</th>
+              <th className="py-2 px-3 font-semibold text-right">당일</th>
+              <th className="py-2 px-3 font-semibold text-right">재컨택</th>
               <th className="py-2 px-3 font-semibold text-right">유입대비</th>
               <th className="py-2 px-3 font-semibold text-right">종결대비</th>
               <th className="py-2 px-3 font-semibold text-right">미확정률</th>
@@ -74,6 +76,16 @@ export default function SegmentTable({
                 </td>
                 <td className="py-2 px-3 text-right tabular-nums">{r.유입.toLocaleString()}</td>
                 <td className="py-2 px-3 text-right tabular-nums">{r.결제.toLocaleString()}</td>
+                {/*
+                  결제를 유입된 날 바로 결제된 건(당일)과 날이 넘어가 결제된 건(재컨택)으로
+                  쪼갠다. 결제일을 모르는 건은 어느 쪽에도 안 들어가 합이 결제보다 작을 수 있다.
+                */}
+                <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
+                  {r.당일결제.toLocaleString()}
+                </td>
+                <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
+                  {r.재컨택결제.toLocaleString()}
+                </td>
                 <td
                   className={`py-2 px-3 text-right tabular-nums font-semibold ${rateColor(
                     r.유입대비_pct
@@ -114,6 +126,12 @@ export default function SegmentTable({
         {hidden > 0 && (
           <p className="text-xs text-muted-foreground">
             유입 {minVolume}건 미만 {hidden}개 항목은 표본 부족으로 숨김
+          </p>
+        )}
+        {passed.some((r) => r.당일결제 + r.재컨택결제 < r.결제) && (
+          <p className="text-xs text-muted-foreground">
+            당일 + 재컨택이 결제보다 적은 행은 결제일 기록이 없는 건이 섞인 것 (결제일은
+            결제 데이터 기준으로 최근 구간만 남아 있음)
           </p>
         )}
         {미확인건 > 0 && (

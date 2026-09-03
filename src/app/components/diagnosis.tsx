@@ -407,7 +407,7 @@ export default function Diagnosis() {
 
       <Section
         title="유입 출처"
-        desc="광고 매체(UTM_source)와 유입 페이지(진입경로)는 다른 축이라 분리해서 본다."
+        desc="광고 매체(UTM_source)와 유입 페이지(진입경로)는 다른 축이라 분리해서 본다. 결제는 유입된 날 바로 결제된 건(당일)과 날이 넘어가 결제된 건(재컨택)으로 나눠 본다."
       >
         <div className="flex rounded-lg border overflow-hidden w-fit mb-3">
           {(
