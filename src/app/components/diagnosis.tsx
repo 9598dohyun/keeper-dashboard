@@ -7,6 +7,7 @@ import StaleLeads from './stale-leads';
 import SegmentTable from './segment-table';
 import LeadTimeChart from './leadtime-chart';
 import DailyCommentPanel from './daily-comment';
+import LagChart from './lag-chart';
 import type {
   DiagnosisResult,
   DiagnosisTable,
@@ -395,6 +396,12 @@ export default function Diagnosis() {
           </div>
         </Section>
       )}
+
+      {/*
+        소요일은 조회 기간과 무관한 전 기간 지표다(월로 자르면 표본이 너무 적다).
+        기간 선택과 독립이라는 점을 카드 설명에 적어 두었다.
+      */}
+      <LagChart />
 
       <Section
         title="방치 리드"

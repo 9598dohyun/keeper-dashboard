@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import MetricCard from './metric-card';
+import BurndownChart from './burndown-chart';
 import type { KpiMonth, KpiDay } from '@/lib/kpi/types';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,6 +118,8 @@ export default function KpiCalendar() {
           color={data.예상착지 >= data.목표 ? 'green' : 'red'}
         />
       </div>
+
+      <BurndownChart />
 
       <Card>
         <CardHeader>

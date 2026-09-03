@@ -17,7 +17,8 @@ import fs from 'fs';
 import path from 'path';
 import { kv } from '@vercel/kv';
 import { computeKpi } from '../src/lib/kpi/compute';
-import { ChannelPay, ChannelPayResult } from '../src/lib/kpi/types';
+import { ChannelPay, ChannelPayResult, BurndownPoint } from '../src/lib/kpi/types';
+import { computeLag, LagInput } from '../src/lib/kpi/lag';
 
 const DATA_DIR = path.join(__dirname, '../data');
 
@@ -69,6 +70,59 @@ function 채널별(월: string, 기준일: string): ChannelPayResult {
   };
 }
 
+/** 리드ID → 유입일(YYYY-MM-DD). 인바운드·SKB를 한 맵으로 합친다 */
+function 유입일맵(): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const t of ['인바운드', 'SKB']) {
+    const p = path.join(DATA_DIR, `${t}.json`);
+    if (!fs.existsSync(p)) continue;
+    const recs = JSON.parse(fs.readFileSync(p, 'utf8')) as {
+      id: string;
+      fields: { 유입시간?: string };
+    }[];
+    for (const r of recs) {
+      const s = r.fields?.유입시간;
+      if (!s) continue;
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) continue;
+      m.set(r.id, new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10));
+    }
+  }
+  return m;
+}
+
+/**
+ * 유입→결제 소요일 입력 만들기.
+ *
+ * 원장의 주문마다 붙은 리드 ID로 유입일을 찾는다. 리드가 없는 채널(오가닉·키퍼맨 등)은
+ * 유입일을 알 수 없어 제외로 빠진다 — 그 규모는 결과의 `제외`에 담긴다.
+ */
+function 소요일입력(): LagInput[] {
+  const ing = 유입일맵();
+  const out: LagInput[] = [];
+  for (const o of Object.values(원장())) {
+    if (o.취소 || !o.결제일) continue;
+    const rec = o as typeof o & { 인바운드ID?: string[]; skbID?: string[] };
+    const id = (rec.인바운드ID ?? [])[0] ?? (rec.skbID ?? [])[0];
+    out.push({
+      유입일: id ? (ing.get(id) ?? null) : null,
+      결제일: o.결제일,
+      채널: o.채널 || '(채널없음)',
+    });
+  }
+  return out;
+}
+
+/** 목표 대비 누적 추이 (번다운) */
+function 번다운(k: { 일별: { 날짜: string; 누적목표: number; 누적실적: number | null; 영업일: boolean }[] }): BurndownPoint[] {
+  return k.일별.map((d) => ({
+    날짜: d.날짜,
+    누적목표: d.누적목표,
+    누적실적: d.누적실적,
+    영업일: d.영업일,
+  }));
+}
+
 /** 결제 원장 → 날짜별 결제 건수 (채널 무관 전량, 취소 제외) */
 function 실적맵(): Record<string, number> {
   const p = path.join(DATA_DIR, '결제원장.json');
@@ -113,6 +167,13 @@ async function main() {
   const ch = 채널별(월, 기준일);
   await kv.set(`kpi:channel:${월}`, ch);
 
+  // 유입→결제 소요일 (전 기간 원장 기준 — 월로 자르면 표본이 너무 적다)
+  const lag = computeLag(소요일입력());
+  await kv.set('kpi:lag', lag);
+
+  // 목표 대비 누적 추이
+  await kv.set(`kpi:burndown:${월}`, 번다운(k));
+
   const months = (await kv.get<string[]>('kpi:months')) ?? [];
   if (!months.includes(월)) {
     months.push(월);
@@ -137,6 +198,16 @@ async function main() {
       `  ${r.채널.padEnd(10)} ${String(r.결제).padStart(3)}건 (${r.비중_pct}%)` +
         (r.리드없음 > 0 ? ` · 리드없음 ${r.리드없음}` : '')
     );
+  }
+
+  console.log(
+    `소요일 (n=${lag.n}, 제외 ${lag.제외}): 중앙 ${lag.중앙}일 · 당일 ${lag.당일_pct}% · 7일내 ${lag.누적7일_pct}%`
+  );
+  for (const r of lag.분포) {
+    console.log(`  ${r.버킷.padEnd(7)} ${String(r.건수).padStart(3)}건 ${r.비중_pct}% (누적 ${r.누적_pct}%)`);
+  }
+  for (const c of lag.채널별) {
+    console.log(`  [${c.채널}] n=${c.결제} 중앙 ${c.중앙}일 · 당일 ${c.당일_pct}%`);
   }
 
   const 공휴일 = k.일별.filter((d) => d.공휴일);

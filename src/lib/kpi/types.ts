@@ -93,3 +93,53 @@ export interface ChannelPayResult {
   총리드없음: number;
   행: ChannelPay[];
 }
+
+/** 소요일 버킷 */
+export type LagBucket = '당일' | '1-3일' | '4-7일' | '8-14일' | '15-30일' | '31일+';
+
+/** 소요일 분포 1행 */
+export interface LagRow {
+  버킷: LagBucket;
+  건수: number;
+  비중_pct: number;
+  /** 이 버킷까지의 누적 비중 — "N일 안에 몇 %가 결제되나" */
+  누적_pct: number;
+}
+
+/** 채널별 소요일 (교차) */
+export interface LagByChannel {
+  채널: string;
+  결제: number;
+  /** 버킷별 건수 (버킷 순서는 LAG_BUCKETS와 같다) */
+  버킷: number[];
+  /** 소요일 중앙값 */
+  중앙: number;
+  /** 당일 결제 비중 */
+  당일_pct: number;
+}
+
+/** 유입→결제 소요일 분석 */
+export interface LagResult {
+  /** 판정된 결제 건수 (유입일·결제일 모두 아는 건) */
+  n: number;
+  /** 소요일 중앙값 */
+  중앙: number;
+  /** 유입 당일에 결제된 비중 */
+  당일_pct: number;
+  /** 7일 안에 결제된 비중 */
+  누적7일_pct: number;
+  분포: LagRow[];
+  채널별: LagByChannel[];
+  /** 집계에서 빠진 건수 (유입일 또는 결제일을 몰라 판정 불가) */
+  제외: number;
+}
+
+/** 목표 대비 누적 추이 1점 (번다운) */
+export interface BurndownPoint {
+  날짜: string;
+  /** 그날까지 누적 목표 (영업일 기준) */
+  누적목표: number;
+  /** 그날까지 누적 실적. 아직 데이터가 없는 날은 null */
+  누적실적: number | null;
+  영업일: boolean;
+}
