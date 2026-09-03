@@ -222,9 +222,14 @@ export default function Diagnosis() {
             {new Date(data.meta.updatedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
           </p>
           </div>
-          <Link href="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            ← 대시보드
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/kpi" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              월 KPI
+            </Link>
+            <Link href="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              ← 대시보드
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
