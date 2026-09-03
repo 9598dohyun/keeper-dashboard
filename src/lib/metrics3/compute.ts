@@ -149,38 +149,64 @@ function 재컨택Of(
   };
 }
 
-function conversionOf(records: D3Record[], paid: PaidContext): ConversionStat {
+/**
+ * 전환 지표.
+ *
+ * `결제`는 **결제일**이 기간 안인 건을 센다 (2026-09-03 변경). 결제 여부의 진짜 소스가
+ * 결제 데이터 엑셀이므로 그날 결제된 건을 그날 결제로 세야 대시보드와 맞는다.
+ * 종전처럼 "그날 유입분 중 결제"를 세면 9/2 결제 5건 중 1건만 잡혔다.
+ *
+ * 첫컨택주문 = 유입일과 결제일이 같은 건. `첫응대시각`은 보지 않는다 —
+ * 결제 처리 시 소급 입력되는 경우가 많아 실제 첫 통화일을 알 수 없다.
+ *
+ * `유입`·`미확정`은 유입일 기준(records)이고 결제만 결제일 기준이라 모집단이 다르다.
+ * allRecords 를 받아야 기간 밖에서 유입돼 기간 안에 결제된 건을 셀 수 있다.
+ */
+function conversionOf(
+  records: D3Record[],
+  allRecords: D3Record[],
+  paid: PaidContext,
+  기간: { since: string; until: string }
+): ConversionStat {
   const 유입 = records.length;
-  let 결제 = 0;
-  let 당일결제 = 0;
-  let 재컨택결제 = 0;
   let 미확정 = 0;
-  for (const r of records) {
-    if (paidOf(r, paid)) {
+  for (const r of records) if (isUnresolved(r)) 미확정++;
+
+  let 결제 = 0;
+  let 첫컨택주문 = 0;
+  let 재컨택주문 = 0;
+  for (const r of allRecords) {
+    if (!paidOf(r, paid)) continue;
+    const 결제일 = paid.payDates?.get(r.id);
+    if (결제일) {
+      // 결제일을 아는 건 — 결제일이 기간 안인지로 판단
+      if (결제일 < 기간.since || 결제일 > 기간.until) continue;
       결제++;
-      /*
-       * 유입된 날 바로 결제됐는지로 가른다. 결제일은 원장에만 있어(2026-08-26~)
-       * 그 이전 결제는 판정할 수 없다 — 어느 쪽에도 넣지 않는다.
-       * 그래서 당일결제 + 재컨택결제 ≤ 결제다.
-       */
-      const 결제일 = paid.payDates?.get(r.id);
       const ing = kstOf(r.fields['유입시간']);
-      if (결제일 && ing) {
-        if (formatDate(ing) === 결제일) 당일결제++;
-        else 재컨택결제++;
-      }
+      if (ing && formatDate(ing) === 결제일) 첫컨택주문++;
+      else 재컨택주문++;
+    } else {
+      /*
+       * 결제일을 모르는 건(원장 이전 결제, 에어테이블 판정분)은 종전처럼 유입일로 센다.
+       * 이렇게 하지 않으면 원장이 덮지 않는 과거 구간의 결제가 통째로 사라진다.
+       */
+      const ing = kstOf(r.fields['유입시간']);
+      if (!ing) continue;
+      const day = formatDate(ing);
+      if (day < 기간.since || day > 기간.until) continue;
+      결제++;
     }
-    if (isUnresolved(r)) 미확정++;
   }
+
   const 종결 = 유입 - 미확정;
   return {
     유입,
     결제,
-    당일결제,
-    재컨택결제,
-    미확정,
+    첫컨택주문,
+    재컨택주문,
     유입대비_pct: pct(결제, 유입),
     종결대비_pct: pct(결제, 종결),
+    미확정,
     미확정률_pct: pct(미확정, 유입),
   };
 }
@@ -189,10 +215,12 @@ function conversionOf(records: D3Record[], paid: PaidContext): ConversionStat {
 function segmentRowOf(
   key: string,
   records: D3Record[],
+  allSub: D3Record[],
   today: Date,
-  paid: PaidContext
+  paid: PaidContext,
+  기간: { since: string; until: string }
 ): SegmentRow {
-  const base = conversionOf(records, paid);
+  const base = conversionOf(records, allSub, paid, 기간);
   let 방치 = 0;
   let 경과합 = 0;
   let 미확정수 = 0;
@@ -356,28 +384,54 @@ export function computeDiagnosis(
     return day >= since && (until === undefined || day <= until);
   });
 
+  /*
+   * 결제일 필터의 기간. "최근 N일"은 until 이 없어(열린 끝) 집계 기준일을 끝으로 쓴다 —
+   * until ?? since 로 두면 기간이 하루로 접혀 결제가 거의 다 빠진다.
+   */
+  const 기간 = { since, until: until ?? formatDate(today) };
+  const segOf = (r: D3Record) => {
+    const d = kstOf(r.fields['유입시간']);
+    return d === null ? null : timeSegmentOf(d);
+  };
+
   const 시간대별 = SEGMENT_ORDER.map((seg) => {
-    const sub = records.filter((r) => {
-      const d = kstOf(r.fields['유입시간']);
-      return d !== null && timeSegmentOf(d) === seg;
-    });
-    return segmentRowOf(seg, sub, today, paid);
+    const sub = records.filter((r) => segOf(r) === seg);
+    const allSub = allRecords.filter((r) => segOf(r) === seg);
+    return segmentRowOf(seg, sub, allSub, today, paid, 기간);
   }).filter((row) => row.유입 > 0);
 
-  const bySource = (keyFn: (r: D3Record) => string) =>
-    [...groupBy(records, keyFn).entries()]
-      .map(([k, v]) => segmentRowOf(k, v, today, paid))
-      .sort((a, b) => b.유입 - a.유입);
+  /*
+   * 결제는 결제일 기준이라 기간 밖에서 유입된 건도 세야 한다. 그래서 그룹마다
+   * 기간 필터를 거치지 않은 allRecords 쪽 같은 키 묶음(allGroups)을 함께 넘긴다.
+   */
+  const bySource = (keyFn: (r: D3Record) => string) => {
+    const allGroups = groupBy(allRecords, keyFn);
+    const groups = groupBy(records, keyFn);
+    /*
+     * 기간 내 유입이 0인 키도 행을 만든다. 결제는 결제일 기준이라 기간 밖에서 유입돼
+     * 기간 안에 결제된 건이 있을 수 있고, 그 키를 빼면 결제 합이 전체와 안 맞는다
+     * (9/2 인바운드: cashnote 유입 0·결제 1이 빠져 매체별 합이 4로 나왔다).
+     */
+    for (const k of allGroups.keys()) if (!groups.has(k)) groups.set(k, []);
+    return [...groups.entries()]
+      .map(([k, v]) => segmentRowOf(k, v, allGroups.get(k) ?? [], today, paid, 기간))
+      .filter((row) => row.유입 > 0 || row.결제 > 0)
+      .sort((a, b) => b.유입 - a.유입 || b.결제 - a.결제);
+  };
 
   const 매체별 = bySource(utmSourceOf);
   const 유입페이지별 = bySource(entryPathOf);
   const 교차별 = bySource(crossKeyOf);
 
-  const 담당자별 = [
-    ...groupBy(records, (r) => r.fields['[콜]담당자']?.trim() || '(미배정)').entries(),
-  ]
-    .map(([k, v]) => segmentRowOf(k, v, today, paid))
-    .sort((a, b) => b.유입 - a.유입);
+  const 담당자키 = (r: D3Record) => r.fields['[콜]담당자']?.trim() || '(미배정)';
+  const 담당자_전체 = groupBy(allRecords, 담당자키);
+  const 담당자_기간 = groupBy(records, 담당자키);
+  // 유입 0·결제 있는 담당자도 남긴다 (위 bySource 와 같은 이유)
+  for (const k of 담당자_전체.keys()) if (!담당자_기간.has(k)) 담당자_기간.set(k, []);
+  const 담당자별 = [...담당자_기간.entries()]
+    .map(([k, v]) => segmentRowOf(k, v, 담당자_전체.get(k) ?? [], today, paid, 기간))
+    .filter((row) => row.유입 > 0 || row.결제 > 0)
+    .sort((a, b) => b.유입 - a.유입 || b.결제 - a.결제);
 
   // 방치 버킷 집계 (제외 대상 뺀 미확정만)
   const bucketCount = new Map<string, number>();
@@ -397,7 +451,7 @@ export function computeDiagnosis(
   const fail = computeFailReasons(records, paid);
 
   return {
-    전체: conversionOf(records, paid),
+    전체: conversionOf(records, allRecords, paid, 기간),
     방치버킷: STALE_BUCKET_ORDER.map((b) => ({
       버킷: b,
       건수: bucketCount.get(b) ?? 0,

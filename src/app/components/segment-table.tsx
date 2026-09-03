@@ -29,7 +29,12 @@ export default function SegmentTable({
   showStale = true,
   limit,
 }: Props) {
-  const passed = rows.filter((r) => r.유입 >= minVolume);
+  /*
+   * 표본 부족 행은 감추되, 결제가 있는 행은 유입이 적어도 남긴다.
+   * 결제는 결제일 기준이라 기간 밖 유입분이 섞여 유입 0·결제 1 같은 행이 나온다 —
+   * 이걸 감추면 표의 결제 합이 화면 상단 결제와 안 맞는다.
+   */
+  const passed = rows.filter((r) => r.유입 >= minVolume || r.결제 > 0);
   const visible = limit ? passed.slice(0, limit) : passed;
   const hidden = rows.length - passed.length;
   const truncated = passed.length - visible.length;
@@ -50,7 +55,7 @@ export default function SegmentTable({
               <th className="py-2 pr-3 font-semibold">{keyLabel}</th>
               <th className="py-2 px-3 font-semibold text-right">유입</th>
               <th className="py-2 px-3 font-semibold text-right">결제</th>
-              <th className="py-2 px-3 font-semibold text-right">당일</th>
+              <th className="py-2 px-3 font-semibold text-right">첫컨택</th>
               <th className="py-2 px-3 font-semibold text-right">재컨택</th>
               <th className="py-2 px-3 font-semibold text-right">유입대비</th>
               <th className="py-2 px-3 font-semibold text-right">종결대비</th>
@@ -77,14 +82,14 @@ export default function SegmentTable({
                 <td className="py-2 px-3 text-right tabular-nums">{r.유입.toLocaleString()}</td>
                 <td className="py-2 px-3 text-right tabular-nums">{r.결제.toLocaleString()}</td>
                 {/*
-                  결제를 유입된 날 바로 결제된 건(당일)과 날이 넘어가 결제된 건(재컨택)으로
-                  쪼갠다. 결제일을 모르는 건은 어느 쪽에도 안 들어가 합이 결제보다 작을 수 있다.
+                  결제는 결제일 기준이다. 유입일과 결제일이 같으면 첫컨택 주문,
+                  다르면 재컨택 주문. 결제일 기록이 없는 과거 결제는 어느 쪽에도 안 들어간다.
                 */}
                 <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
-                  {r.당일결제.toLocaleString()}
+                  {r.첫컨택주문.toLocaleString()}
                 </td>
                 <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
-                  {r.재컨택결제.toLocaleString()}
+                  {r.재컨택주문.toLocaleString()}
                 </td>
                 <td
                   className={`py-2 px-3 text-right tabular-nums font-semibold ${rateColor(
@@ -128,12 +133,15 @@ export default function SegmentTable({
             유입 {minVolume}건 미만 {hidden}개 항목은 표본 부족으로 숨김
           </p>
         )}
-        {passed.some((r) => r.당일결제 + r.재컨택결제 < r.결제) && (
+        {passed.some((r) => r.첫컨택주문 + r.재컨택주문 < r.결제) && (
           <p className="text-xs text-muted-foreground">
-            당일 + 재컨택이 결제보다 적은 행은 결제일 기록이 없는 건이 섞인 것 (결제일은
-            결제 데이터 기준으로 최근 구간만 남아 있음)
+            첫컨택 + 재컨택이 결제보다 적은 행은 결제일 기록이 없는 과거 결제가 섞인 것
           </p>
         )}
+        <p className="text-xs text-muted-foreground">
+          결제는 그날(기간 내) 결제된 건을 세고, 유입은 그 기간에 들어온 리드를 센다 —
+          세는 대상이 달라 유입대비는 참고용
+        </p>
         {미확인건 > 0 && (
           <p className="text-xs text-muted-foreground">
             (미확인) {미확인건.toLocaleString()}건은 유입 출처가 기록되지 않은 건으로,
