@@ -27,7 +27,7 @@ import {
   LeadTimeBucket,
   FailReasonRow,
   DiagnosisTable,
-  상담차수Stat,
+  재컨택Stat,
 } from './types';
 
 /** 첫응대시각 에어테이블 자동화 적용일. 이전 유입분은 리드타임 측정 불가 */
@@ -78,69 +78,74 @@ export interface PaidContext {
 }
 
 /**
- * 결제건을 첫상담 / 재상담으로 가른다.
+ * 재컨택 분해 — 그날 접촉된 건을 신규 / 재컨택으로 가른다.
  *
- * 기준 (2026-09-03 변경): **유입일이 결제일과 같으면** 첫상담, 그 밖은 재상담.
+ * 기준 (2026-09-03 확정):
+ *   - 그날 `메모수정시각`이 찍힌 건 = 그날 접촉된 건
+ *   - 그중 유입일이 그날이 아니면 **재컨택**, 유입일도 그날이면 **신규**
+ *   - `첫응대시각`이 그날보다 앞서면 이미 응대한 뒤 다시 접촉한 것이므로,
+ *     유입일이 그날이어도 재컨택으로 본다 (당일 유입·당일 첫응대 후 재접촉)
+ *   - `메모수정시각`이 비면 **미컨택** — 접촉 분해 대상이 아니라 따로 센다
  *
- * 종전 기준은 `첫응대시각`까지 결제일과 같아야 첫상담으로 봤다. 그런데 이 필드는
- * 상담 시점에 찍히는 게 아니라 **결제를 처리하면서 소급 입력**되는 경우가 많다 —
- * 결제건 167건 중 27건이 결제시각과 5분 이내이고, 메모에 "실통화 8월24일"이라 적힌 건의
- * 첫응대시각이 9/2(결제일)로 찍힌 사례도 있다. 즉 이 필드로는 실제 첫 통화일을 알 수 없다.
- * 게다가 LEADTIME_START(8/11) 이전 유입분은 값이 아예 없어 무조건 재상담으로 떨어졌다
- * (결제 167건 중 30건). 두 문제 모두 이 필드를 판정에서 빼면 사라진다.
- *
- * 한계: 상담 횟수를 센 것이 아니라 **유입에서 결제까지 날이 넘어갔는지**를 본다.
- * 에어테이블에 상담 횟수 필드가 없고, 접촉이력은 리드당 마지막 접촉일 1개만 남는
- * 덮어쓰기 구조라 횟수를 소급 계산할 수 없다. 같은 날 여러 번 상담해 결제된 건도
- * 첫상담으로 잡힌다 — 이 지표는 "당일에 끝났는지"까지만 답한다.
+ * 하루 단위에서만 의미가 있다. 여러 날을 묶으면 "그날"이 정해지지 않아 null을 준다.
  */
-function 상담차수Of단건(r: D3Record, ctx: PaidContext): '첫상담' | '재상담' | null {
-  const 결제일 = ctx.payDates?.get(r.id);
-  if (!결제일) return null;
-  const 유입 = kstOf(r.fields['유입시간']);
-  if (!유입) return null; // 유입일을 모르면 판정 불가 — 재상담으로 단정하지 않는다
-  return formatDate(유입) === 결제일 ? '첫상담' : '재상담';
-}
+function 재컨택Of(
+  records: D3Record[],
+  opts: { day: string | null; since: string; until: string }
+): 재컨택Stat | null {
+  const { day, since, until } = opts;
+  if (!day) return null;
 
-/** 결제건을 첫상담/재상담으로 분해. 결제일을 모르면(원장 없음) null */
-function 상담차수Of(records: D3Record[], paid: PaidContext): 상담차수Stat | null {
-  if (!paid.payDates || paid.payDates.size === 0) return null;
-  let 첫상담 = 0;
-  let 재상담 = 0;
-  let 분해불가 = 0;
-  // 재상담 건의 유입→결제 소요일. "며칠 걸려 돌아왔나"를 함께 보여준다
-  const 소요일: number[] = [];
+  let 신규 = 0;
+  let 재컨택 = 0;
+  let 미컨택 = 0;
+  let 유입 = 0;
+  const 경과일: number[] = [];
+  const [dy, dm, dd] = day.split('-').map(Number);
+  const 기준 = new Date(dy, dm - 1, dd);
+
   for (const r of records) {
-    if (!paidOf(r, paid)) continue;
-    const v = 상담차수Of단건(r, paid);
-    if (v === '첫상담') 첫상담++;
-    else if (v === '재상담') {
-      재상담++;
-      const 유입 = kstOf(r.fields['유입시간']);
-      const 결제일 = paid.payDates.get(r.id);
-      if (유입 && 결제일) {
-        const [y, m, d] = 결제일.split('-').map(Number);
-        소요일.push(daysBetween(유입, new Date(y, m - 1, d)));
-      }
-    } else 분해불가++;
+    const ing = kstOf(r.fields['유입시간']);
+    const ingDay = ing ? formatDate(ing) : null;
+
+    // 미컨택 — 기간 내 유입분 중 아직 메모가 없는 건
+    if (ingDay !== null && ingDay >= since && ingDay <= until && !r.fields['메모수정시각']) {
+      미컨택++;
+    }
+    if (ingDay !== null && ingDay >= since && ingDay <= until) 유입++;
+
+    const memo = kstOf(r.fields['메모수정시각']);
+    if (!memo || formatDate(memo) !== day) continue;
+
+    const 첫응대 = kstOf(r.fields['첫응대시각']);
+    const 첫응대일 = 첫응대 ? formatDate(첫응대) : null;
+    // 유입이 과거이거나, 이미 앞선 날에 응대한 뒤 다시 접촉한 건 → 재컨택
+    if (ingDay !== day || (첫응대일 !== null && 첫응대일 < day)) {
+      재컨택++;
+      if (ing) 경과일.push(daysBetween(ing, 기준));
+    } else {
+      신규++;
+    }
   }
-  소요일.sort((a, b) => a - b);
-  const mid = 소요일.length >> 1;
-  const 중앙 = 소요일.length
-    ? 소요일.length % 2
-      ? 소요일[mid]
-      : Math.round((소요일[mid - 1] + 소요일[mid]) / 2)
+
+  경과일.sort((a, b) => a - b);
+  const mid = 경과일.length >> 1;
+  const 중앙 = 경과일.length
+    ? 경과일.length % 2
+      ? 경과일[mid]
+      : Math.round((경과일[mid - 1] + 경과일[mid]) / 2)
     : null;
-  const 결제 = 첫상담 + 재상담;
+  const 접촉 = 신규 + 재컨택;
+
   return {
-    첫상담,
-    재상담,
-    결제,
-    첫상담_pct: pct(첫상담, 결제),
-    재상담_pct: pct(재상담, 결제),
-    재상담_소요일_중앙: 중앙,
-    재상담_소요일_최대: 소요일.length ? 소요일[소요일.length - 1] : null,
-    분해불가,
+    접촉,
+    신규,
+    재컨택,
+    재컨택률_pct: pct(재컨택, 접촉),
+    재컨택_경과일_중앙: 중앙,
+    재컨택_경과일_최대: 경과일.length ? 경과일[경과일.length - 1] : null,
+    미컨택,
+    미컨택률_pct: pct(미컨택, 유입),
   };
 }
 
@@ -395,6 +400,15 @@ export function computeDiagnosis(
       기재율_pct: pct(fail.기재, fail.실패총건),
     },
     방치_제외건수: 제외건수,
-    상담차수: 상담차수Of(records, paid),
+    /*
+     * 재컨택은 allRecords 로 계산한다. records 는 유입일로 걸러진 집합이라
+     * "과거에 유입돼 그날 접촉된 건"이 빠져 있어 재컨택을 셀 수 없다.
+     * 하루 단위 조회(since === until)에서만 값이 나온다.
+     */
+    재컨택: 재컨택Of(allRecords, {
+      day: until !== undefined && since === until ? since : null,
+      since,
+      until: until ?? since,
+    }),
   };
 }

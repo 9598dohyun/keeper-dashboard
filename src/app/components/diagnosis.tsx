@@ -15,7 +15,7 @@ import type {
 } from '@/lib/metrics3/types';
 import type { DailyComment } from '@/lib/metrics3/comment';
 import { SEGMENT_LABEL, SEGMENT_ORDER } from '@/lib/metrics3/time-segment';
-import { 상담차수_집계시작 } from '@/lib/constants';
+import { 접촉_집계시작 } from '@/lib/constants';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -339,56 +339,53 @@ export default function Diagnosis() {
         <DailyCommentPanel data={comment[table]} />
       )}
 
-      {t.상담차수 && t.상담차수.결제 > 0 && (
+      {t.재컨택 && t.재컨택.접촉 > 0 && (
         <Section
-          title="첫상담 / 재상담 주문"
-          desc={`유입된 날에 결제까지 된 건을 첫상담으로, 날이 넘어가 결제된 건을 재상담으로 본다. ${상담차수_집계시작}부터 집계.`}
+          title="신규 / 재컨택"
+          desc="그날 메모가 수정된 건을 그날 접촉된 건으로 본다. 유입일이 그날이 아니거나, 앞선 날에 이미 응대한 뒤 다시 접촉했으면 재컨택이다."
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <MetricCard
-              title="첫상담 주문"
-              value={t.상담차수.첫상담.toLocaleString()}
+              title="신규 접촉"
+              value={t.재컨택.신규.toLocaleString()}
               unit="건"
-              sub={`분해한 ${t.상담차수.결제}건 중 ${t.상담차수.첫상담_pct}%`}
+              sub={`접촉 ${t.재컨택.접촉}건 중`}
               color="blue"
             />
             <MetricCard
-              title="재상담 주문"
-              value={t.상담차수.재상담.toLocaleString()}
+              title="재컨택"
+              value={t.재컨택.재컨택.toLocaleString()}
               unit="건"
-              sub={`분해한 ${t.상담차수.결제}건 중 ${t.상담차수.재상담_pct}%`}
+              sub={`접촉 ${t.재컨택.접촉}건 중 ${t.재컨택.재컨택률_pct}%`}
               color="green"
+            />
+            <MetricCard
+              title="미컨택"
+              value={t.재컨택.미컨택.toLocaleString()}
+              unit="건"
+              sub={`이 기간 유입 중 ${t.재컨택.미컨택률_pct}%`}
+              color="red"
             />
           </div>
 
           <div className="mt-3 space-y-1 text-xs text-gray-500">
-            {/*
-              분해 대상은 결제일을 아는 건뿐이다. 결제일은 결제 엑셀 원장에만 있어
-              원장 이전 결제는 판정할 수 없다. 이 규모를 적지 않으면 위 두 카드의 합이
-              화면 상단 '결제'와 달라 보인다.
-            */}
-            {t.상담차수.분해불가 > 0 && (
+            {t.재컨택.재컨택 > 0 && t.재컨택.재컨택_경과일_중앙 !== null && (
               <p>
-                이 기간 결제 {t.전체.결제.toLocaleString()}건 중{' '}
-                {t.상담차수.결제.toLocaleString()}건만 분해했다. 나머지{' '}
-                {t.상담차수.분해불가.toLocaleString()}건은 {상담차수_집계시작} 이전에 결제돼
-                결제일 기록이 없다. 조회 기간을 {상담차수_집계시작} 이후로 좁히면 전건 분해된다.
-              </p>
-            )}
-            {t.상담차수.재상담 > 0 && t.상담차수.재상담_소요일_중앙 !== null && (
-              <p>
-                재상담 {t.상담차수.재상담}건은 유입에서 결제까지 중앙 
-                {t.상담차수.재상담_소요일_중앙}일, 최대 {t.상담차수.재상담_소요일_최대}일
-                걸렸다.
+                재컨택 {t.재컨택.재컨택}건은 유입 후 중앙 {t.재컨택.재컨택_경과일_중앙}일, 최대{' '}
+                {t.재컨택.재컨택_경과일_최대}일 지나 다시 접촉됐다.
               </p>
             )}
             {/*
-              상담 횟수를 센 것이 아니라는 점을 밝혀 둔다. 에어테이블에 횟수 필드가 없고
-              접촉이력은 마지막 접촉일만 남는 덮어쓰기 구조라 소급 계산이 불가능하다.
+              미컨택은 메모가 아직 없는 건이다. 메모수정시각은 2026-08-26부터 쌓이므로
+              그 이전 유입분은 실제로 응대했어도 미컨택으로 잡힌다 — 숨기지 않고 적는다.
             */}
             <p>
-              상담 횟수를 센 것이 아니라 유입에서 결제까지 날이 넘어갔는지로 가른 것이다.
-              같은 날 여러 번 상담해 결제된 건도 첫상담으로 잡힌다.
+              미컨택은 메모가 아직 남지 않은 건이다. 메모 기록은 {접촉_집계시작}부터
+              쌓이므로 그 이전에 유입된 리드는 실제로 응대했어도 미컨택으로 잡힌다.
+            </p>
+            <p>
+              접촉 횟수를 센 것이 아니라 그날 건드렸는지만 본다. 메모 기록은 마지막 수정만
+              남아 하루에 여러 번 접촉해도 1건이다.
             </p>
           </div>
         </Section>
