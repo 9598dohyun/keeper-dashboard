@@ -14,12 +14,7 @@
 import fs from 'fs';
 import path from 'path';
 import { kv } from '@vercel/kv';
-import {
-  DailyComment,
-  CommentLine,
-  PaidTrace,
-  PaidTracking,
-} from '../src/lib/metrics3/comment';
+import { DailyComment, CommentLine } from '../src/lib/metrics3/comment';
 import { KV_D3_DAILY_TTL } from '../src/lib/constants';
 import { isTestRecord } from '../src/lib/test-lead';
 
@@ -144,67 +139,6 @@ function loadPaidIds(day: string): { 인바운드: Set<string>; skb: Set<string>
   };
 }
 
-/**
- * 그날 결제 전수 추적.
- *
- * 원장은 결제일로 묶여 있어 그날 결제된 주문 전부를 집을 수 있다. 각 주문에 붙은
- * 리드 ID로 유입일을 찾아 소요일을 낸다. 리드가 없는 건(오가닉·아웃바운드 등)은
- * 유입일을 알 수 없어 미매칭으로 남기되, 건수에서 빼지 않는다 — 빼면 그날 결제
- * 총량이 화면에서 사라진다.
- */
-function buildTracking(day: string, 유입일: Map<string, string>): PaidTracking | null {
-  const p = path.join(__dirname, '../data/결제원장.json');
-  if (!fs.existsSync(p)) return null;
-  const led = JSON.parse(fs.readFileSync(p, 'utf8')) as {
-    주문?: Record<
-      string,
-      {
-        결제일?: string | null;
-        취소?: boolean;
-        채널?: string;
-        인바운드ID?: string[];
-        skbID?: string[];
-      }
-    >;
-  };
-
-  const 건: PaidTrace[] = [];
-  for (const o of Object.values(led.주문 ?? {})) {
-    if (o.취소 || o.결제일 !== day) continue;
-    const ib = o.인바운드ID ?? [];
-    const sk = o.skbID ?? [];
-    const 테이블: PaidTrace['테이블'] = ib.length ? '인바운드' : sk.length ? 'SKB' : '미매칭';
-    const id = ib[0] ?? sk[0];
-    const ing = id ? (유입일.get(id) ?? null) : null;
-    건.push({
-      채널: o.채널 || '(없음)',
-      테이블,
-      유입일: ing,
-      소요일: ing ? Math.round((Date.parse(day) - Date.parse(ing)) / 86400000) : null,
-    });
-  }
-  if (!건.length) return null;
-
-  const lags = 건.map((x) => x.소요일).filter((v): v is number => v !== null);
-  const ch = new Map<string, number>();
-  for (const x of 건) ch.set(x.채널, (ch.get(x.채널) ?? 0) + 1);
-
-  건.sort((a, b) => (b.소요일 ?? -Infinity) - (a.소요일 ?? -Infinity));
-
-  return {
-    주문: 건.length,
-    매칭: 건.filter((x) => x.테이블 !== '미매칭').length,
-    미매칭: 건.filter((x) => x.테이블 === '미매칭').length,
-    당일결제: 건.filter((x) => x.소요일 === 0).length,
-    소요일_중앙: lags.length ? Math.round(median(lags)) : null,
-    소요일_최대: lags.length ? Math.max(...lags) : null,
-    채널별: [...ch.entries()]
-      .map(([채널, 건수]) => ({ 채널, 건수 }))
-      .sort((a, b) => b.건수 - a.건수),
-    건,
-  };
-}
-
 function 인자(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i === -1 ? undefined : process.argv[i + 1];
@@ -214,16 +148,10 @@ async function build(
   table: TableKey,
   day: string,
   paidIds: Set<string> | null,
-  결제전체: number,
-  유입일수집: Map<string, string>
+  결제전체: number
 ): Promise<DailyComment> {
   const conf = TABLES[table];
   const recs = await fetchAll(conf.id, [...BASE_FIELDS, conf.이름, conf.메모]);
-  // 결제 추적에서 리드ID → 유입일을 찾는 데 쓴다 (테이블 두 곳을 합쳐 하나의 맵으로)
-  for (const r of recs) {
-    const d = kstDate(r.fields['유입시간']);
-    if (d) 유입일수집.set(r.id, d);
-  }
   const hit = recs.filter(
     (r) => !isTestRecord(r.fields) && kstDate(r.fields['메모수정시각']) === day
   );
@@ -385,7 +313,6 @@ async function build(
     테이블: table,
     실적: { 응대, 결제, 결제_전체: 결제전체, 실패: 실패건.length, 부재중 },
     라인: lines,
-    결제추적: null, // main 에서 두 테이블 수집이 끝난 뒤 채운다
     meta: { updatedAt: new Date().toISOString(), 메모검토 },
   };
 }
@@ -404,61 +331,13 @@ async function main() {
       : '결제 소스: 에어테이블 [콜]최종 결과 (해당 기준일 결제대조.json 없음)'
   );
 
-  /*
-   * 결제 추적은 두 테이블을 합쳐 계산한다. 그날 결제된 주문은 인바운드·SKB 어느 쪽
-   * 리드에도 붙을 수 있고, 아예 안 붙기도 한다(오가닉 등). 테이블별로 쪼개면 그날
-   * 결제 총량이 화면에서 갈라져 "오늘 몇 건 결제됐나"를 답할 수 없다.
-   */
-  const 유입일 = new Map<string, string>();
-  const built: Record<string, DailyComment> = {};
-
   for (const table of ['인바운드', 'skb'] as TableKey[]) {
-    built[table] = await build(
+    const c = await build(
       table,
       day,
       paid ? paid[table] : null,
-      paid ? paid[table].size : 0,
-      유입일
+      paid ? paid[table].size : 0
     );
-  }
-
-  const tracking = buildTracking(day, 유입일);
-  if (tracking) {
-    console.log(
-      `\n[그날 결제 추적] 주문 ${tracking.주문}건 (매칭 ${tracking.매칭} / 미매칭 ${tracking.미매칭}) · ` +
-        `당일결제 ${tracking.당일결제}건 · 소요일 중앙 ${tracking.소요일_중앙} / 최대 ${tracking.소요일_최대}`
-    );
-    console.log(
-      '  채널별: ' + tracking.채널별.map((c) => `${c.채널} ${c.건수}`).join(' · ')
-    );
-  }
-
-  /*
-   * 결제 리드타임 코멘트 — 그날 결제가 그날 유입에서 나오지 않는다는 사실을 짚는다.
-   * 이걸 안 적으면 화면의 유입 코호트 결제수(9/2: 1건)를 그날 성과로 오독한다.
-   */
-  const 추적라인: CommentLine[] = [];
-  if (tracking && tracking.주문 >= 5) {
-    const 당일pct = pct(tracking.당일결제, tracking.주문);
-    if (당일pct < 50) {
-      추적라인.push({
-        축: '결제리드타임',
-        본문:
-          `그날 결제 ${tracking.주문}건 중 당일 유입에서 바로 나온 건은 ${tracking.당일결제}건뿐이다. ` +
-          `나머지는 과거 유입분이 뒤늦게 결제된 것이라, 그날 유입만 보면 성과가 실제보다 작아 보인다.`,
-        근거: [
-          `당일결제 ${tracking.당일결제}건 (${당일pct}%)`,
-          `소요일 중앙 ${tracking.소요일_중앙}일`,
-          `최대 ${tracking.소요일_최대}일`,
-        ],
-      });
-    }
-  }
-
-  for (const table of ['인바운드', 'skb'] as TableKey[]) {
-    const c = built[table];
-    c.결제추적 = tracking;
-    c.라인 = [...추적라인, ...c.라인];
     console.log(`\n===== ${table} ${day} =====`);
     console.log(
       `응대 ${c.실적.응대} / 결제 ${c.실적.결제} (그날 결제 전체 ${c.실적.결제_전체}) / ` +
