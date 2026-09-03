@@ -6,12 +6,14 @@ import MetricCard from './metric-card';
 import StaleLeads from './stale-leads';
 import SegmentTable from './segment-table';
 import LeadTimeChart from './leadtime-chart';
+import DailyCommentPanel from './daily-comment';
 import type {
   DiagnosisResult,
   DiagnosisTable,
   TimeSegment,
   SourceAxis,
 } from '@/lib/metrics3/types';
+import type { DailyComment } from '@/lib/metrics3/comment';
 import { SEGMENT_LABEL, SEGMENT_ORDER } from '@/lib/metrics3/time-segment';
 import { 상담차수_집계시작 } from '@/lib/constants';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -79,6 +81,12 @@ export default function Diagnosis() {
   const [seg, setSeg] = useState<SegFilter>('전체');
   const [axis, setAxis] = useState<SourceAxis>('utm');
   const [data, setData] = useState<DiagnosisResult | null>(null);
+  /** 일자별 코멘트. 일간 조회일 때만 채워진다 */
+  const [comment, setComment] = useState<{
+    날짜: string;
+    인바운드: DailyComment | null;
+    skb: DailyComment | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -128,6 +136,27 @@ export default function Diagnosis() {
     if (!sel || sel.kind !== kind) return;
     fetchData(sel.kind, sel.id);
   }, [fetchData, kind, sel]);
+
+  /*
+   * 코멘트는 하루 단위로만 만든다. 주·월을 고르면 여러 날이 섞여
+   * "그날 무엇이 막혔나"라는 질문 자체가 성립하지 않으므로 감춘다.
+   */
+  useEffect(() => {
+    if (kind !== 'day' || !sel || sel.kind !== 'day') return;
+    const 날짜 = sel.id;
+    let alive = true;
+    fetch(`/api/diagnosis?type=comment&date=${날짜}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => {
+        if (alive) setComment(c ? { ...c, 날짜 } : null);
+      })
+      .catch(() => {
+        if (alive) setComment(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [kind, sel]);
 
   const t: DiagnosisTable | null = data ? data[table] : null;
 
@@ -305,6 +334,10 @@ export default function Diagnosis() {
           color="red"
         />
       </div>
+
+      {kind === 'day' && comment && comment.날짜 === sel?.id && (
+        <DailyCommentPanel data={comment[table]} />
+      )}
 
       {t.상담차수 && t.상담차수.결제 > 0 && (
         <Section

@@ -12,6 +12,7 @@ import { D3_RANGES } from '@/lib/constants';
  * GET /api/diagnosis?date=YYYY-MM-DD&range=60 → 그날 마감 시점 스냅샷
  * GET /api/diagnosis?kind=week                → 고를 수 있는 주차 목록
  * GET /api/diagnosis?kind=week&period=2026-W35 → 그 주(월~일) 지표
+ * GET /api/diagnosis?type=comment&date=YYYY-MM-DD → 그날 진단 코멘트 (인바운드+SKB)
  *
  * metrics2(/api/metrics-v2)와 분모가 다른 별개 지표다. 혼용 금지.
  */
@@ -47,6 +48,18 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: '해당 기간 데이터가 없습니다.' }, { status: 404 });
       }
       return NextResponse.json(snap);
+    }
+
+    // 일자별 코멘트 — 그날 응대·결제 실적 축. 없으면 빈 객체를 준다(화면에서 감춤)
+    if (type === 'comment') {
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return NextResponse.json({ error: '날짜 형식 오류' }, { status: 400 });
+      }
+      const [인바운드, skb] = await Promise.all([
+        kv.get(`d3:comment:${date}:인바운드`),
+        kv.get(`d3:comment:${date}:skb`),
+      ]);
+      return NextResponse.json({ 인바운드: 인바운드 ?? null, skb: skb ?? null });
     }
 
     if (type === 'dates') {
