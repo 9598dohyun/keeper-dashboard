@@ -394,11 +394,17 @@ export function computeDiagnosis(
     return d === null ? null : timeSegmentOf(d);
   };
 
+  /*
+   * 유입이 0인 시간대도 결제가 있으면 남긴다. 결제는 결제일 기준이라 기간 밖에서
+   * 유입된 건이 섞이는데, 그 유입시각이 기간 내 유입에 없는 시간대(예: 주말)면
+   * 행이 사라져 시간대별 결제 합이 전체와 안 맞았다
+   * (9/2 인바운드: 결제 5건 중 3건이 8/22·8/29·8/30 유입 → 주말·영업외).
+   */
   const 시간대별 = SEGMENT_ORDER.map((seg) => {
     const sub = records.filter((r) => segOf(r) === seg);
     const allSub = allRecords.filter((r) => segOf(r) === seg);
     return segmentRowOf(seg, sub, allSub, today, paid, 기간);
-  }).filter((row) => row.유입 > 0);
+  }).filter((row) => row.유입 > 0 || row.결제 > 0);
 
   /*
    * 결제는 결제일 기준이라 기간 밖에서 유입된 건도 세야 한다. 그래서 그룹마다
