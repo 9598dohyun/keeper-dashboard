@@ -75,6 +75,28 @@ export interface SkbMetrics {
 }
 
 /**
+ * 정보와기술용 지표 (전환 + 담당자별 + 유입 + 채널).
+ *
+ * 정보와기술 테이블은 대표전화·채널톡 두 채널을 함께 다룬다(채널 구분은 유입경로 필드로 함).
+ * 필드명이 인바운드/SKB와 달라(유입날짜·메모완료시각·유입경로)
+ * fetch-airtable.ts가 유입시간·메모수정시각·UTM_source로 리네임해 저장한다 —
+ * 그 결과 V2Record 형태가 같아 InboundMetrics와 동일한 계산 로직(computeInbound)을 재사용한다.
+ */
+export type RepPhoneMetrics = InboundMetrics;
+
+/**
+ * 레드재컨택(레드텔레콤 하위) 지표.
+ *
+ * 레드재컨택 테이블 자체엔 결제 상태 필드가 없다 — '레드텔레콤 [결제완료]' 테이블과
+ * 연락처로 매칭해서 재컨택 대상 중 결제로 전환된 건수를 reconcile.py가 산출한다.
+ * (매칭은 개인정보를 다루므로 로컬 스크립트 실행 시에만 계산하고, 결과는 건수만 남는다)
+ */
+export interface RedContactMetrics {
+  재컨택_전체: number; // 레드재컨택 테이블 전체 레코드 수
+  결제전환: number; // 그중 레드텔레콤[결제완료]와 연락처가 매칭된 건수
+}
+
+/**
  * 결제 데이터 엑셀 대조 결과 (scripts/payment-sync/reconcile.py 산출).
  *
  * 결제 여부의 진짜 소스는 오전에 받는 결제 데이터 엑셀이다.
@@ -89,8 +111,24 @@ export interface PaymentReconcile {
   결제_매칭: number;
   결제ID_인바운드: string[];
   결제ID_SKB: string[];
+  결제ID_정보와기술: string[];
+  // 테이블별 주문 건수. 결제ID_*는 레코드ID 집합이라 같은 리드가 여러 주문(같은 날 재구매·증설 등)의
+  // 대표로 뽑히면 집합 크기가 실제 주문 건수보다 작아진다 — 표시용 건수는 반드시 이 값을 쓴다.
+  결제건수_인바운드: number;
+  결제건수_SKB: number;
+  결제건수_정보와기술: number;
+  // 담당자별 결제 건수(주문 단위, 중복 리드 병합 없음). 담당자별 표시는 이 값을 우선 쓴다 —
+  // 결제ID_*(레코드ID 집합) 기준으로 배분하면 같은 리드가 여러 주문의 대표로 뽑힐 때
+  // 그중 한 건만 잡혀 실제보다 적게 나온다.
+  담당자별_결제_인바운드?: Record<string, number>;
+  담당자별_결제_SKB?: Record<string, number>;
+  담당자별_결제_정보와기술?: Record<string, number>;
   미매칭_건수: number;
   에어테이블만_결제_건수: number;
+  /** 레드재컨택 ↔ 레드텔레콤[결제완료] 연락처 매칭 건수 (reconcile.py 산출) */
+  레드재컨택_결제전환?: number;
+  /** 레드재컨택 테이블 전체 레코드 수 (reconcile.py 산출) */
+  레드재컨택_전체?: number;
 }
 
 /** 날짜 1일치 카운트 */
@@ -123,6 +161,7 @@ export interface TrendPoint {
   날짜: string; // YYYY-MM-DD
   인바운드: TrendSeries;
   skb: TrendSeries;
+  정보와기술: TrendSeries;
 }
 
 /** KV에 저장하는 대시보드 묶음 */
@@ -130,11 +169,13 @@ export interface DashboardV2 {
   인바운드: InboundMetrics;
   skb: SkbMetrics;
   레드텔레콤: CountMetrics;
+  정보와기술: RepPhoneMetrics;
+  레드재컨택: RedContactMetrics;
   집계시작: string; // 'YYYY-MM-DD'
   오늘: string; // 응대 지표 기준일 'YYYY-MM-DD' (KST)
   _meta: {
     updatedAt: string;
-    counts: { 인바운드: number; skb: number; 레드텔레콤: number };
+    counts: { 인바운드: number; skb: number; 레드텔레콤: number; 정보와기술: number; 레드재컨택: number };
     /** 결제수 소스. 엑셀 대조를 거치지 않으면 airtable로 남아 화면에 표시된다 */
     결제소스?: {
       종류: 'excel' | 'airtable';

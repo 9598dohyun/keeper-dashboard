@@ -35,17 +35,21 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
     (latest.인바운드.유입_일자별 ?? []).map((d) => [d.날짜, d.건수])
   );
   const inflowSkb = new Map((latest.skb.유입_일자별 ?? []).map((d) => [d.날짜, d.건수]));
+  // 정보와기술은 2026-09-23에 추가된 신규 필드 — 그 이전 스냅샷엔 없어 옵셔널로 다룬다
+  const inflowRep = new Map((latest.정보와기술?.유입_일자별 ?? []).map((d) => [d.날짜, d.건수]));
 
   // 유입 실집계가 있으면 그 날짜들까지 축에 포함한다(스냅샷이 없는 날도 유입은 보여야 함)
   const allDates = new Set<string>([
     ...sorted.map((s) => s.오늘),
     ...inflowInbound.keys(),
     ...inflowSkb.keys(),
+    ...inflowRep.keys(),
   ]);
   const byDate = new Map(sorted.map((s) => [s.오늘, s]));
 
   let prevInbound: number | undefined;
   let prevSkb: number | undefined;
+  let prevRep: number | undefined;
 
   return [...allDates]
     .sort((a, b) => a.localeCompare(b))
@@ -61,9 +65,15 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
         : s
           ? dailyFromCumulative(s.skb.유입건수, prevSkb)
           : null;
+      const 유입R = inflowRep.has(날짜)
+        ? inflowRep.get(날짜)!
+        : s?.정보와기술
+          ? dailyFromCumulative(s.정보와기술.유입건수, prevRep)
+          : null;
       if (s) {
         prevInbound = s.인바운드.유입건수;
         prevSkb = s.skb.유입건수;
+        prevRep = s.정보와기술?.유입건수;
       }
       return {
         날짜,
@@ -78,6 +88,13 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
           결제: s?.skb.전환.결제 ?? null,
           전환율_pct: s?.skb.전환.전환율_pct ?? null,
           유입: 유입S,
+        },
+        // 정보와기술 없는 구 스냅샷(2026-09-23 이전)은 이 날짜 값을 null로 둔다
+        정보와기술: {
+          응대: s?.정보와기술?.전환.응대 ?? null,
+          결제: s?.정보와기술?.전환.결제 ?? null,
+          전환율_pct: s?.정보와기술?.전환.전환율_pct ?? null,
+          유입: 유입R,
         },
       };
     });

@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { V2Record, DashboardV2, PaymentReconcile } from '../src/lib/metrics2/types';
-import { computeInbound, computeSkb, computeCount } from '../src/lib/metrics2/compute';
+import { computeInbound, computeSkb, computeCount, computeRepPhone } from '../src/lib/metrics2/compute';
 import {
   ContactHistory,
   updateHistory,
@@ -135,6 +135,7 @@ async function main() {
   const inboundRecords = load('인바운드.json');
   const skbRecords = load('SKB.json');
   const redtelRecords = load('레드텔레콤.json');
+  const repRecords = load('정보와기술.json');
 
   const 대조 = loadReconcile();
   if (대조) {
@@ -153,26 +154,61 @@ async function main() {
   }
   const 인바운드ID = 대조 ? new Set(대조.결제ID_인바운드) : null;
   const skbID = 대조 ? new Set(대조.결제ID_SKB) : null;
+  const 정보와기술ID = 대조 ? new Set(대조.결제ID_정보와기술 ?? []) : null;
+  // 결제ID(레코드ID 집합)만으로 세면 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로
+  // 뽑힐 때 집합 크기가 실제 주문 건수보다 작아진다 — 정확한 주문 단위 건수를 우선한다.
+  const 인바운드결제건수 = 대조?.결제건수_인바운드;
+  const skb결제건수 = 대조?.결제건수_SKB;
+  const 정보와기술결제건수 = 대조?.결제건수_정보와기술;
+  const 인바운드담당자별결제 = 대조?.담당자별_결제_인바운드;
+  const skb담당자별결제 = 대조?.담당자별_결제_SKB;
+  const 정보와기술담당자별결제 = 대조?.담당자별_결제_정보와기술;
 
-  // 접촉이력은 인바운드/SKB가 서로 다른 베이스라 ID 공간이 겹치지 않게 분리 저장한다.
+  // 접촉이력은 인바운드/SKB/정보와기술가 서로 다른 베이스·테이블이라 ID 공간이 겹치지 않게 분리 저장한다.
   const 인바운드이력 = load이력('인바운드');
   const skb이력 = load이력('SKB');
+  const 정보와기술이력 = load이력('정보와기술');
 
   const 인바운드 = computeInbound(
     inboundRecords,
     집계시작,
     오늘,
     인바운드ID,
-    인바운드이력
+    인바운드이력,
+    인바운드결제건수,
+    인바운드담당자별결제
   );
-  const skb = computeSkb(skbRecords, 집계시작, 오늘, skbID, skb이력);
+  const skb = computeSkb(
+    skbRecords,
+    집계시작,
+    오늘,
+    skbID,
+    skb이력,
+    skb결제건수,
+    skb담당자별결제
+  );
   const 레드텔레콤 = computeCount(redtelRecords, 집계시작);
+  const 정보와기술 = computeRepPhone(
+    repRecords,
+    집계시작,
+    오늘,
+    정보와기술ID,
+    정보와기술이력,
+    정보와기술결제건수,
+    정보와기술담당자별결제
+  );
+  const 레드재컨택: DashboardV2['레드재컨택'] = {
+    재컨택_전체: 대조?.레드재컨택_전체 ?? 0,
+    결제전환: 대조?.레드재컨택_결제전환 ?? 0,
+  };
 
   const updatedAt = new Date().toISOString();
   const dashboard: DashboardV2 = {
     인바운드,
     skb,
     레드텔레콤,
+    정보와기술,
+    레드재컨택,
     집계시작,
     오늘,
     _meta: {
@@ -181,6 +217,8 @@ async function main() {
         인바운드: inboundRecords.length,
         skb: skbRecords.length,
         레드텔레콤: redtelRecords.length,
+        정보와기술: repRecords.length,
+        레드재컨택: 레드재컨택.재컨택_전체,
       },
       결제소스: 대조
         ? {
@@ -215,6 +253,7 @@ async function main() {
   // '이미 본 것'이 되어 재컨택으로 세지 못한다.
   save이력('인바운드', updateHistory(인바운드이력, 접촉목록(inboundRecords, 오늘)));
   save이력('SKB', updateHistory(skb이력, 접촉목록(skbRecords, 오늘)));
+  save이력('정보와기술', updateHistory(정보와기술이력, 접촉목록(repRecords, 오늘)));
 
   console.log(`v2:daily:${오늘} 저장 완료 (누적 ${날짜목록.length}일)`);
   console.log('v2:latest 저장 완료');
@@ -234,6 +273,10 @@ async function main() {
     `  SKB: 오늘응대 ${skb.전환.응대}${재(skb.전환)} / 오늘결제 ${skb.전환.결제} / 전환율 ${율(skb.전환.전환율_pct)} / 누적유입 ${skb.유입건수}`
   );
   console.log(`  레드텔레콤: 전체 ${레드텔레콤.건수_전체} / 오늘이후 ${레드텔레콤.건수_오늘이후}`);
+  console.log(
+    `  정보와기술: 오늘응대 ${정보와기술.전환.응대}${재(정보와기술.전환)} / 오늘결제 ${정보와기술.전환.결제} / 전환율 ${율(정보와기술.전환.전환율_pct)} / 누적유입 ${정보와기술.유입건수}`
+  );
+  console.log(`  레드재컨택: 전체 ${레드재컨택.재컨택_전체} / 결제전환 ${레드재컨택.결제전환}`);
 }
 
 main().catch((error) => {

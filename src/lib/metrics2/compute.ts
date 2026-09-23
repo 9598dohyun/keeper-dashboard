@@ -72,7 +72,8 @@ function computeConversion(
   records: V2Record[],
   today: string,
   결제ID: Set<string> | null,
-  이력: ContactHistory | null
+  이력: ContactHistory | null,
+  결제건수?: number
 ): ConversionMetrics {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
@@ -87,9 +88,13 @@ function computeConversion(
   const 응대 = 응대건.length;
   // 엑셀 대조가 있으면 그날 결제 전체를 센다(응대 여부와 무관).
   // 없으면 기존대로 응대건 중 결제 완료를 센다.
-  const 결제 = 결제ID
-    ? records.filter((r) => 결제ID.has(r.id)).length
-    : 분해.결제;
+  // 결제ID(레코드ID 집합)로 세면 같은 리드가 여러 주문(같은 날 재구매·증설)의 대표로 뽑힐 때
+  // 집합 크기가 실제 주문 건수보다 작아진다 — 결제건수(정확한 주문 단위 카운트)가 있으면 그걸 쓴다.
+  const 결제 = 결제건수 !== undefined
+    ? 결제건수
+    : 결제ID
+      ? records.filter((r) => 결제ID.has(r.id)).length
+      : 분해.결제;
   return {
     응대,
     결제,
@@ -107,28 +112,54 @@ function computeConversion(
   };
 }
 
-/** 오늘 응대건의 담당자별 응대·결제·전환율 (응대 많은 순) */
+/**
+ * 담당자별 응대·결제·전환율 (응대 많은 순).
+ *
+ * 응대와 결제는 서로 다른 모집단이다(computeConversion과 동일한 이유) — 그래서 결제를
+ * '오늘 응대건 중 결제된 것'으로만 세면 이전에 상담했고 오늘 결제만 발생한 건이 담당자별에서
+ * 빠진다. 엑셀 대조가 있으면 오늘 결제된 리드 전체를 배정 담당자([콜]담당자) 기준으로
+ * 집계해 응대 집계에 더한다 — 담당자당 결제 합이 상단 오늘결제 전체와 일치해야 한다.
+ */
 function computeAssignees(
   records: V2Record[],
   today: string,
-  결제ID: Set<string> | null
+  결제ID: Set<string> | null,
+  담당자별결제?: Record<string, number>
 ): AssigneeMetric[] {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const map = new Map<string, { 응대: number; 결제: number }>();
+  const dam어 = (r: V2Record) => r.fields['[콜]담당자']?.trim() || '(미배정)';
   for (const r of 응대건) {
-    const dam = r.fields['[콜]담당자']?.trim() || '(미배정)';
+    const dam = dam어(r);
     const cur = map.get(dam) ?? { 응대: 0, 결제: 0 };
     cur.응대++;
-    if (결제판정(r, 결제ID)) cur.결제++;
+    // 엑셀 대조가 없으면 기존대로 응대건 중 결제 완료만 센다(아래에서 전체를 다시 더하지 않음).
+    if (!결제ID && 결제판정(r, 결제ID)) cur.결제++;
     map.set(dam, cur);
+  }
+  if (담당자별결제) {
+    // 정확한 주문 단위 담당자별 결제(reconcile.py가 매칭 리스트로 집계) — 우선 사용.
+    // 결제ID(레코드ID 집합)로 배분하면 같은 리드가 여러 주문의 대표로 뽑힐 때 한 건만 잡힌다.
+    for (const [dam, 결제] of Object.entries(담당자별결제)) {
+      const cur = map.get(dam) ?? { 응대: 0, 결제: 0 };
+      cur.결제 = 결제;
+      map.set(dam, cur);
+    }
+  } else if (결제ID) {
+    for (const r of records) {
+      if (!결제ID.has(r.id)) continue;
+      const dam = dam어(r);
+      const cur = map.get(dam) ?? { 응대: 0, 결제: 0 };
+      cur.결제++;
+      map.set(dam, cur);
+    }
   }
   return [...map.entries()]
     .map(([담당자, v]) => ({
       담당자,
       응대: v.응대,
       결제: v.결제,
-      // 담당자별 결제는 '그날 응대한 건 중 결제된 것'이라 응대를 분모로 쓸 수 있다.
-      // 엑셀 기준일 때는 결제 귀속이 담당자와 무관해질 수 있어 내보내지 않는다.
+      // 엑셀 기준일 때는 결제가 오늘 응대 밖에서도 잡혀 응대를 분모로 쓸 수 없다.
       전환율_pct: 결제ID ? null : v.응대 > 0 ? Math.round((v.결제 / v.응대) * 1000) / 10 : 0,
     }))
     .sort((a, b) => b.응대 - a.응대);
@@ -167,7 +198,9 @@ export function computeInbound(
   집계시작: string,
   today: string,
   결제ID: Set<string> | null = null,
-  이력: ContactHistory | null = null
+  이력: ContactHistory | null = null,
+  결제건수?: number,
+  담당자별결제?: Record<string, number>
 ): InboundMetrics {
   const 유입 = inflowSince(records, 집계시작);
   // 채널 (집계시작 이후 유입 기준)
@@ -180,8 +213,8 @@ export function computeInbound(
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_CHANNELS_COUNT);
   return {
-    전환: computeConversion(records, today, 결제ID, 이력),
-    담당자별: computeAssignees(records, today, 결제ID),
+    전환: computeConversion(records, today, 결제ID, 이력, 결제건수),
+    담당자별: computeAssignees(records, today, 결제ID, 담당자별결제),
     유입건수: 유입.length,
     채널_Top,
     유입_일자별: dailyInflow(records, 집계시작),
@@ -193,11 +226,13 @@ export function computeSkb(
   집계시작: string,
   today: string,
   결제ID: Set<string> | null = null,
-  이력: ContactHistory | null = null
+  이력: ContactHistory | null = null,
+  결제건수?: number,
+  담당자별결제?: Record<string, number>
 ): SkbMetrics {
   return {
-    전환: computeConversion(records, today, 결제ID, 이력),
-    담당자별: computeAssignees(records, today, 결제ID),
+    전환: computeConversion(records, today, 결제ID, 이력, 결제건수),
+    담당자별: computeAssignees(records, today, 결제ID, 담당자별결제),
     유입건수: inflowSince(records, 집계시작).length,
     유입_일자별: dailyInflow(records, 집계시작),
   };
@@ -209,3 +244,9 @@ export function computeCount(records: V2Record[], 집계시작: string): CountMe
     건수_오늘이후: inflowSince(records, 집계시작).length,
   };
 }
+
+/**
+ * 정보와기술 지표 — fetch-airtable.ts가 필드명을 인바운드 표준으로
+ * 리네임해 두었으므로 computeInbound를 그대로 재사용한다.
+ */
+export const computeRepPhone = computeInbound;

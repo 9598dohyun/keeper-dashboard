@@ -73,8 +73,11 @@ export interface PaidContext {
   ids: Set<string> | null;
   /** 이 날짜 이후 유입분만 원장으로 판정. null이면 전체 기간 */
   since: string | null;
-  /** 리드ID → 결제일(YYYY-MM-DD). 첫상담/재상담 분해에 쓴다. 없으면 분해 불가 */
-  payDates?: Map<string, string> | null;
+  /**
+   * 리드ID → 결제일(YYYY-MM-DD) 목록. 첫상담/재상담 분해에 쓴다. 없으면 분해 불가.
+   * 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로 뽑히면 여러 결제일이 쌓인다.
+   */
+  payDates?: Map<string, string[]> | null;
 }
 
 /**
@@ -177,14 +180,18 @@ function conversionOf(
   let 재컨택주문 = 0;
   for (const r of allRecords) {
     if (!paidOf(r, paid)) continue;
-    const 결제일 = paid.payDates?.get(r.id);
-    if (결제일) {
-      // 결제일을 아는 건 — 결제일이 기간 안인지로 판단
-      if (결제일 < 기간.since || 결제일 > 기간.until) continue;
-      결제++;
+    const 결제일들 = paid.payDates?.get(r.id);
+    if (결제일들 && 결제일들.length > 0) {
+      // 결제일을 아는 건 — 결제일이 기간 안인지로 판단.
+      // 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로 뽑히면 결제일이 여러 개 쌓인다 —
+      // 하나만 세면 실제 주문 건수보다 결제가 적게 잡히므로 전부 순회한다.
       const ing = kstOf(r.fields['유입시간']);
-      if (ing && formatDate(ing) === 결제일) 첫컨택주문++;
-      else 재컨택주문++;
+      for (const 결제일 of 결제일들) {
+        if (결제일 < 기간.since || 결제일 > 기간.until) continue;
+        결제++;
+        if (ing && formatDate(ing) === 결제일) 첫컨택주문++;
+        else 재컨택주문++;
+      }
     } else {
       /*
        * 결제일을 모르는 건(원장 이전 결제, 에어테이블 판정분)은 종전처럼 유입일로 센다.

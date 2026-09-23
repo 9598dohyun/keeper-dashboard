@@ -124,18 +124,26 @@ function 주제분류(memo: string): string[] {
  * 에어테이블 `[콜]최종 결과`가 '결제 완료'여도 엑셀에 없으면 결제로 세지 않는다.
  * 대조 결과의 기준일이 코멘트 기준일과 다르면 쓰지 않는다(다른 날 결제를 섞지 않기 위함).
  */
-function loadPaidIds(day: string): { 인바운드: Set<string>; skb: Set<string> } | null {
+function loadPaidIds(
+  day: string
+): { 인바운드: Set<string>; skb: Set<string>; 건수_인바운드: number; 건수_SKB: number } | null {
   const p = path.join(__dirname, '../data/결제대조.json');
   if (!fs.existsSync(p)) return null;
   const j = JSON.parse(fs.readFileSync(p, 'utf8')) as {
     기준일?: string;
     결제ID_인바운드?: string[];
     결제ID_SKB?: string[];
+    결제건수_인바운드?: number;
+    결제건수_SKB?: number;
   };
   if (j.기준일 !== day) return null;
   return {
     인바운드: new Set(j.결제ID_인바운드 ?? []),
     skb: new Set(j.결제ID_SKB ?? []),
+    // 결제ID_*(레코드ID 집합)는 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로 뽑히면
+    // 실제 주문 건수보다 작아진다 — "그날 결제 전체" 표시는 정확한 결제건수_*를 쓴다.
+    건수_인바운드: j.결제건수_인바운드 ?? (j.결제ID_인바운드 ?? []).length,
+    건수_SKB: j.결제건수_SKB ?? (j.결제ID_SKB ?? []).length,
   };
 }
 
@@ -327,16 +335,17 @@ async function main() {
   const paid = loadPaidIds(day);
   console.log(
     paid
-      ? `결제 소스: 결제대조.json (인바운드 ${paid.인바운드.size} · SKB ${paid.skb.size})`
+      ? `결제 소스: 결제대조.json (인바운드 ${paid.건수_인바운드} · SKB ${paid.건수_SKB})`
       : '결제 소스: 에어테이블 [콜]최종 결과 (해당 기준일 결제대조.json 없음)'
   );
 
+  const 결제전체 = { 인바운드: paid?.건수_인바운드, skb: paid?.건수_SKB };
   for (const table of ['인바운드', 'skb'] as TableKey[]) {
     const c = await build(
       table,
       day,
       paid ? paid[table] : null,
-      paid ? paid[table].size : 0
+      paid ? (결제전체[table] ?? 0) : 0
     );
     console.log(`\n===== ${table} ${day} =====`);
     console.log(

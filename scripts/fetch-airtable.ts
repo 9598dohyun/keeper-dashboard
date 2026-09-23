@@ -16,6 +16,8 @@ const TABLES = {
   인바운드: 'tbljFHOl4PzAWmb1f',
   SKB: 'tblb5APohbhFixfHB',
   레드텔레콤: 'tbll3OcD4C6LGtnDv',
+  정보와기술: 'tblfWVIcGWZat5z3g', // 대표전화·채널톡 채널을 함께 다루는 테이블
+  레드재컨택: 'tblysBtqXuppj2UTm', // 레드텔레콤 하위 — 인바운드 중복 재컨택 대상
 };
 
 // 계산에 필요한 필드만 가져옴 (개인정보 연락처 제외)
@@ -50,6 +52,21 @@ const SKB_FIELDS = [
   ...DIAGNOSIS_FIELDS,
 ];
 const REDTEL_FIELDS = ['유입시간']; // 카운트 + 오늘이후 판정용
+
+// 정보와기술 원본 필드명은 인바운드/SKB와 다르다 — fetch 단계에서
+// 유입날짜→유입시간, 메모완료시각→메모수정시각, 유입경로→UTM_source로 리네임해
+// 이후 compute.ts(V2Record 기반)를 그대로 재사용한다.
+const REP_PHONE_FIELDS = [
+  '이름', // 테스트 리드 판정용 — 저장하지 않고 버린다
+  '유입날짜',
+  '수정일자',
+  '메모완료시각',
+  '[콜]최종 결과',
+  '[콜]담당자',
+  '유입경로',
+];
+// 레드재컨택 ↔ 레드텔레콤[결제완료] 매칭은 연락처(개인정보)가 필요해 이 스크립트에서
+// 다루지 않는다. reconcile.py가 로컬 실행 시 직접 조회해 매칭 결과(건수만)만 남긴다.
 
 type AirtableListResponse<TRecord> = {
   records?: TRecord[];
@@ -109,6 +126,27 @@ function stripAndFilter(records: V2Record[], label: string): V2Record[] {
   return out;
 }
 
+/**
+ * 정보와기술 원본 레코드 필드명을 인바운드/SKB 표준 필드명으로 리네임한다.
+ * 유입날짜→유입시간, 메모완료시각→메모수정시각, 유입경로→UTM_source.
+ * 이렇게 맞춰 두면 metrics2/compute.ts를 수정 없이 그대로 재사용할 수 있다.
+ */
+function renameRepPhoneFields(records: V2Record[]): V2Record[] {
+  return records.map((r) => {
+    const f = r.fields as Record<string, unknown>;
+    const renamed: Record<string, unknown> = {
+      ...f,
+      유입시간: f['유입날짜'],
+      메모수정시각: f['메모완료시각'],
+      UTM_source: f['유입경로'],
+    };
+    delete renamed['유입날짜'];
+    delete renamed['메모완료시각'];
+    delete renamed['유입경로'];
+    return { id: r.id, fields: renamed } as V2Record;
+  });
+}
+
 async function main() {
   if (!fs.existsSync(OUT_DIR)) {
     fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -130,6 +168,12 @@ async function main() {
   const redtel = await fetchAll<V2Record>(TABLES.레드텔레콤, REDTEL_FIELDS);
   fs.writeFileSync(path.join(OUT_DIR, '레드텔레콤.json'), JSON.stringify(redtel, null, 0));
   console.log(`레드텔레콤: ${redtel.length}건`);
+
+  console.log('Fetching 정보와기술...');
+  const repRaw = await fetchAll<V2Record>(TABLES.정보와기술, REP_PHONE_FIELDS);
+  const rep = stripAndFilter(renameRepPhoneFields(repRaw), '정보와기술');
+  fs.writeFileSync(path.join(OUT_DIR, '정보와기술.json'), JSON.stringify(rep, null, 0));
+  console.log(`정보와기술: ${rep.length}건`);
 }
 
 main().catch((error) => {

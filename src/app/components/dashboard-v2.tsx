@@ -34,7 +34,7 @@ import type {
   DailyCount,
 } from '@/lib/metrics2/types';
 
-type TableKey = '인바운드' | 'skb';
+type TableKey = '인바운드' | 'skb' | '정보와기술';
 
 /** 큰 숫자 하나 — 지표 카드의 공통 단위 */
 function Stat({
@@ -368,9 +368,9 @@ export default function DashboardV2() {
       {data && (
         <Tabs value={table} onValueChange={(v: string) => setTable(v as TableKey)}>
           <TabsList>
-            {(['인바운드', 'skb'] as TableKey[]).map((k) => (
+            {(['인바운드', 'skb', '정보와기술'] as TableKey[]).map((k) => (
               <TabsTrigger key={k} value={k}>
-                {k === 'skb' ? 'SKB' : '인바운드'}
+                {k === 'skb' ? 'SKB' : k}
                 <span className="ml-1.5 text-muted-foreground tabular-nums">
                   {data[k].전환.전환율_pct === null
                     ? `결제 ${data[k].전환.결제}`
@@ -404,7 +404,7 @@ export default function DashboardV2() {
   }
 
   const cur = data[table];
-  const 이름 = table === 'skb' ? 'SKB' : '인바운드';
+  const 이름 = table === 'skb' ? 'SKB' : table;
   const 일자별유입 = cur.유입_일자별 ?? [];
   // 보고 있는 날(data.오늘)의 유입. 날짜 드롭박스로 과거를 보면 그날 값이 나온다.
   const 선택일 = data.오늘;
@@ -451,15 +451,39 @@ export default function DashboardV2() {
 
           {일자별유입.length > 1 && <DailyInflowBars data={일자별유입} />}
 
-          {table === '인바운드' && <ChannelChart data={data.인바운드.채널_Top} />}
+          {/* SKB는 채널 구분 필드가 없어 채널_Top을 계산하지 않는다 */}
+          {'채널_Top' in cur && <ChannelChart data={cur.채널_Top} />}
         </div>
       </Section>
 
       {/*
-        채널별 결제는 인바운드/SKB 탭과 무관하게 엑셀 전량을 보여주므로 탭 분기 밖에 둔다.
+        채널별 결제는 인바운드/SKB/정보와기술 탭과 무관하게 엑셀 전량을 보여주므로 탭 분기 밖에 둔다.
         리드가 없는 채널(오가닉·키퍼맨 등)은 어느 테이블에도 속하지 않는다.
       */}
       <ChannelPayCard />
+
+      {/*
+        레드텔레콤·레드재컨택은 응대·전환·유입 지표가 없는 카운트 전용 소스라 탭 밖에
+        고정 카드로 둔다. 레드재컨택의 결제전환은 레드텔레콤[결제완료]와 연락처로 매칭한 값.
+      */}
+      <Section title="레드텔레콤 · 레드재컨택" desc="카운트 전용 — 응대·전환·유입 지표 없음">
+        <div className="flex flex-wrap gap-x-10 gap-y-4">
+          <Stat label="레드텔레콤 전체" value={data.레드텔레콤.건수_전체} size="md" />
+          <Stat
+            label="레드텔레콤 집계시작 이후"
+            value={data.레드텔레콤.건수_오늘이후}
+            size="md"
+          />
+          <Stat label="레드재컨택 대상" value={data.레드재컨택.재컨택_전체} size="md" />
+          <Stat
+            label="레드재컨택 결제전환"
+            value={data.레드재컨택.결제전환}
+            accent
+            size="md"
+            hint="레드텔레콤[결제완료]와 연락처 매칭"
+          />
+        </div>
+      </Section>
 
       <p className="pb-4 text-center text-[10px] text-muted-foreground">
         한화비전 키퍼 · SKB+인바운드 통합관리

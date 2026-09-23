@@ -40,8 +40,13 @@ function loadLedgerIds(): {
   orders: number;
   /** 원장이 덮는 가장 이른 결제일. 이 날 이후 유입분만 엑셀로 판정한다 */
   coversSince: string | null;
-  /** 리드ID → 결제일. 첫상담/재상담 분해용 */
-  payDates: Map<string, string>;
+  /**
+   * 리드ID → 결제일 목록. 첫상담/재상담 분해용.
+   * 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로 뽑히면 결제일이 여러 개 쌓인다 —
+   * 배열로 담아야 그 주문들이 전부 카운트된다. 문자열 하나만 저장하면 뒤 주문이 앞 주문을 덮어써
+   * 실제 주문 건수보다 결제가 적게 잡힌다.
+   */
+  payDates: Map<string, string[]>;
 } {
   const p = path.join(DATA_DIR, '결제원장.json');
   if (!fs.existsSync(p))
@@ -54,18 +59,23 @@ function loadLedgerIds(): {
   };
   const inbound = new Set<string>();
   const skb = new Set<string>();
-  const payDates = new Map<string, string>();
+  const payDates = new Map<string, string[]>();
+  const push = (id: string, day: string) => {
+    const cur = payDates.get(id);
+    if (cur) cur.push(day);
+    else payDates.set(id, [day]);
+  };
   let earliest: string | null = null;
   for (const rec of Object.values(ledger.주문 ?? {})) {
     if (rec.결제일 && (earliest === null || rec.결제일 < earliest)) earliest = rec.결제일;
     if (rec.취소) continue;
     for (const id of rec.인바운드ID ?? []) {
       inbound.add(id);
-      if (rec.결제일) payDates.set(id, rec.결제일);
+      if (rec.결제일) push(id, rec.결제일);
     }
     for (const id of rec.skbID ?? []) {
       skb.add(id);
-      if (rec.결제일) payDates.set(id, rec.결제일);
+      if (rec.결제일) push(id, rec.결제일);
     }
   }
   return {
