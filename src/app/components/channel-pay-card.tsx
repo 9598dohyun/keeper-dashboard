@@ -4,35 +4,54 @@ import { useEffect, useState } from 'react';
 import type { ChannelPayResult } from '@/lib/kpi/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface Props {
+  /** 조회 단위. 생략하면 기존처럼 최신 월 */
+  kind?: 'week' | 'month' | 'day';
+  /** kind별 식별자 — week: YYYY-Www, month: YYYY-MM, day: YYYY-MM-DD. 생략하면 최신 */
+  period?: string | null;
+}
+
+const KIND_LABEL: Record<NonNullable<Props['kind']>, string> = {
+  week: '이번 주',
+  month: '이번 달',
+  day: '이 날',
+};
+
 /**
  * 채널별 결제 (엑셀 원장 기준).
  *
  * 위쪽 채널 차트는 `UTM_source` 기준 **유입** 분포라 축이 다르다. 여기는 엑셀
  * `주문유입채널` 기준 **결제**이고, 에어테이블에 리드가 없는 채널(오가닉·키퍼맨·
  * B2B 영업 등)까지 센다 — 대시보드 결제수에는 안 잡히는 물량이다.
+ *
+ * 조회 단위(주차별·월별·날짜별)는 대시보드가 보고 있는 탭·기간에 맞춰 부모가 넘긴다 —
+ * 고정으로 "이번 달"만 보여주면 다른 탭에서 화면과 안 맞는 값이 뜬다.
  */
-export default function ChannelPayCard() {
+export default function ChannelPayCard({ kind, period }: Props) {
   const [data, setData] = useState<ChannelPayResult | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/kpi?type=channel')
+    const params = new URLSearchParams({ type: 'channel' });
+    if (kind && period) params.set(kind, period);
+    fetch(`/api/kpi?${params.toString()}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => alive && setData(d && !d.error ? d : null))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, []);
+  }, [kind, period]);
 
   if (!data || !data.행.length) return null;
 
   const max = Math.max(...data.행.map((r) => r.결제));
+  const 제목 = kind ? KIND_LABEL[kind] : '이번 달';
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">채널별 결제 (이번 달)</CardTitle>
+        <CardTitle className="text-base">채널별 결제 ({제목})</CardTitle>
         <CardDescription>
           결제 데이터 엑셀의 주문유입채널 기준 · {data.기간.시작} ~ {data.기간.종료} · 총{' '}
           {data.총결제}건. 위 채널 차트는 유입 분포라 세는 대상이 다르다.

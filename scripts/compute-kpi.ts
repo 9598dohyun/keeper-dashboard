@@ -19,6 +19,13 @@ import { kv } from '@vercel/kv';
 import { computeKpi } from '../src/lib/kpi/compute';
 import { ChannelPay, ChannelPayResult, BurndownPoint } from '../src/lib/kpi/types';
 import { computeLag, LagInput } from '../src/lib/kpi/lag';
+import { weekIdOf, resolvePeriod } from '../src/lib/metrics3/period';
+
+/** 'YYYY-MM-DD' → 그 날짜의 로컬(달력) Date. GitHub Actions는 UTC 실행이라 new Date(string) 파싱을 피한다 */
+function parseYMDLocal(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
 
 const DATA_DIR = path.join(__dirname, '../data');
 
@@ -35,18 +42,17 @@ function 원장(): Record<string, { 결제일?: string | null; 취소?: boolean;
 }
 
 /**
- * 채널별 결제 집계.
+ * 채널별 결제 집계 — 임의의 [시작, 종료] 기간(결제일 기준, 취소 제외).
  *
  * 리드가 없는 채널(오가닉·키퍼맨·B2B 영업 등)도 센다 — 대시보드 결제수는 에어테이블
  * 리드에 매칭된 건만 세므로 이 채널들이 통째로 빠진다. 그 규모를 `리드없음`으로 드러낸다.
  */
-function 채널별(월: string, 기준일: string): ChannelPayResult {
-  const 시작 = `${월}-01`;
+function 채널별(시작: string, 종료: string): ChannelPayResult {
   const acc = new Map<string, { 결제: number; 리드있음: number; 리드없음: number }>();
   let 총결제 = 0;
   for (const o of Object.values(원장())) {
     if (o.취소 || !o.결제일) continue;
-    if (o.결제일 < 시작 || o.결제일 > 기준일) continue;
+    if (o.결제일 < 시작 || o.결제일 > 종료) continue;
     const c = o.채널 || '(채널없음)';
     const v = acc.get(c) ?? { 결제: 0, 리드있음: 0, 리드없음: 0 };
     v.결제++;
@@ -63,7 +69,7 @@ function 채널별(월: string, 기준일: string): ChannelPayResult {
     }))
     .sort((a, b) => b.결제 - a.결제);
   return {
-    기간: { 시작, 종료: 기준일 },
+    기간: { 시작, 종료 },
     총결제,
     총리드없음: 행.reduce((s, r) => s + r.리드없음, 0),
     행,
@@ -163,9 +169,18 @@ async function main() {
   const k = computeKpi(월, 목표, 기준일, 실적맵());
   await kv.set(`kpi:month:${월}`, k);
 
-  // 채널별 결제 — 대시보드에서 리드 없는 채널까지 보이게 한다
-  const ch = 채널별(월, 기준일);
+  // 채널별 결제 — 대시보드에서 리드 없는 채널까지 보이게 한다.
+  // 월별(이번 달 1일~기준일) + 기준일이 속한 주(월~일)·기준일 하루도 함께 저장 —
+  // 주차별·날짜별 화면에서 '이번 달' 값이 그대로 노출되는 걸 막기 위함.
+  const ch = 채널별(`${월}-01`, 기준일);
   await kv.set(`kpi:channel:${월}`, ch);
+
+  const 주 = resolvePeriod('week', weekIdOf(parseYMDLocal(기준일)));
+  const chWeek = 채널별(주.시작, 기준일 < 주.종료 ? 기준일 : 주.종료);
+  await kv.set(`kpi:channel:week:${주.id}`, chWeek);
+
+  const chDay = 채널별(기준일, 기준일);
+  await kv.set(`kpi:channel:day:${기준일}`, chDay);
 
   // 유입→결제 소요일 (전 기간 원장 기준 — 월로 자르면 표본이 너무 적다)
   const lag = computeLag(소요일입력());

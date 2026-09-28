@@ -5,6 +5,9 @@ import Link from 'next/link';
 import ChannelChart from './channel-chart';
 import ChannelPayCard from './channel-pay-card';
 import TrendLines from './trend-lines';
+import PeriodSummaryView from './period-summary';
+import RedtelPeriodSummaryView from './redtel-period-summary';
+import type { PeriodSummary, PeriodKind } from '@/lib/metrics2/period';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +38,15 @@ import type {
 } from '@/lib/metrics2/types';
 
 type TableKey = '인바운드' | 'skb' | '정보와기술';
+type SubTab = TableKey | '레드텔레콤';
+type TopTab = 'week' | 'month' | 'date';
+
+interface PeriodOption {
+  id: string;
+  label: string;
+  시작: string;
+  종료: string;
+}
 
 /** 큰 숫자 하나 — 지표 카드의 공통 단위 */
 function Stat({
@@ -261,7 +273,11 @@ export default function DashboardV2() {
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [table, setTable] = useState<TableKey>('인바운드');
+  const [table, setTable] = useState<SubTab>('인바운드');
+  const [topTab, setTopTab] = useState<TopTab>('date');
+  const [periodOptions, setPeriodOptions] = useState<PeriodOption[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [periodBadges, setPeriodBadges] = useState<Record<TableKey, PeriodSummary> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -296,6 +312,37 @@ export default function DashboardV2() {
     fetchData(selectedDate);
   }, [fetchData, selectedDate]);
 
+  // 주차별/월별 화면 진입·전환 시: 고를 수 있는 주/월 목록을 가져오고 선택은 최신 기간으로 리셋한다.
+  useEffect(() => {
+    if (topTab === 'date') return;
+    setSelectedPeriod('');
+    fetch(`/api/metrics-v2?type=period-list&kind=${topTab}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list: PeriodOption[]) => setPeriodOptions(Array.isArray(list) ? list : []))
+      .catch(() => setPeriodOptions([]));
+  }, [topTab]);
+
+  // 이번주/이번달 화면에서는 탭 배지도 "오늘"이 아니라 그 기간 값을 보여줘야 한다.
+  useEffect(() => {
+    if (topTab === 'date') return;
+    setPeriodBadges(null);
+    const tables: TableKey[] = ['인바운드', 'skb', '정보와기술'];
+    const kind: PeriodKind = topTab;
+    const periodParam = selectedPeriod ? `&period=${encodeURIComponent(selectedPeriod)}` : '';
+    Promise.all(
+      tables.map((t) =>
+        fetch(
+          `/api/metrics-v2?type=period&kind=${kind}${periodParam}&table=${encodeURIComponent(t)}`
+        ).then((res) => (res.ok ? res.json() : null))
+      )
+    )
+      .then(([인바운드, skb, 정보와기술]: (PeriodSummary | null)[]) => {
+        if (!인바운드 || !skb || !정보와기술) return;
+        setPeriodBadges({ 인바운드, skb, 정보와기술 });
+      })
+      .catch(() => setPeriodBadges(null));
+  }, [topTab, selectedPeriod]);
+
   const 갱신 = data?._meta?.updatedAt
     ? new Date(data._meta.updatedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
     : '';
@@ -306,6 +353,41 @@ export default function DashboardV2() {
     { label: `최신 (${dates[0]})`, value: '__latest__' },
     ...dates.map((d) => ({ label: d, value: d })),
   ];
+  const 기간옵션 = [
+    { label: `최신 (${periodOptions[0]?.label ?? ''})`, value: '__latest__' },
+    ...periodOptions.map((p) => ({ label: p.label, value: p.id })),
+  ];
+
+  const 테이블탭 = data && (
+    <Tabs value={table} onValueChange={(v: string) => setTable(v as SubTab)}>
+      <TabsList>
+        {(['인바운드', 'skb', '정보와기술'] as TableKey[]).map((k) => {
+          const 배지 =
+            topTab === 'date'
+              ? {
+                  결제: data[k].전환.결제,
+                  전환율_pct: data[k].전환.전환율_pct,
+                }
+              : periodBadges
+                ? { 결제: periodBadges[k].결제, 전환율_pct: periodBadges[k].전환율_pct }
+                : null;
+          return (
+            <TabsTrigger key={k} value={k}>
+              {k === 'skb' ? 'SKB' : k}
+              <span className="ml-1.5 text-muted-foreground tabular-nums">
+                {배지 === null
+                  ? '…'
+                  : 배지.전환율_pct === null
+                    ? `결제 ${배지.결제}`
+                    : `${배지.전환율_pct}%`}
+              </span>
+            </TabsTrigger>
+          );
+        })}
+        <TabsTrigger value="레드텔레콤">레드텔레콤</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
 
   const 헤더 = (
     <header className="space-y-3">
@@ -319,35 +401,9 @@ export default function DashboardV2() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {dates.length > 0 && (
-            <Select
-              items={날짜옵션}
-              value={selectedDate || '__latest__'}
-              onValueChange={(v: string | null) =>
-                setSelectedDate(!v || v === '__latest__' ? '' : v)
-              }
-            >
-              <SelectTrigger size="sm" className="w-[180px]" aria-label="조회 날짜 선택">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__latest__">최신 ({dates[0]})</SelectItem>
-                {dates.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Link
-            href="/diagnosis"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            전환율 진단 →
-          </Link>
-        </div>
+        <Link href="/diagnosis" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          전환율 진단 →
+        </Link>
       </div>
 
       {결제소스 && 결제소스.종류 !== 'excel' && (
@@ -365,22 +421,59 @@ export default function DashboardV2() {
         </Alert>
       )}
 
-      {data && (
-        <Tabs value={table} onValueChange={(v: string) => setTable(v as TableKey)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Tabs value={topTab} onValueChange={(v: string) => setTopTab(v as TopTab)}>
           <TabsList>
-            {(['인바운드', 'skb', '정보와기술'] as TableKey[]).map((k) => (
-              <TabsTrigger key={k} value={k}>
-                {k === 'skb' ? 'SKB' : k}
-                <span className="ml-1.5 text-muted-foreground tabular-nums">
-                  {data[k].전환.전환율_pct === null
-                    ? `결제 ${data[k].전환.결제}`
-                    : `${data[k].전환.전환율_pct}%`}
-                </span>
-              </TabsTrigger>
-            ))}
+            <TabsTrigger value="date">날짜별</TabsTrigger>
+            <TabsTrigger value="week">주차별</TabsTrigger>
+            <TabsTrigger value="month">월별</TabsTrigger>
           </TabsList>
         </Tabs>
-      )}
+
+        {topTab !== 'date' && periodOptions.length > 0 && (
+          <Select
+            items={기간옵션}
+            value={selectedPeriod || '__latest__'}
+            onValueChange={(v: string | null) =>
+              setSelectedPeriod(!v || v === '__latest__' ? '' : v)
+            }
+          >
+            <SelectTrigger size="sm" className="w-[160px]" aria-label="조회 기간 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__latest__">최신 ({periodOptions[0]?.label})</SelectItem>
+              {periodOptions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {topTab === 'date' && dates.length > 0 && (
+          <Select
+            items={날짜옵션}
+            value={selectedDate || '__latest__'}
+            onValueChange={(v: string | null) =>
+              setSelectedDate(!v || v === '__latest__' ? '' : v)
+            }
+          >
+            <SelectTrigger size="sm" className="w-[180px]" aria-label="조회 날짜 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__latest__">최신 ({dates[0]})</SelectItem>
+              {dates.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     </header>
   );
 
@@ -403,6 +496,76 @@ export default function DashboardV2() {
     );
   }
 
+  if (topTab !== 'date') {
+    const 이름 = table === 'skb' ? 'SKB' : table;
+    return (
+      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
+        {헤더}
+
+        {테이블탭}
+
+        {table === '레드텔레콤' ? (
+          <Section
+            title={`레드텔레콤 · ${topTab === 'week' ? '주차별' : '월별'}`}
+            desc="카운트 전용 — 응대·전환·담당자 지표 없음. 레드재컨택 결제전환은 전체 누적(기간과 무관)"
+          >
+            <RedtelPeriodSummaryView kind={topTab} period={selectedPeriod || null} />
+          </Section>
+        ) : (
+          <Section
+            title={`${이름} · ${topTab === 'week' ? '주차별' : '월별'}`}
+            desc="선택한 기간 동안 응대·결제·담당자·재컨택·채널을 합산한 값"
+          >
+            <PeriodSummaryView kind={topTab} period={selectedPeriod || null} table={table} />
+          </Section>
+        )}
+
+        <ChannelPayCard
+          kind={topTab}
+          period={selectedPeriod || periodOptions[0]?.id || null}
+        />
+
+        <p className="pb-4 text-center text-[10px] text-muted-foreground">
+          한화비전 키퍼 · SKB+인바운드 통합관리
+        </p>
+      </div>
+    );
+  }
+
+  if (table === '레드텔레콤') {
+    return (
+      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
+        {헤더}
+        {테이블탭}
+
+        <Section title="레드텔레콤 · 레드재컨택" desc="카운트 전용 — 응대·전환·유입 지표 없음">
+          <div className="flex flex-wrap gap-x-10 gap-y-4">
+            <Stat label="레드텔레콤 전체" value={data.레드텔레콤.건수_전체} size="md" />
+            <Stat
+              label="레드텔레콤 집계시작 이후"
+              value={data.레드텔레콤.건수_오늘이후}
+              size="md"
+            />
+            <Stat label="레드재컨택 대상" value={data.레드재컨택.재컨택_전체} size="md" />
+            <Stat
+              label="레드재컨택 결제전환"
+              value={data.레드재컨택.결제전환}
+              accent
+              size="md"
+              hint="레드텔레콤[결제완료]와 연락처 매칭"
+            />
+          </div>
+        </Section>
+
+        <ChannelPayCard kind="day" period={selectedDate || data.오늘} />
+
+        <p className="pb-4 text-center text-[10px] text-muted-foreground">
+          한화비전 키퍼 · SKB+인바운드 통합관리
+        </p>
+      </div>
+    );
+  }
+
   const cur = data[table];
   const 이름 = table === 'skb' ? 'SKB' : table;
   const 일자별유입 = cur.유입_일자별 ?? [];
@@ -414,6 +577,8 @@ export default function DashboardV2() {
   return (
     <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
       {헤더}
+
+      {테이블탭}
 
       <Section title={`${이름} · 오늘`} desc={`${data.오늘} 응대 기준`}>
         <ConversionHero 전환={cur.전환} />
@@ -459,31 +624,10 @@ export default function DashboardV2() {
       {/*
         채널별 결제는 인바운드/SKB/정보와기술 탭과 무관하게 엑셀 전량을 보여주므로 탭 분기 밖에 둔다.
         리드가 없는 채널(오가닉·키퍼맨 등)은 어느 테이블에도 속하지 않는다.
+        조회 날짜(드롭다운)와 같은 날 기준으로 보여준다 — '이번 달' 고정이면 과거 날짜를
+        조회할 때 화면과 안 맞는 값이 뜬다.
       */}
-      <ChannelPayCard />
-
-      {/*
-        레드텔레콤·레드재컨택은 응대·전환·유입 지표가 없는 카운트 전용 소스라 탭 밖에
-        고정 카드로 둔다. 레드재컨택의 결제전환은 레드텔레콤[결제완료]와 연락처로 매칭한 값.
-      */}
-      <Section title="레드텔레콤 · 레드재컨택" desc="카운트 전용 — 응대·전환·유입 지표 없음">
-        <div className="flex flex-wrap gap-x-10 gap-y-4">
-          <Stat label="레드텔레콤 전체" value={data.레드텔레콤.건수_전체} size="md" />
-          <Stat
-            label="레드텔레콤 집계시작 이후"
-            value={data.레드텔레콤.건수_오늘이후}
-            size="md"
-          />
-          <Stat label="레드재컨택 대상" value={data.레드재컨택.재컨택_전체} size="md" />
-          <Stat
-            label="레드재컨택 결제전환"
-            value={data.레드재컨택.결제전환}
-            accent
-            size="md"
-            hint="레드텔레콤[결제완료]와 연락처 매칭"
-          />
-        </div>
-      </Section>
+      <ChannelPayCard kind="day" period={selectedDate || data.오늘} />
 
       <p className="pb-4 text-center text-[10px] text-muted-foreground">
         한화비전 키퍼 · SKB+인바운드 통합관리

@@ -7,7 +7,10 @@ import { KpiMonth, ChannelPayResult, LagResult, BurndownPoint } from '@/lib/kpi/
  * GET /api/kpi                 → 최신 월
  * GET /api/kpi?month=2026-09   → 그 달
  * GET /api/kpi?type=months     → KPI가 있는 월 목록
- * GET /api/kpi?type=channel     → 채널별 결제 (엑셀 기준, 리드 없는 채널 포함)
+ * GET /api/kpi?type=channel                    → 채널별 결제, 최신 월 (엑셀 기준, 리드 없는 채널 포함)
+ * GET /api/kpi?type=channel&month=2026-09       → 그 달 채널별 결제
+ * GET /api/kpi?type=channel&week=2026-W38       → 그 주(월~일) 채널별 결제
+ * GET /api/kpi?type=channel&day=2026-09-20      → 그날 채널별 결제
  * GET /api/kpi?type=lag         → 유입→결제 소요일 분포 (전 기간)
  * GET /api/kpi?type=burndown    → 목표 대비 누적 추이
  */
@@ -39,6 +42,31 @@ export async function GET(request: Request) {
     }
 
     if (type === 'channel') {
+      const week = searchParams.get('week');
+      const day = searchParams.get('day');
+
+      if (week) {
+        if (!/^\d{4}-W\d{2}$/.test(week)) {
+          return NextResponse.json({ error: '주차 형식 오류 (YYYY-Www)' }, { status: 400 });
+        }
+        const ch = await kv.get<ChannelPayResult>(`kpi:channel:week:${week}`);
+        if (!ch) {
+          return NextResponse.json({ error: `${week} 채널 데이터가 없습니다.` }, { status: 404 });
+        }
+        return NextResponse.json(ch);
+      }
+
+      if (day) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+          return NextResponse.json({ error: '날짜 형식 오류 (YYYY-MM-DD)' }, { status: 400 });
+        }
+        const ch = await kv.get<ChannelPayResult>(`kpi:channel:day:${day}`);
+        if (!ch) {
+          return NextResponse.json({ error: `${day} 채널 데이터가 없습니다.` }, { status: 404 });
+        }
+        return NextResponse.json(ch);
+      }
+
       let 월 = month;
       if (!월) {
         const months = (await kv.get<string[]>('kpi:months')) ?? [];

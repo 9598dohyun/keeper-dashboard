@@ -20,6 +20,7 @@ import {
   SkbMetrics,
   CountMetrics,
   DailyCount,
+  DailyChannelCount,
 } from './types';
 
 /**
@@ -185,6 +186,41 @@ function dailyInflow(records: V2Record[], 집계시작: string): DailyCount[] {
     .map(([날짜, 건수]) => ({ 날짜, 건수 }));
 }
 
+/**
+ * 날짜별 × 채널별 유입·결제 집계 (유입시간 기준, 집계시작 이후만).
+ *
+ * 채널_Top(누적)과 달리 기간(이번주·이번달) 합산에 쓰기 위해 날짜 단위로 쪼개 둔다.
+ * fetch-airtable.ts가 새로 저장한 레코드부터 반영되므로 과거 스냅샷엔 없을 수 있다.
+ *
+ * 결제는 유입일 기준 코호트 전환(그 채널로 유입된 리드 중 결제ID에 매칭된 건수) —
+ * 결제 데이터 엑셀 대조(결제ID)가 있을 때만 계산한다. 없으면(에어테이블 최종결과만 볼 때)
+ * 아직 결제되지 않은 리드와 앞으로 결제될 리드를 구분할 수 없어 결제 필드를 비워 둔다.
+ */
+function dailyChannelInflow(
+  records: V2Record[],
+  집계시작: string,
+  결제ID: Set<string> | null
+): DailyChannelCount[] {
+  const from = 집계시작 > MEMO_TS_START ? 집계시작 : MEMO_TS_START;
+  const map = new Map<string, { 건수: number; 결제: number }>(); // `${날짜} ${채널}` → 집계
+  for (const r of records) {
+    const d = kstDate(r.fields.유입시간);
+    if (d === null || d < from) continue;
+    const ch = normalizeChannel2(r.fields);
+    const key = `${d} ${ch}`;
+    const cur = map.get(key) ?? { 건수: 0, 결제: 0 };
+    cur.건수++;
+    if (결제ID?.has(r.id)) cur.결제++;
+    map.set(key, cur);
+  }
+  return [...map.entries()]
+    .map(([key, v]) => {
+      const [날짜, 채널] = key.split(' ');
+      return { 날짜, 채널, 건수: v.건수, 결제: 결제ID ? v.결제 : undefined };
+    })
+    .sort((a, b) => a.날짜.localeCompare(b.날짜) || b.건수 - a.건수);
+}
+
 /** 집계시작 이후 유입 리드 */
 function inflowSince(records: V2Record[], 집계시작: string): V2Record[] {
   return records.filter((r) => {
@@ -218,6 +254,7 @@ export function computeInbound(
     유입건수: 유입.length,
     채널_Top,
     유입_일자별: dailyInflow(records, 집계시작),
+    채널_일자별: dailyChannelInflow(records, 집계시작, 결제ID),
   };
 }
 
@@ -242,6 +279,7 @@ export function computeCount(records: V2Record[], 집계시작: string): CountMe
   return {
     건수_전체: records.length,
     건수_오늘이후: inflowSince(records, 집계시작).length,
+    유입_일자별: dailyInflow(records, 집계시작),
   };
 }
 
