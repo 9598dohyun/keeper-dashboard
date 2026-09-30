@@ -3,6 +3,14 @@
 import { useEffect, useState } from 'react';
 import type { ChannelPayResult } from '@/lib/kpi/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface Props {
   /** 조회 단위. 생략하면 기존처럼 최신 월 */
@@ -45,7 +53,6 @@ export default function ChannelPayCard({ kind, period }: Props) {
 
   if (!data || !data.행.length) return null;
 
-  const max = Math.max(...data.행.map((r) => r.결제));
   const 제목 = kind ? KIND_LABEL[kind] : '이번 달';
 
   return (
@@ -58,50 +65,33 @@ export default function ChannelPayCard({ kind, period }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          {data.행.map((r) => (
-            <div key={r.채널} className="flex items-center gap-2">
-              <span className="w-20 shrink-0 truncate text-xs text-foreground" title={r.채널}>
-                {r.채널}
-              </span>
-              <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted">
-                {/*
-                  리드 있는 건과 없는 건을 한 바에서 색으로 나눈다. 리드 없는 건은
-                  대시보드 결제수에 안 잡히므로 그 규모가 보여야 한다.
-                */}
-                <div
-                  className="absolute inset-y-0 left-0 bg-primary/70"
-                  style={{ width: `${(r.리드있음 / max) * 100}%` }}
-                />
-                <div
-                  className="absolute inset-y-0 bg-amber-400/80 dark:bg-amber-500/70"
-                  style={{
-                    left: `${(r.리드있음 / max) * 100}%`,
-                    width: `${(r.리드없음 / max) * 100}%`,
-                  }}
-                />
-              </div>
-              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {r.결제}건 · {r.비중_pct}%
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-primary/70" />
-            리드 있음
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-400/80 dark:bg-amber-500/70" />
-            리드 없음 {data.총리드없음}건
-          </span>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>채널</TableHead>
+              <TableHead className="text-right">건수</TableHead>
+              <TableHead className="text-right">비중</TableHead>
+              <TableHead className="text-right">리드 매칭</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.행.map((r) => (
+              <TableRow key={r.채널}>
+                <TableCell className="font-medium">{r.채널}</TableCell>
+                <TableCell className="text-right tabular-nums">{r.결제}건</TableCell>
+                <TableCell className="text-right tabular-nums">{r.비중_pct}%</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {r.리드있음}건 있음 · {r.리드없음}건 없음
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          리드 없음은 에어테이블에 리드가 없어 위 결제수에는 안 잡히는 건이다(오가닉·키퍼맨·
-          B2B 영업 등). 월 KPI는 채널을 가리지 않고 전량을 세므로 이 건들도 포함한다.
+          리드 없음(총 {data.총리드없음}건)은 에어테이블에 리드가 없어 위 결제수에는 안 잡히는
+          건이다(오가닉·키퍼맨·B2B 영업 등). 월 KPI는 채널을 가리지 않고 전량을 세므로 이 건들도
+          포함한다.
         </p>
       </CardContent>
     </Card>

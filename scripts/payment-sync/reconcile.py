@@ -40,8 +40,7 @@ LEDGER_PATH = BASE_DIR / "data" / "결제원장.json"
 INBOUND_TABLE = "tbljFHOl4PzAWmb1f"
 SKB_TABLE = "tblb5APohbhFixfHB"
 REP_PHONE_TABLE = "tblfWVIcGWZat5z3g"  # 정보와기술
-REDTEL_PAID_TABLE = "tbll3OcD4C6LGtnDv"  # 레드텔레콤 [결제완료]
-RED_RECONTACT_TABLE = "tblysBtqXuppj2UTm"  # 레드재컨택 [인바운드 중복]
+# 레드텔레콤 I/B·O/B는 엑셀 대조 대상이 아니다(에어테이블 필드만으로 결제 판정) — 여기서 다루지 않는다.
 
 # 엑셀 컬럼 이름 후보 (매달 조금씩 바뀔 수 있어 후보를 둔다)
 PHONE_HEADERS = ["휴대폰번호", "연락처", "휴대폰", "전화번호", "고객연락처"]
@@ -616,27 +615,6 @@ def main():
         f" / 결제 인정(주문건수 기준) 인바운드 {inb_count} · SKB {skb_count} · 정보와기술 {rep_count}"
     )
 
-    # 레드재컨택 ↔ 레드텔레콤[결제완료] 연락처 매칭 — 재컨택 대상 중 결제로 전환된 건수만 남긴다.
-    # 두 테이블 모두 이 베이스 소속이라 별도 엑셀 대조 없이 에어테이블 조회만으로 계산한다.
-    print("\n레드재컨택 ↔ 레드텔레콤[결제완료] 매칭 중...")
-    red_recontact = airtable_fetch(
-        base, token, RED_RECONTACT_TABLE, ["연락처"], "레드재컨택"
-    )
-    red_paid = airtable_fetch(
-        base, token, REDTEL_PAID_TABLE, ["연락처"], "레드텔레콤[결제완료]"
-    )
-    red_paid_keys = {phone_key(r.get("fields", {}).get("연락처")) for r in red_paid}
-    red_paid_keys.discard(None)
-    red_recontact_keys = [
-        phone_key(r.get("fields", {}).get("연락처")) for r in red_recontact
-    ]
-    red_recontact_keys = [k for k in red_recontact_keys if k is not None]
-    red_전환 = sum(1 for k in red_recontact_keys if k in red_paid_keys)
-    print(
-        f"  레드재컨택 {len(red_recontact)}건 중 결제완료 매칭 {red_전환}건"
-        f" (레드텔레콤[결제완료] {len(red_paid)}건 대조)"
-    )
-
     payload = {
         "기준일": 기준일,
         "생성시각": datetime.now(KST).isoformat(),
@@ -687,9 +665,6 @@ def main():
                 m["리드"][0]["담당자"] for m in 매칭 if m["리드"][0]["테이블"] == "정보와기술"
             ).most_common()
         ),
-        # 레드재컨택 ↔ 레드텔레콤[결제완료] 연락처 매칭 (엑셀과 무관, 사내 두 테이블 간 대조)
-        "레드재컨택_전체": len(red_recontact),
-        "레드재컨택_결제전환": red_전환,
         # 원장 누적분 — 진단 화면이 과거 코호트를 엑셀 기준으로 셀 때 쓴다
         "원장_주문수": len(ledger["주문"]),
         "원장_결제ID_인바운드": sorted(inb_ids),

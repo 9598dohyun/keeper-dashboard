@@ -5,7 +5,7 @@ import { buildTrend } from '@/lib/metrics2/trend';
 import { MEMO_TS_START } from '@/lib/metrics2/compute';
 import {
   summarizePeriod,
-  summarizeRedtel,
+  summarizeRedtelOB,
   periodRange,
   listSelectablePeriods,
   PeriodKind,
@@ -13,7 +13,7 @@ import {
 } from '@/lib/metrics2/period';
 
 const PERIOD_KINDS = ['week', 'month'] as const;
-const TABLE_KEYS: TableKey[] = ['인바운드', 'skb', '정보와기술'];
+const TABLE_KEYS: TableKey[] = ['인바운드', 'skb', '정보와기술', '레드텔레콤_IB'];
 
 /**
  * SKB+인바운드 통합 대시보드(v2) 데이터.
@@ -23,8 +23,8 @@ const TABLE_KEYS: TableKey[] = ['인바운드', 'skb', '정보와기술'];
  * GET /api/metrics-v2?type=trend&days=30 → 날짜별 추이 (그날 값, 누적 아님)
  * GET /api/metrics-v2?type=period-list&kind=week|month
  *   → 선택 가능한 주차/월 목록 (최신순, {kind,id,label,시작,종료})
- * GET /api/metrics-v2?type=period&kind=week|month&period=<id 생략시 오늘이 속한 기간>&table=인바운드|skb|정보와기술|레드텔레콤
- *   → 기간 합산 요약(응대·결제·담당자별·재컨택·채널). table=레드텔레콤은 별도 모양(RedtelPeriodSummary)
+ * GET /api/metrics-v2?type=period&kind=week|month&period=<id 생략시 오늘이 속한 기간>&table=인바운드|skb|정보와기술|레드텔레콤_IB|레드텔레콤_OB
+ *   → 기간 합산 요약(응대·결제·담당자별·재컨택·채널). table=레드텔레콤_OB는 별도 모양(RedtelOBPeriodSummary)
  * GET /api/metrics-v2?date=YYYY-MM-DD  → 해당 날짜 스냅샷
  */
 export async function GET(request: Request) {
@@ -51,13 +51,13 @@ export async function GET(request: Request) {
     if (type === 'period') {
       const kind = searchParams.get('kind') as PeriodKind | null;
       const period = searchParams.get('period');
-      const table = searchParams.get('table') as TableKey | '레드텔레콤' | null;
+      const table = searchParams.get('table') as TableKey | '레드텔레콤_OB' | null;
       if (!kind || !PERIOD_KINDS.includes(kind)) {
         return NextResponse.json({ error: 'kind 파라미터 오류 (week|month)' }, { status: 400 });
       }
-      if (!table || ![...TABLE_KEYS, '레드텔레콤'].includes(table)) {
+      if (!table || ![...TABLE_KEYS, '레드텔레콤_OB'].includes(table)) {
         return NextResponse.json(
-          { error: 'table 파라미터 오류 (인바운드|skb|정보와기술|레드텔레콤)' },
+          { error: 'table 파라미터 오류 (인바운드|skb|정보와기술|레드텔레콤_IB|레드텔레콤_OB)' },
           { status: 400 }
         );
       }
@@ -69,8 +69,8 @@ export async function GET(request: Request) {
         dates.map((d) => kv.get<DashboardV2>(`v2:daily:${d}`))
       );
       const valid = snapshots.filter((s): s is DashboardV2 => !!s);
-      if (table === '레드텔레콤') {
-        return NextResponse.json(summarizeRedtel(valid, 시작, 끝));
+      if (table === '레드텔레콤_OB') {
+        return NextResponse.json(summarizeRedtelOB(valid, 시작, 끝));
       }
       return NextResponse.json(summarizePeriod(valid, table, 시작, 끝));
     }

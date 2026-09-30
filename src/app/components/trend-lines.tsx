@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import type { TrendPoint } from '@/lib/metrics2/types';
 
-type TableKey = '인바운드' | 'skb' | '정보와기술';
+type TableKey = '인바운드' | 'skb' | '정보와기술' | '레드텔레콤_IB';
 
 interface Props {
   data: TrendPoint[];

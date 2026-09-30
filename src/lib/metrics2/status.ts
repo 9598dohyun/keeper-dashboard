@@ -27,3 +27,11 @@ export function isFail(final: string | undefined): boolean {
   if (isActive(final)) return false;
   return !isPaid(final) && !isDuplicate(final) && !isB2B(final);
 }
+
+/**
+ * 레드텔레콤 I/B 전용 판정 (필드명 "최종결과", 값 "결제완료"/"부재중 실패"/"실패" 3종만 —
+ * 중복문의·B2B 개념 없음). 다른 테이블의 "결제 완료"(공백 있음)와 값이 달라 별도 함수로 둔다.
+ */
+export function isPaidRedtelIB(final: string | undefined): boolean {
+  return final === '결제완료';
+}

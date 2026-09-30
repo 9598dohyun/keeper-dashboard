@@ -8,7 +8,7 @@
  */
 import { parseUTC, toKST, formatDate } from '../metrics/biz-date';
 import { TOP_CHANNELS_COUNT } from '../constants';
-import { isPaid, isDuplicate, isB2B, isActive } from './status';
+import { isPaid, isDuplicate, isB2B, isActive, isPaidRedtelIB } from './status';
 import { normalizeChannel2 } from './channel';
 import { ContactHistory, splitRecontact } from './recontact';
 import {
@@ -18,7 +18,7 @@ import {
   AssigneeMetric,
   InboundMetrics,
   SkbMetrics,
-  CountMetrics,
+  RedtelOBMetrics,
   DailyCount,
   DailyChannelCount,
 } from './types';
@@ -55,6 +55,15 @@ function 응대일(r: V2Record): string | null {
 function 결제판정(r: V2Record, 결제ID: Set<string> | null): boolean {
   if (결제ID) return 결제ID.has(r.id);
   return isPaid(r.fields['[콜]최종 결과']);
+}
+
+/**
+ * 레드텔레콤 I/B 전용 결제 판정. 필드명이 "최종결과"(공백 없음, 옵션도
+ * "결제완료"/"부재중 실패"/"실패" 3종뿐 — 중복문의·B2B 없음)라 결제판정()과 다르다.
+ * 엑셀 대조 대상이 아니라 결제ID 경로는 쓰지 않는다.
+ */
+function 결제판정_레드텔레콤IB(r: V2Record): boolean {
+  return isPaidRedtelIB(r.fields.최종결과);
 }
 
 /**
@@ -275,16 +284,74 @@ export function computeSkb(
   };
 }
 
-export function computeCount(records: V2Record[], 집계시작: string): CountMetrics {
-  return {
-    건수_전체: records.length,
-    건수_오늘이후: inflowSince(records, 집계시작).length,
-    유입_일자별: dailyInflow(records, 집계시작),
-  };
-}
-
 /**
  * 정보와기술 지표 — fetch-airtable.ts가 필드명을 인바운드 표준으로
  * 리네임해 두었으므로 computeInbound를 그대로 재사용한다.
  */
 export const computeRepPhone = computeInbound;
+
+/**
+ * 레드텔레콤 I/B 전용 응대·전환 지표.
+ *
+ * 필드명("최종결과")과 값 체계(결제완료/부재중 실패/실패 3종, 중복문의·B2B 없음)가
+ * 인바운드([콜]최종 결과)와 달라 결제판정()을 그대로 못 쓴다. 담당자 필드도 없어
+ * 담당자별은 항상 빈 배열이다. 결제 엑셀 대조 대상이 아니라 결제ID는 받지 않는다.
+ */
+function computeConversionRedtelIB(records: V2Record[], today: string): ConversionMetrics {
+  const 응대건 = records.filter((r) => 응대일(r) === today);
+  const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
+  for (const r of 응대건) {
+    if (결제판정_레드텔레콤IB(r)) 분해.결제++;
+    else 분해.실패++; // '실패' + '부재중 실패' — 중복문의·B2B 개념 없음
+  }
+  const 응대 = 응대건.length;
+  const 결제 = 분해.결제;
+  return {
+    응대,
+    결제,
+    전환율_pct: 응대 > 0 ? Math.round((결제 / 응대) * 1000) / 10 : 0,
+    분해,
+  };
+}
+
+export function computeRedtelIB(
+  records: V2Record[],
+  집계시작: string,
+  today: string
+): InboundMetrics {
+  const 유입 = inflowSince(records, 집계시작);
+  const counts = new Map<string, number>();
+  for (const r of 유입) {
+    const ch = normalizeChannel2(r.fields);
+    counts.set(ch, (counts.get(ch) ?? 0) + 1);
+  }
+  const 채널_Top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TOP_CHANNELS_COUNT);
+  return {
+    전환: computeConversionRedtelIB(records, today),
+    담당자별: [], // 담당자 필드 없음
+    유입건수: 유입.length,
+    채널_Top,
+    유입_일자별: dailyInflow(records, 집계시작),
+  };
+}
+
+/**
+ * 레드텔레콤 O/B 전용 지표 — 결제 건수만 보여준다(응대·전환·담당자·유입 지표 없음).
+ * O/B엔 메모수정시각 필드가 없어 '응대'라는 개념 자체가 성립하지 않는다 —
+ * '[콜]최종 결과' == '결제 완료'인 전체 레코드 수를 그대로 센다(엑셀 대조 없음).
+ */
+export function computeRedtelOB(records: V2Record[]): RedtelOBMetrics {
+  const 결제 = records.filter((r) => isPaid(r.fields['[콜]최종 결과'])).length;
+  return {
+    전환: {
+      응대: 0,
+      결제,
+      전환율_pct: null,
+      분해: { 결제, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 },
+    },
+    담당자별: [],
+    유입건수: 0,
+  };
+}

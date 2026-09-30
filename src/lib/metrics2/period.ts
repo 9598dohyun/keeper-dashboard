@@ -17,7 +17,7 @@ import { toKST } from '../metrics/biz-date';
 import { listPeriods, resolvePeriod, weekIdOf, monthIdOf } from '../metrics3/period';
 import { DashboardV2, AssigneeMetric, DailyChannelCount } from './types';
 
-export type TableKey = '인바운드' | 'skb' | '정보와기술';
+export type TableKey = '인바운드' | 'skb' | '정보와기술' | '레드텔레콤_IB';
 /** 이 화면은 주차별·월별만 다룬다(진단 화면의 'day'는 여기서 쓰지 않는다) */
 export type PeriodKind = 'week' | 'month';
 
@@ -212,39 +212,26 @@ export function summarizePeriod(
 }
 
 /**
- * 레드텔레콤 기간 요약.
+ * 레드텔레콤 O/B 기간 요약 — 결제 건수만 있는 카운트 전용 소스라 PeriodSummary와 다른 모양이다.
  *
- * 응대·전환·담당자·재컨택 지표가 없는 카운트 전용 소스라 PeriodSummary와 다른 모양이다.
- * 레드재컨택_결제전환은 reconcile.py가 실행 시점 전체를 한 번에 매칭한 값이라 날짜별로
- * 쪼갤 수 없다 — 기간과 무관하게 항상 가장 최근 값(전체 누적)을 그대로 보여준다.
+ * computeRedtelOB()가 세는 결제는 "그날 기준 [콜]최종 결과 == 결제 완료 전체 레코드 수"라
+ * 날짜별 스냅샷을 그대로 더하면 같은 결제가 여러 날 중복 집계된다 — 레드재컨택과 같은 이유로
+ * 기간과 무관하게 가장 최근 스냅샷 값을 그대로 쓴다.
  */
-export interface RedtelPeriodSummary {
+export interface RedtelOBPeriodSummary {
   기간: { 시작: string; 끝: string };
   일수: number;
-  신규유입: number; // 기간 내 유입시간 기준 신규 건수
-  레드재컨택_전체: number; // 전체 누적 (기간 무관)
-  레드재컨택_결제전환: number; // 전체 누적 (기간 무관)
+  결제: number; // 전체 누적 (기간과 무관, 최신 스냅샷 값)
 }
 
-export function summarizeRedtel(
+export function summarizeRedtelOB(
   snapshots: DashboardV2[],
   시작: string,
   끝: string
-): RedtelPeriodSummary {
+): RedtelOBPeriodSummary {
   if (snapshots.length === 0) {
-    return { 기간: { 시작, 끝 }, 일수: 0, 신규유입: 0, 레드재컨택_전체: 0, 레드재컨택_결제전환: 0 };
+    return { 기간: { 시작, 끝 }, 일수: 0, 결제: 0 };
   }
   const 최신 = [...snapshots].sort((a, b) => a.오늘.localeCompare(b.오늘)).at(-1)!;
-  let 신규유입 = 0;
-  for (const d of 최신.레드텔레콤.유입_일자별 ?? []) {
-    if (d.날짜 < 시작 || d.날짜 > 끝) continue;
-    신규유입 += d.건수;
-  }
-  return {
-    기간: { 시작, 끝 },
-    일수: snapshots.length,
-    신규유입,
-    레드재컨택_전체: 최신.레드재컨택.재컨택_전체,
-    레드재컨택_결제전환: 최신.레드재컨택.결제전환,
-  };
+  return { 기간: { 시작, 끝 }, 일수: snapshots.length, 결제: 최신.레드텔레콤_OB.전환.결제 };
 }

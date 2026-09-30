@@ -20,6 +20,11 @@ export interface V2Record {
     '[콜]담당자'?: string; // singleSelect (빈값 = 미배정)
     UTM_source?: string;
     진입경로?: string; // 인바운드만 존재, SKB엔 없음
+    /**
+     * 레드텔레콤 I/B 전용 필드. 값도 "결제완료"/"부재중 실패"/"실패" 3종뿐이라
+     * 다른 테이블의 '[콜]최종 결과'와 별개로 둔다(중복문의·B2B 개념 없음, 담당자 필드 없음).
+     */
+    최종결과?: string;
   };
 }
 
@@ -87,16 +92,12 @@ export interface SkbMetrics {
 export type RepPhoneMetrics = InboundMetrics;
 
 /**
- * 레드재컨택(레드텔레콤 하위) 지표.
+ * 레드텔레콤 O/B용 지표 (전환 + 담당자별, 유입 채널 없음).
  *
- * 레드재컨택 테이블 자체엔 결제 상태 필드가 없다 — '레드텔레콤 [결제완료]' 테이블과
- * 연락처로 매칭해서 재컨택 대상 중 결제로 전환된 건수를 reconcile.py가 산출한다.
- * (매칭은 개인정보를 다루므로 로컬 스크립트 실행 시에만 계산하고, 결과는 건수만 남는다)
+ * 결제 판정은 엑셀 대조 없이 에어테이블 [콜]최종 결과 == '결제 완료'만으로 바로 센다
+ * (다른 테이블과 달리 결제 엑셀 대조 대상이 아니다).
  */
-export interface RedContactMetrics {
-  재컨택_전체: number; // 레드재컨택 테이블 전체 레코드 수
-  결제전환: number; // 그중 레드텔레콤[결제완료]와 연락처가 매칭된 건수
-}
+export type RedtelOBMetrics = SkbMetrics;
 
 /**
  * 결제 데이터 엑셀 대조 결과 (scripts/payment-sync/reconcile.py 산출).
@@ -127,10 +128,6 @@ export interface PaymentReconcile {
   담당자별_결제_정보와기술?: Record<string, number>;
   미매칭_건수: number;
   에어테이블만_결제_건수: number;
-  /** 레드재컨택 ↔ 레드텔레콤[결제완료] 연락처 매칭 건수 (reconcile.py 산출) */
-  레드재컨택_결제전환?: number;
-  /** 레드재컨택 테이블 전체 레코드 수 (reconcile.py 산출) */
-  레드재컨택_전체?: number;
 }
 
 /** 날짜 1일치 카운트 */
@@ -154,13 +151,6 @@ export interface DailyChannelCount {
   결제?: number; // 그중 결제ID(엑셀 대조)에 매칭된 건수. 대조 없으면 undefined
 }
 
-/** 레드텔레콤용 (레코드 수만) */
-export interface CountMetrics {
-  건수_전체: number; // 테이블 전체 레코드 수
-  건수_오늘이후: number; // 유입시간이 집계시작 이후인 건수
-  /** 날짜별 유입 (집계시작 이후, 유입시간 기준). 기간(주차별·월별) 화면 합산에 쓴다 */
-  유입_일자별?: DailyCount[];
-}
 
 /**
  * 날짜별 추이 1일치 (누적이 아닌 그날 값)
@@ -181,20 +171,27 @@ export interface TrendPoint {
   인바운드: TrendSeries;
   skb: TrendSeries;
   정보와기술: TrendSeries;
+  레드텔레콤_IB: TrendSeries;
 }
 
 /** KV에 저장하는 대시보드 묶음 */
 export interface DashboardV2 {
   인바운드: InboundMetrics;
   skb: SkbMetrics;
-  레드텔레콤: CountMetrics;
+  레드텔레콤_IB: InboundMetrics;
+  레드텔레콤_OB: RedtelOBMetrics;
   정보와기술: RepPhoneMetrics;
-  레드재컨택: RedContactMetrics;
   집계시작: string; // 'YYYY-MM-DD'
   오늘: string; // 응대 지표 기준일 'YYYY-MM-DD' (KST)
   _meta: {
     updatedAt: string;
-    counts: { 인바운드: number; skb: number; 레드텔레콤: number; 정보와기술: number; 레드재컨택: number };
+    counts: {
+      인바운드: number;
+      skb: number;
+      레드텔레콤_IB: number;
+      레드텔레콤_OB: number;
+      정보와기술: number;
+    };
     /** 결제수 소스. 엑셀 대조를 거치지 않으면 airtable로 남아 화면에 표시된다 */
     결제소스?: {
       종류: 'excel' | 'airtable';

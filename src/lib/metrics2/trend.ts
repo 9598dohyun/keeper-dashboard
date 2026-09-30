@@ -37,6 +37,10 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
   const inflowSkb = new Map((latest.skb.유입_일자별 ?? []).map((d) => [d.날짜, d.건수]));
   // 정보와기술은 2026-09-23에 추가된 신규 필드 — 그 이전 스냅샷엔 없어 옵셔널로 다룬다
   const inflowRep = new Map((latest.정보와기술?.유입_일자별 ?? []).map((d) => [d.날짜, d.건수]));
+  // 레드텔레콤_IB는 이번 재편에서 추가된 필드 — 그 이전 스냅샷엔 없어 옵셔널로 다룬다
+  const inflowRedtelIB = new Map(
+    (latest.레드텔레콤_IB?.유입_일자별 ?? []).map((d) => [d.날짜, d.건수])
+  );
 
   // 유입 실집계가 있으면 그 날짜들까지 축에 포함한다(스냅샷이 없는 날도 유입은 보여야 함)
   const allDates = new Set<string>([
@@ -44,12 +48,14 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
     ...inflowInbound.keys(),
     ...inflowSkb.keys(),
     ...inflowRep.keys(),
+    ...inflowRedtelIB.keys(),
   ]);
   const byDate = new Map(sorted.map((s) => [s.오늘, s]));
 
   let prevInbound: number | undefined;
   let prevSkb: number | undefined;
   let prevRep: number | undefined;
+  let prevRedtelIB: number | undefined;
 
   return [...allDates]
     .sort((a, b) => a.localeCompare(b))
@@ -70,10 +76,16 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
         : s?.정보와기술
           ? dailyFromCumulative(s.정보와기술.유입건수, prevRep)
           : null;
+      const 유입RedtelIB = inflowRedtelIB.has(날짜)
+        ? inflowRedtelIB.get(날짜)!
+        : s?.레드텔레콤_IB
+          ? dailyFromCumulative(s.레드텔레콤_IB.유입건수, prevRedtelIB)
+          : null;
       if (s) {
         prevInbound = s.인바운드.유입건수;
         prevSkb = s.skb.유입건수;
         prevRep = s.정보와기술?.유입건수;
+        prevRedtelIB = s.레드텔레콤_IB?.유입건수;
       }
       return {
         날짜,
@@ -95,6 +107,13 @@ export function buildTrend(snapshots: DashboardV2[]): TrendPoint[] {
           결제: s?.정보와기술?.전환.결제 ?? null,
           전환율_pct: s?.정보와기술?.전환.전환율_pct ?? null,
           유입: 유입R,
+        },
+        // 레드텔레콤_IB 없는 구 스냅샷(이번 재편 이전)은 이 날짜 값을 null로 둔다
+        레드텔레콤_IB: {
+          응대: s?.레드텔레콤_IB?.전환.응대 ?? null,
+          결제: s?.레드텔레콤_IB?.전환.결제 ?? null,
+          전환율_pct: s?.레드텔레콤_IB?.전환.전환율_pct ?? null,
+          유입: 유입RedtelIB,
         },
       };
     });

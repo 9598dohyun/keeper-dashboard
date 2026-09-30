@@ -8,7 +8,13 @@
 import fs from 'fs';
 import path from 'path';
 import { V2Record, DashboardV2, PaymentReconcile } from '../src/lib/metrics2/types';
-import { computeInbound, computeSkb, computeCount, computeRepPhone } from '../src/lib/metrics2/compute';
+import {
+  computeInbound,
+  computeSkb,
+  computeRepPhone,
+  computeRedtelIB,
+  computeRedtelOB,
+} from '../src/lib/metrics2/compute';
 import {
   ContactHistory,
   updateHistory,
@@ -134,7 +140,8 @@ async function main() {
 
   const inboundRecords = load('인바운드.json');
   const skbRecords = load('SKB.json');
-  const redtelRecords = load('레드텔레콤.json');
+  const redtelIBRecords = load('레드텔레콤_IB.json');
+  const redtelOBRecords = load('레드텔레콤_OB.json');
   const repRecords = load('정보와기술.json');
 
   const 대조 = loadReconcile();
@@ -187,7 +194,6 @@ async function main() {
     skb결제건수,
     skb담당자별결제
   );
-  const 레드텔레콤 = computeCount(redtelRecords, 집계시작);
   const 정보와기술 = computeRepPhone(
     repRecords,
     집계시작,
@@ -197,18 +203,16 @@ async function main() {
     정보와기술결제건수,
     정보와기술담당자별결제
   );
-  const 레드재컨택: DashboardV2['레드재컨택'] = {
-    재컨택_전체: 대조?.레드재컨택_전체 ?? 0,
-    결제전환: 대조?.레드재컨택_결제전환 ?? 0,
-  };
+  const 레드텔레콤_IB = computeRedtelIB(redtelIBRecords, 집계시작, 오늘);
+  const 레드텔레콤_OB = computeRedtelOB(redtelOBRecords);
 
   const updatedAt = new Date().toISOString();
   const dashboard: DashboardV2 = {
     인바운드,
     skb,
-    레드텔레콤,
+    레드텔레콤_IB,
+    레드텔레콤_OB,
     정보와기술,
-    레드재컨택,
     집계시작,
     오늘,
     _meta: {
@@ -216,9 +220,9 @@ async function main() {
       counts: {
         인바운드: inboundRecords.length,
         skb: skbRecords.length,
-        레드텔레콤: redtelRecords.length,
+        레드텔레콤_IB: redtelIBRecords.length,
+        레드텔레콤_OB: redtelOBRecords.length,
         정보와기술: repRecords.length,
-        레드재컨택: 레드재컨택.재컨택_전체,
       },
       결제소스: 대조
         ? {
@@ -272,11 +276,13 @@ async function main() {
   console.log(
     `  SKB: 오늘응대 ${skb.전환.응대}${재(skb.전환)} / 오늘결제 ${skb.전환.결제} / 전환율 ${율(skb.전환.전환율_pct)} / 누적유입 ${skb.유입건수}`
   );
-  console.log(`  레드텔레콤: 전체 ${레드텔레콤.건수_전체} / 오늘이후 ${레드텔레콤.건수_오늘이후}`);
   console.log(
     `  정보와기술: 오늘응대 ${정보와기술.전환.응대}${재(정보와기술.전환)} / 오늘결제 ${정보와기술.전환.결제} / 전환율 ${율(정보와기술.전환.전환율_pct)} / 누적유입 ${정보와기술.유입건수}`
   );
-  console.log(`  레드재컨택: 전체 ${레드재컨택.재컨택_전체} / 결제전환 ${레드재컨택.결제전환}`);
+  console.log(
+    `  레드텔레콤 I/B: 오늘응대 ${레드텔레콤_IB.전환.응대} / 오늘결제 ${레드텔레콤_IB.전환.결제} / 전환율 ${율(레드텔레콤_IB.전환.전환율_pct)} / 누적유입 ${레드텔레콤_IB.유입건수}`
+  );
+  console.log(`  레드텔레콤 O/B: 결제 ${레드텔레콤_OB.전환.결제}`);
 }
 
 main().catch((error) => {
