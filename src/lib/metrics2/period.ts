@@ -150,7 +150,7 @@ export function summarizePeriod(
     .filter((s) => !!s[table])
     .sort((a, b) => a.오늘.localeCompare(b.오늘))
     .at(-1);
-  for (const d of 최신?.[table].유입_일자별 ?? []) {
+  for (const d of 최신?.[table]?.유입_일자별 ?? []) {
     if (d.날짜 < 시작 || d.날짜 > 끝) continue;
     유입 += d.건수;
   }
@@ -229,9 +229,13 @@ export function summarizeRedtelOB(
   시작: string,
   끝: string
 ): RedtelOBPeriodSummary {
-  if (snapshots.length === 0) {
+  // 레드텔레콤_OB는 이번 재편에서 추가된 필드라 그 이전 스냅샷엔 없다 — 있는 것 중 최신을 쓴다
+  const 최신 = [...snapshots]
+    .filter((s) => !!s.레드텔레콤_OB)
+    .sort((a, b) => a.오늘.localeCompare(b.오늘))
+    .at(-1);
+  if (!최신) {
     return { 기간: { 시작, 끝 }, 일수: 0, 결제: 0 };
   }
-  const 최신 = [...snapshots].sort((a, b) => a.오늘.localeCompare(b.오늘)).at(-1)!;
-  return { 기간: { 시작, 끝 }, 일수: snapshots.length, 결제: 최신.레드텔레콤_OB.전환.결제 };
+  return { 기간: { 시작, 끝 }, 일수: snapshots.length, 결제: 최신.레드텔레콤_OB!.전환.결제 };
 }

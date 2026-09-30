@@ -178,8 +178,9 @@ export interface TrendPoint {
 export interface DashboardV2 {
   인바운드: InboundMetrics;
   skb: SkbMetrics;
-  레드텔레콤_IB: InboundMetrics;
-  레드텔레콤_OB: RedtelOBMetrics;
+  /** 이번 재편(탭 구조 전체/A/B/C)에서 추가된 필드 — 그 이전 스냅샷엔 없다 */
+  레드텔레콤_IB?: InboundMetrics;
+  레드텔레콤_OB?: RedtelOBMetrics;
   정보와기술: RepPhoneMetrics;
   집계시작: string; // 'YYYY-MM-DD'
   오늘: string; // 응대 지표 기준일 'YYYY-MM-DD' (KST)

@@ -37,11 +37,13 @@ import type {
 } from '@/lib/metrics2/types';
 
 type TableKey = '인바운드' | 'skb' | '정보와기술' | '레드텔레콤_IB';
+/** A/B탭은 항상 값이 있는 테이블만 가리킨다(레드텔레콤_IB 제외) */
+type ABTableKey = '인바운드' | '정보와기술';
 type MainTab = '전체' | 'A' | 'B' | 'C';
 type RedtelSubTab = 'IB' | 'OB';
 type TopTab = 'week' | 'month' | 'date';
 
-const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C'>, TableKey> = {
+const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C'>, ABTableKey> = {
   A: '인바운드',
   B: '정보와기술',
 };
@@ -392,11 +394,13 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
 
   function 탭배지(k: TableKey): { 결제: number; 전환율_pct: number | null } | null {
     if (!data) return null;
-    return topTab === 'date'
-      ? { 결제: data[k].전환.결제, 전환율_pct: data[k].전환.전환율_pct }
-      : periodBadges
-        ? { 결제: periodBadges[k].결제, 전환율_pct: periodBadges[k].전환율_pct }
-        : null;
+    if (topTab === 'date') {
+      const cur = data[k];
+      return cur ? { 결제: cur.전환.결제, 전환율_pct: cur.전환.전환율_pct } : null;
+    }
+    return periodBadges?.[k]
+      ? { 결제: periodBadges[k].결제, 전환율_pct: periodBadges[k].전환율_pct }
+      : null;
   }
 
   const 메인탭 = data && (
@@ -598,7 +602,13 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
             </TabsList>
           </Tabs>
           <Section title="O/B · 레드텔레콤 리드" desc="카운트 전용 — 응대·전환·담당자·유입 지표 없음">
-            <Stat label="결제 건수" value={data.레드텔레콤_OB.전환.결제} accent size="md" />
+            {data.레드텔레콤_OB ? (
+              <Stat label="결제 건수" value={data.레드텔레콤_OB.전환.결제} accent size="md" />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                이 날짜는 탭 재편 이전 스냅샷이라 데이터가 없습니다.
+              </p>
+            )}
           </Section>
           {푸터}
         </div>
@@ -617,16 +627,26 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
           </TabsList>
         </Tabs>
 
-        <Section title="I/B · 키퍼리드 · 오늘" desc={`${data.오늘} 응대 기준`}>
-          <ConversionHero 전환={cur.전환} />
-        </Section>
+        {cur ? (
+          <>
+            <Section title="I/B · 키퍼리드 · 오늘" desc={`${data.오늘} 응대 기준`}>
+              <ConversionHero 전환={cur.전환} />
+            </Section>
 
-        <Section
-          title="날짜별 추이"
-          desc="누적이 아닌 그날 값. 지표마다 단위가 달라 축을 나눠 그린다."
-        >
-          <TrendLines data={trend} table="레드텔레콤_IB" />
-        </Section>
+            <Section
+              title="날짜별 추이"
+              desc="누적이 아닌 그날 값. 지표마다 단위가 달라 축을 나눠 그린다."
+            >
+              <TrendLines data={trend} table="레드텔레콤_IB" />
+            </Section>
+          </>
+        ) : (
+          <Section title="I/B · 키퍼리드" desc="탭 재편 이전 스냅샷">
+            <p className="text-sm text-muted-foreground">
+              이 날짜는 탭 재편 이전 스냅샷이라 데이터가 없습니다.
+            </p>
+          </Section>
+        )}
 
         {푸터}
       </div>
