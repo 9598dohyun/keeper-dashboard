@@ -21,23 +21,37 @@ import { isTestRecord } from '../src/lib/test-lead';
 const TOKEN = process.env.AIRTABLE_TOKEN!;
 const BASE_ID = process.env.AIRTABLE_BASE_ID!;
 
-const TABLES = {
-  인바운드: { id: 'tbljFHOl4PzAWmb1f', 이름: '고객명', 메모: '메모 텍스트' },
-  skb: { id: 'tblb5APohbhFixfHB', 이름: '이름', 메모: '[콜]메모 관리' },
-} as const;
+interface TableConf {
+  id: string;
+  이름: string;
+  메모: string;
+  최종결과: string;
+  담당자: string;
+  부재중상태: string | null;
+}
+
+// 2026-09-30 '인바운드'→'영원' 개명 이후 필드명이 다르다(최종결과·담당자, [콜]부재중 상태 없음)
+const TABLES: Record<'인바운드' | 'skb', TableConf> = {
+  인바운드: {
+    id: 'tbl8NencTcDnVDWy6',
+    이름: '고객명',
+    메모: '메모텍스트',
+    최종결과: '최종결과',
+    담당자: '담당자',
+    부재중상태: null,
+  },
+  skb: {
+    id: 'tblb5APohbhFixfHB',
+    이름: '이름',
+    메모: '[콜]메모 관리',
+    최종결과: '[콜]최종 결과',
+    담당자: '[콜]담당자',
+    부재중상태: '[콜]부재중 상태',
+  },
+};
 type TableKey = keyof typeof TABLES;
 
-const BASE_FIELDS = [
-  '유입시간',
-  '메모수정시각',
-  '첫응대시각',
-  '[콜]최종 결과',
-  '[콜]담당자',
-  '실패사유',
-  '실패상세이유',
-  '[콜]부재중 상태',
-  'UTM_source',
-];
+const COMMON_FIELDS = ['유입시간', '메모수정시각', '첫응대시각', '실패사유', '실패상세이유', 'UTM_source'];
 
 interface Rec {
   id: string;
@@ -152,6 +166,19 @@ function 인자(name: string): string | undefined {
   return i === -1 ? undefined : process.argv[i + 1];
 }
 
+/** 테이블별 원본 필드명을 표준 필드명('[콜]최종 결과'·'[콜]담당자'·'[콜]부재중 상태')으로 리네임 */
+function toStandardFields(table: TableKey, recs: Rec[]): Rec[] {
+  const conf = TABLES[table];
+  if (conf.최종결과 === '[콜]최종 결과' && conf.담당자 === '[콜]담당자') return recs;
+  return recs.map((r) => {
+    const f = { ...r.fields };
+    f['[콜]최종 결과'] = f[conf.최종결과];
+    f['[콜]담당자'] = f[conf.담당자];
+    if (conf.부재중상태) f['[콜]부재중 상태'] = f[conf.부재중상태];
+    return { id: r.id, fields: f };
+  });
+}
+
 async function build(
   table: TableKey,
   day: string,
@@ -159,7 +186,16 @@ async function build(
   결제전체: number
 ): Promise<DailyComment> {
   const conf = TABLES[table];
-  const recs = await fetchAll(conf.id, [...BASE_FIELDS, conf.이름, conf.메모]);
+  const fields = [
+    ...COMMON_FIELDS,
+    conf.이름,
+    conf.메모,
+    conf.최종결과,
+    conf.담당자,
+    ...(conf.부재중상태 ? [conf.부재중상태] : []),
+  ];
+  const raw = await fetchAll(conf.id, fields);
+  const recs = toStandardFields(table, raw);
   const hit = recs.filter(
     (r) => !isTestRecord(r.fields) && kstDate(r.fields['메모수정시각']) === day
   );

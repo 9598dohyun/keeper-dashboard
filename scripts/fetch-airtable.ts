@@ -22,7 +22,8 @@ const OUT_DIR = path.join(__dirname, '../data');
 const SYNC_STATE_PATH = path.join(OUT_DIR, '_sync-state.json');
 
 const TABLES = {
-  인바운드: 'tbljFHOl4PzAWmb1f',
+  // 2026-09-30 '인바운드' → '영원'으로 개명 + 필드 정리(동일 데이터, 필드명만 변경)
+  인바운드: 'tbl8NencTcDnVDWy6',
   SKB: 'tblb5APohbhFixfHB',
   정보와기술: 'tblfWVIcGWZat5z3g', // 대표전화·채널톡 채널을 함께 다루는 테이블
   레드텔레콤_IB: 'tblxlXKRGuumb5Wuz', // 키퍼리드 — 응대·결제·유입채널 지표 있음
@@ -31,10 +32,10 @@ const TABLES = {
 
 /** 테이블별 증분 필터에 쓸 lastModifiedTime 계열 필드명. 없는 테이블은 이 맵에서 뺀다(전체 재수집) */
 const SYNC_FIELD: Partial<Record<keyof typeof TABLES, string>> = {
-  인바운드: 'Last Modified',
-  SKB: 'Last Modified',
+  인바운드: '수정일자', // 개명 전 'Last Modified'
+  SKB: '수정일자', // 개명 전 'Last Modified'
   정보와기술: 'Last modified time', // 소문자 m — 증분화를 위해 신설된 필드
-  레드텔레콤_IB: '수정시각',
+  레드텔레콤_IB: '수정일자', // 개명 전 '수정시각' — 필드 자체가 죽은 참조로 바뀌어 교체(2026-10-01)
 };
 
 type SyncState = Partial<Record<keyof typeof TABLES, string>>; // 테이블명 → 마지막 수집 시각(ISO)
@@ -49,7 +50,7 @@ function saveSyncState(state: SyncState) {
 }
 
 // 계산에 필요한 필드만 가져옴 (개인정보 연락처 제외)
-// 뒤쪽 5개는 진단 대시보드(metrics3)용 — v2는 앞쪽 필드만 읽으므로 영향 없음
+// 뒤쪽 필드는 진단 대시보드(metrics3)용 — v2는 앞쪽 필드만 읽으므로 영향 없음
 const DIAGNOSIS_FIELDS = [
   '첫응대시각',
   '실패사유',
@@ -57,22 +58,29 @@ const DIAGNOSIS_FIELDS = [
   '전화번호 중복여부',
   '연락 금지',
 ];
-const INBOUND_FIELDS = [
-  '고객명', // 테스트 리드 판정용 — 저장하지 않고 버린다
+/**
+ * 2026-09-30 '인바운드'→'영원' 개명 이후 원본 필드명. renameInboundFields에서
+ * 기존 표준 필드명(Last Modified·[콜]최종 결과 등)으로 리네임해 저장한다.
+ * '[콜]부재중 상태'·'전화번호 중복여부'는 영원 테이블에 대응 필드가 없어 가져오지 않는다(값 없음 처리).
+ */
+const INBOUND_RAW_FIELDS = [
+  '고객명',
   '유입시간',
-  'Last Modified',
+  '수정일자', // → Last Modified
   '메모수정시각',
-  '[콜]최종 결과',
-  '[콜]담당자',
+  '최종결과', // → [콜]최종 결과
+  '담당자', // → [콜]담당자
   'UTM_source',
-  '진입경로',
-  '[콜]온도감', // 인바운드에만 존재
-  ...DIAGNOSIS_FIELDS,
+  '페이지경로', // → 진입경로
+  '고객기준', // → [콜]온도감 (접촉시도=하/상담 진행=중/구매의향 확인=상/보류=중)
+  '연락금지', // → 연락 금지
+  '첫응대시각',
+  '실패사유',
 ];
 const SKB_FIELDS = [
   '이름', // 테스트 리드 판정용 — 저장하지 않고 버린다
   '유입시간',
-  'Last Modified',
+  '수정일자', // 개명 전 'Last Modified'
   '메모수정시각',
   '[콜]최종 결과',
   '[콜]담당자',
@@ -167,6 +175,52 @@ function stripAndFilter(records: V2Record[], label: string): V2Record[] {
   return out;
 }
 
+/** 고객기준(접촉시도/상담 진행/구매의향 확인/보류) → 온도감(하/중/상) 매핑. 2026-10-01 확정 */
+const 고객기준_온도감: Record<string, string> = {
+  접촉시도: '하',
+  '상담 진행': '중',
+  '구매의향 확인': '상',
+  보류: '중',
+};
+
+/**
+ * 2026-09-30 '인바운드'→'영원' 개명 이후 원본 필드명을 기존 표준 필드명으로 리네임한다.
+ * 수정일자→Last Modified, 최종결과→[콜]최종 결과, 담당자→[콜]담당자,
+ * 페이지경로→진입경로, 연락금지→연락 금지, 고객기준→[콜]온도감(값 매핑).
+ * '[콜]부재중 상태'·'전화번호 중복여부'는 대응 필드가 없어 비워 둔다.
+ */
+function renameInboundFields(records: V2Record[]): V2Record[] {
+  return records.map((r) => {
+    const f = r.fields as Record<string, unknown>;
+    const renamed: Record<string, unknown> = {
+      ...f,
+      'Last Modified': f['수정일자'],
+      '[콜]최종 결과': f['최종결과'],
+      '[콜]담당자': f['담당자'],
+      진입경로: f['페이지경로'],
+      '연락 금지': f['연락금지'],
+      '[콜]온도감': 고객기준_온도감[f['고객기준'] as string] ?? undefined,
+    };
+    delete renamed['수정일자'];
+    delete renamed['최종결과'];
+    delete renamed['담당자'];
+    delete renamed['페이지경로'];
+    delete renamed['연락금지'];
+    delete renamed['고객기준'];
+    return { id: r.id, fields: renamed } as V2Record;
+  });
+}
+
+/** SKB 원본 'Last Modified'가 '수정일자'로 개명됨 — 기존 표준 필드명으로 리네임 */
+function renameSkbFields(records: V2Record[]): V2Record[] {
+  return records.map((r) => {
+    const f = r.fields as Record<string, unknown>;
+    const renamed: Record<string, unknown> = { ...f, 'Last Modified': f['수정일자'] };
+    delete renamed['수정일자'];
+    return { id: r.id, fields: renamed } as V2Record;
+  });
+}
+
 /**
  * 정보와기술 원본 레코드 필드명을 인바운드/SKB 표준 필드명으로 리네임한다.
  * 유입날짜→유입시간, 메모완료시각→메모수정시각, 유입경로→UTM_source.
@@ -241,8 +295,8 @@ async function main() {
 
   const syncState = loadSyncState();
 
-  await fetchTable('인바운드', '인바운드', INBOUND_FIELDS, syncState);
-  await fetchTable('SKB', 'SKB', SKB_FIELDS, syncState);
+  await fetchTable('인바운드', '인바운드', INBOUND_RAW_FIELDS, syncState, renameInboundFields);
+  await fetchTable('SKB', 'SKB', SKB_FIELDS, syncState, renameSkbFields);
   await fetchTable('레드텔레콤_IB', '레드텔레콤_IB', REDTEL_IB_FIELDS, syncState);
   await fetchTable('레드텔레콤_OB', '레드텔레콤_OB', REDTEL_OB_FIELDS, syncState);
   await fetchTable('정보와기술', '정보와기술', REP_PHONE_FIELDS, syncState, renameRepPhoneFields);
