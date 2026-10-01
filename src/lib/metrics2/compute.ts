@@ -245,7 +245,14 @@ export function computeInbound(
   결제ID: Set<string> | null = null,
   이력: ContactHistory | null = null,
   결제건수?: number,
-  담당자별결제?: Record<string, number>
+  담당자별결제?: Record<string, number>,
+  /**
+   * 채널_일자별(코호트 전환) 전용 결제ID — 원장 전체 누적(취소 제외).
+   * 응대·결제 카드가 쓰는 결제ID(그날 하루치)와 다르다: 그걸 그대로 쓰면 과거에 유입돼
+   * 다른 날 결제된 건이 빠져 채널별 결제 합이 실제보다 작게 나온다.
+   * 생략하면 결제ID로 폴백한다(원장 데이터가 없는 과거 호출 호환용).
+   */
+  채널결제ID?: Set<string> | null
 ): InboundMetrics {
   const 유입 = inflowSince(records, 집계시작);
   // 채널 (집계시작 이후 유입 기준)
@@ -263,7 +270,7 @@ export function computeInbound(
     유입건수: 유입.length,
     채널_Top,
     유입_일자별: dailyInflow(records, 집계시작),
-    채널_일자별: dailyChannelInflow(records, 집계시작, 결제ID),
+    채널_일자별: dailyChannelInflow(records, 집계시작, 채널결제ID ?? 결제ID),
   };
 }
 

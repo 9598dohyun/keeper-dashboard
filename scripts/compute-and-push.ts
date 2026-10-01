@@ -162,6 +162,14 @@ async function main() {
   const 인바운드ID = 대조 ? new Set(대조.결제ID_인바운드) : null;
   const skbID = 대조 ? new Set(대조.결제ID_SKB) : null;
   const 정보와기술ID = 대조 ? new Set(대조.결제ID_정보와기술 ?? []) : null;
+  // 채널_일자별(코호트 전환) 전용 — 원장 전체 누적(취소 제외).
+  // 위 결제ID(그날 하루치)를 그대로 쓰면 과거에 유입돼 다른 날 결제된 건이 빠져
+  // 채널별 결제 합이 실제보다 작게 나온다(2026-10-01 확인: 정보와기술 대표전화 09-28+09-29
+  // 결제 2건 중 1건이 누락).
+  const 인바운드채널결제ID = 대조?.원장_결제ID_인바운드 ? new Set(대조.원장_결제ID_인바운드) : 인바운드ID;
+  const 정보와기술채널결제ID = 대조?.원장_결제ID_정보와기술
+    ? new Set(대조.원장_결제ID_정보와기술)
+    : 정보와기술ID;
   // 결제ID(레코드ID 집합)만으로 세면 같은 리드가 여러 주문(같은 날 재구매·증설 등)의 대표로
   // 뽑힐 때 집합 크기가 실제 주문 건수보다 작아진다 — 정확한 주문 단위 건수를 우선한다.
   const 인바운드결제건수 = 대조?.결제건수_인바운드;
@@ -183,7 +191,8 @@ async function main() {
     인바운드ID,
     인바운드이력,
     인바운드결제건수,
-    인바운드담당자별결제
+    인바운드담당자별결제,
+    인바운드채널결제ID
   );
   const skb = computeSkb(
     skbRecords,
@@ -201,7 +210,8 @@ async function main() {
     정보와기술ID,
     정보와기술이력,
     정보와기술결제건수,
-    정보와기술담당자별결제
+    정보와기술담당자별결제,
+    정보와기술채널결제ID
   );
   const 레드텔레콤_IB = computeRedtelIB(redtelIBRecords, 집계시작, 오늘);
   const 레드텔레콤_OB = computeRedtelOB(redtelOBRecords);
