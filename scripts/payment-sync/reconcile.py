@@ -37,7 +37,7 @@ OUT_PATH = BASE_DIR / "data" / "결제대조.json"
 # 하루치 파일만 와도 과거분이 남아 있어야 진단(유입 코호트)이 엑셀 기준으로 계산된다.
 LEDGER_PATH = BASE_DIR / "data" / "결제원장.json"
 
-INBOUND_TABLE = "tbljFHOl4PzAWmb1f"
+INBOUND_TABLE = "tbl8NencTcDnVDWy6"  # 영원
 SKB_TABLE = "tblb5APohbhFixfHB"
 REP_PHONE_TABLE = "tblfWVIcGWZat5z3g"  # 정보와기술
 # 레드텔레콤 I/B·O/B는 엑셀 대조 대상이 아니다(에어테이블 필드만으로 결제 판정) — 여기서 다루지 않는다.
@@ -511,9 +511,15 @@ def main():
         base,
         token,
         INBOUND_TABLE,
-        ["연락처", "고객명", "[콜]최종 결과", "유입시간", "[콜]담당자"],
+        ["연락처", "고객명", "최종결과", "유입시간", "담당자"],
         "인바운드",
     )
+    # 2026-09-30 '인바운드'→'영원' 개명으로 원본 필드명이 바뀌었다 — 표준 필드명으로 되돌린다
+    # (fetch-airtable.ts의 renameInboundFields와 동일 매핑)
+    for r in inbound:
+        f = r.get("fields", {})
+        f["[콜]최종 결과"] = f.get("최종결과")
+        f["[콜]담당자"] = f.get("담당자")
     skb = airtable_fetch(
         base,
         token,

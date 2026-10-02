@@ -256,6 +256,50 @@ function mergeById(existing: V2Record[], incoming: V2Record[]): V2Record[] {
 }
 
 /**
+ * 베이스 전체 테이블의 필드명 스키마를 메타 API로 한 번만 가져와 캐시한다.
+ *
+ * 레코드 응답으로 필드 존재를 검증하면 오탐이 난다 — 에어테이블은 값이 빈 필드를
+ * 레코드 JSON에서 아예 생략하므로, 필드가 실제로 있어도 샘플 레코드엔 안 보일 수 있다
+ * (2026-10-02 확인: `실패상세이유`는 스키마엔 있지만 당일 레코드가 전부 비어 있어
+ * 레코드 기반 검증이 "없는 필드"로 오판했다). 그래서 스키마 자체를 조회해 대조한다.
+ */
+let schemaCache: Map<string, Set<string>> | null = null;
+async function loadSchema(): Promise<Map<string, Set<string>>> {
+  if (schemaCache) return schemaCache;
+  const res = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`Airtable meta API error: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as { tables: { id: string; fields: { name: string }[] }[] };
+  schemaCache = new Map(data.tables.map((t) => [t.id, new Set(t.fields.map((f) => f.name))]));
+  return schemaCache;
+}
+
+/**
+ * 요청한 필드명이 실제로 에어테이블 스키마에 존재하는지 확인한다.
+ *
+ * 에어테이블 API는 존재하지 않는 필드명을 fields[]로 요청해도 에러를 내지 않고
+ * 그냥 그 필드를 응답에서 빼버린다 — 그래서 필드명이 바뀌면(예: 2026-09-30
+ * '인바운드'→'영원' 개명) 스크립트는 "정상 종료"하지만 데이터가 전부 비어 나온다.
+ * 이 침묵 실패를 역추적하느라 디버깅이 오래 걸린 적이 있어(해당 사고 때 Read 반복 11회),
+ * 요청 직전에 스키마와 대조해 바로 에러를 낸다.
+ */
+async function assertFieldsExist(tableId: string, fields: string[], outName: string) {
+  const schema = await loadSchema();
+  const present = schema.get(tableId);
+  if (!present) throw new Error(`${outName}: 테이블 ID ${tableId}를 메타 API 스키마에서 찾지 못했습니다.`);
+  const missing = fields.filter((f) => !present.has(f));
+  if (missing.length > 0) {
+    throw new Error(
+      `${outName}: 요청한 필드가 에어테이블 스키마에 없습니다 — 필드명이 바뀌었을 수 있습니다.\n` +
+        `  없는 필드: ${missing.join(', ')}\n` +
+        `  에어테이블 메타 API로 현재 스키마를 확인하세요: ` +
+        `GET https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`
+    );
+  }
+}
+
+/**
  * 한 테이블을 수집한다. SYNC_FIELD에 등록된 테이블은 직전 수집 이후 바뀐 레코드만
  * filterByFormula로 가져와 기존 JSON과 병합하고, 없는 테이블은 매번 전체 재수집한다.
  */
@@ -273,6 +317,7 @@ async function fetchTable(
   console.log(`Fetching ${outName}${formula ? ` (증분: ${since} 이후)` : ' (전체)'}...`);
 
   const rawFields = syncField && !fields.includes(syncField) ? [...fields, syncField] : fields;
+  await assertFieldsExist(TABLES[key], rawFields, outName);
   const raw = await fetchAll<V2Record>(TABLES[key], rawFields, formula);
   const processed = postProcess(raw);
   const filtered = stripAndFilter(processed, outName);

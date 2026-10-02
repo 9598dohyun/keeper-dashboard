@@ -14,14 +14,16 @@ npm run build      # 프로덕션 빌드 (배포 전 라우트 생성/타입 검
 npm run lint       # ESLint 검사 (= eslint)
 npx tsc --noEmit   # 타입체크 (별도 test 스위트 없음 — 빌드+타입체크가 검증 수단)
 
-# 데이터 파이프라인 (로컬 수동 실행)
+# 데이터 파이프라인 핵심 3개 (전체 6단계 절차는 아래 참조)
 python3 scripts/payment-sync/reconcile.py <결제데이터.xlsx>  # 결제 엑셀 대조 → data/결제대조.json
 npx tsx scripts/fetch-airtable.ts        # Airtable → data/*.json
 npx tsx scripts/compute-and-push.ts      # 지표 계산 → Upstash KV 저장
 ```
 
-**자동 스케줄은 2026-08-26에 중단했다.** 결제 데이터 엑셀을 오전에 받아 위 3단계로 수동
-반영한다. 절차·트러블슈팅은 `scripts/payment-sync/README.md` 참조. 되살리려면 두 워크플로
+**자동 스케줄은 2026-08-26에 중단했다.** 결제 데이터 엑셀을 오전에 받아 수동 반영한다.
+**전체 절차(6단계: 엑셀 대조 → 에어테이블 수집 → 지표 계산 → 진단 반영 → 코멘트 생성 → KPI 갱신)의
+SSOT는 `.claude/skills/keeper-dashboard-update/SKILL.md`다** — 위 3개는 핵심만 뽑은 것이고
+실제 실행 시엔 SKILL.md 절차를 따를 것. 되살리려면 두 워크플로
 (`refresh-metrics.yml`, `keeper-reports.yml`)의 `schedule` 블록 주석을 해제한다.
 
 ### v2 지표 기준 (2026-08-26 변경)

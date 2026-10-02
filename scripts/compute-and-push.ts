@@ -138,7 +138,16 @@ async function main() {
   const 집계시작 = V2_AGGREGATE_START;
   let 오늘 = targetDateKST();
 
-  const inboundRecords = load('인바운드.json');
+  const inboundRecords = load('인바운드.json').map((r) => {
+    // 2026-09-30 '인바운드'→'영원' 개명 작업 중 2026-10-01T02:30대에 11,256건이
+    // 일괄 터치되어 메모수정시각이 찍혔다(실제 응대 아님) — 그 배치만 제외한다.
+    const ts = r.fields.메모수정시각;
+    if (typeof ts === 'string' && ts.startsWith('2026-10-01T02:30')) {
+      const { 메모수정시각: _, ...rest } = r.fields;
+      return { ...r, fields: rest } as V2Record;
+    }
+    return r;
+  });
   const skbRecords = load('SKB.json');
   const redtelIBRecords = load('레드텔레콤_IB.json');
   const redtelOBRecords = load('레드텔레콤_OB.json');

@@ -58,7 +58,50 @@ interface Rec {
   fields: Record<string, string | boolean | number | undefined>;
 }
 
+/**
+ * 베이스 전체 테이블의 필드명 스키마를 메타 API로 한 번만 가져와 캐시한다.
+ *
+ * 레코드 응답으로 필드 존재를 검증하면 오탐이 난다 — 에어테이블은 값이 빈 필드를
+ * 레코드 JSON에서 아예 생략하므로, 필드가 실제로 있어도 샘플 레코드엔 안 보일 수 있다
+ * (2026-10-02 확인: `실패상세이유`는 스키마엔 있지만 당일 레코드가 전부 비어 있어
+ * 레코드 기반 검증이 "없는 필드"로 오판했다). 그래서 스키마 자체를 조회해 대조한다.
+ */
+let schemaCache: Map<string, Set<string>> | null = null;
+async function loadSchema(): Promise<Map<string, Set<string>>> {
+  if (schemaCache) return schemaCache;
+  const res = await fetch(`https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`Airtable meta API error: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as { tables: { id: string; fields: { name: string }[] }[] };
+  schemaCache = new Map(data.tables.map((t) => [t.id, new Set(t.fields.map((f) => f.name))]));
+  return schemaCache;
+}
+
+/**
+ * 요청한 필드명이 실제로 에어테이블 스키마에 존재하는지 확인한다.
+ *
+ * 에어테이블 API는 존재하지 않는 필드명을 fields[]로 요청해도 에러 없이 그냥 빼버린다 —
+ * 필드명이 바뀌면(예: 2026-09-30 '인바운드'→'영원' 개명) 코멘트가 전부 빈 채로 조용히
+ * 생성된다. 요청 직전에 스키마와 대조해 바로 에러를 낸다.
+ */
+async function assertFieldsExist(tableId: string, fields: string[]) {
+  const schema = await loadSchema();
+  const present = schema.get(tableId);
+  if (!present) throw new Error(`테이블 ID ${tableId}를 메타 API 스키마에서 찾지 못했습니다.`);
+  const missing = fields.filter((f) => !present.has(f));
+  if (missing.length > 0) {
+    throw new Error(
+      `${tableId}: 요청한 필드가 에어테이블 스키마에 없습니다 — 필드명이 바뀌었을 수 있습니다.\n` +
+        `  없는 필드: ${missing.join(', ')}\n` +
+        `  에어테이블 메타 API로 현재 스키마를 확인하세요: ` +
+        `GET https://api.airtable.com/v0/meta/bases/${BASE_ID}/tables`
+    );
+  }
+}
+
 async function fetchAll(tableId: string, fields: string[]): Promise<Rec[]> {
+  await assertFieldsExist(tableId, fields);
   const out: Rec[] = [];
   let offset: string | undefined;
   for (;;) {
@@ -196,9 +239,13 @@ async function build(
   ];
   const raw = await fetchAll(conf.id, fields);
   const recs = toStandardFields(table, raw);
-  const hit = recs.filter(
-    (r) => !isTestRecord(r.fields) && kstDate(r.fields['메모수정시각']) === day
-  );
+  const hit = recs.filter((r) => {
+    const ts = r.fields['메모수정시각'];
+    // 2026-09-30 '인바운드'→'영원' 개명 작업 중 2026-10-01T02:30대에 11,256건이
+    // 일괄 터치되어 메모수정시각이 찍혔다(실제 응대 아님) — 그 배치만 제외한다.
+    if (typeof ts === 'string' && ts.startsWith('2026-10-01T02:30')) return false;
+    return !isTestRecord(r.fields) && kstDate(ts) === day;
+  });
 
   const 응대 = hit.length;
   const 결과 = (r: Rec) => str(r.fields['[콜]최종 결과']);
