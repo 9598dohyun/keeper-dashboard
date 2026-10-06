@@ -37,23 +37,63 @@ const KIND_LABEL: Record<NonNullable<Props['kind']>, string> = {
  */
 export default function ChannelPayCard({ kind, period }: Props) {
   const [data, setData] = useState<ChannelPayResult | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     const params = new URLSearchParams({ type: 'channel' });
     if (kind && period) params.set(kind, period);
     fetch(`/api/kpi?${params.toString()}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => alive && setData(d && !d.error ? d : null))
-      .catch(() => {});
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!alive) return;
+        if (!ok || d?.error) {
+          setData(null);
+          setNotFound(true);
+        } else {
+          setData(d);
+          setNotFound(false);
+        }
+      })
+      .catch(() => alive && setNotFound(true))
+      .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, [kind, period]);
 
-  if (!data || !data.행.length) return null;
-
   const 제목 = kind ? KIND_LABEL[kind] : '이번 달';
+
+  if (loading) return null;
+
+  if (notFound || !data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">채널별 결제 ({제목})</CardTitle>
+          <CardDescription>
+            이 기간의 채널별 결제 데이터가 아직 집계되지 않았습니다 — compute-kpi.ts가
+            이 날짜로 실행돼야 채워진다(월 KPI 갱신 단계, SKILL.md 6단계 중 마지막).
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (!data.행.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">채널별 결제 ({제목})</CardTitle>
+          <CardDescription>
+            {data.기간.시작} ~ {data.기간.종료} · 이 기간엔 결제 데이터 엑셀 기준 결제가 0건이다.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card>
