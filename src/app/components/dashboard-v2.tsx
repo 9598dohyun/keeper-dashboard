@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import ChannelPayCard from './channel-pay-card';
+import StoreSummaryView from './store-summary';
 import TrendLines from './trend-lines';
 import PeriodSummaryView from './period-summary';
 import RedtelPeriodSummaryView from './redtel-period-summary';
@@ -39,11 +40,11 @@ import type {
 type TableKey = '인바운드' | 'skb' | '정보와기술' | '레드텔레콤_IB';
 /** A/B탭은 항상 값이 있는 테이블만 가리킨다(레드텔레콤_IB 제외) */
 type ABTableKey = '인바운드' | '정보와기술';
-type MainTab = '전체' | 'A' | 'B' | 'C';
+type MainTab = '전체' | 'A' | 'B' | 'C' | '누적결제';
 type RedtelSubTab = 'IB' | 'OB';
 type TopTab = 'week' | 'month' | 'date';
 
-const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C'>, ABTableKey> = {
+const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C' | '누적결제'>, ABTableKey> = {
   A: '인바운드',
   B: '정보와기술',
 };
@@ -390,6 +391,7 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
     A: 'A · 인바운드',
     B: 'B · 정보와기술',
     C: 'C · 레드텔레콤',
+    누적결제: '누적결제',
   };
 
   function 탭배지(k: TableKey): { 결제: number; 전환율_pct: number | null } | null {
@@ -406,9 +408,9 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
   const 메인탭 = data && (
     <Tabs value={mainTab} onValueChange={(v: string) => setMainTab(v as MainTab)}>
       <TabsList>
-        {(['전체', 'A', 'B', 'C'] as MainTab[]).map((m) => {
+        {(['전체', 'A', 'B', 'C', '누적결제'] as MainTab[]).map((m) => {
           const table: TableKey | null =
-            m === '전체' ? null : m === 'C' ? '레드텔레콤_IB' : MAIN_TAB_TABLE[m];
+            m === '전체' || m === '누적결제' ? null : m === 'C' ? '레드텔레콤_IB' : MAIN_TAB_TABLE[m];
           const 배지 = table ? 탭배지(table) : null;
           return (
             <TabsTrigger key={m} value={m}>
@@ -537,6 +539,18 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
       한화비전 키퍼 · SKB+인바운드 통합관리
     </p>
   );
+
+  // 누적결제 탭 — 매장(주소) 단위 전체 누적. 날짜/주차/월별 토글과 무관하게 항상 전체 기준.
+  if (mainTab === '누적결제') {
+    return (
+      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
+        {헤더}
+        {메인탭}
+        <StoreSummaryView />
+        {푸터}
+      </div>
+    );
+  }
 
   // 전체 탭 — 채널별 결제만. 탭·기간과 무관하게 엑셀 전량 기준이라 여기 하나로 모은다.
   if (mainTab === '전체') {

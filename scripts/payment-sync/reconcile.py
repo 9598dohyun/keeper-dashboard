@@ -36,6 +36,9 @@ OUT_PATH = BASE_DIR / "data" / "결제대조.json"
 # 누적 결제 원장 — 엑셀을 받을 때마다 여기에 쌓인다.
 # 하루치 파일만 와도 과거분이 남아 있어야 진단(유입 코호트)이 엑셀 기준으로 계산된다.
 LEDGER_PATH = BASE_DIR / "data" / "결제원장.json"
+# 매장(주소) 단위 누적 결제 — "누적결제" 탭 전용. 결제원장(리드 매칭용)과는 별개로,
+# 주소가 같으면 매장 수를 1건으로 묶어 지역별 매장 수·결제 건수를 센다.
+STORE_LEDGER_PATH = BASE_DIR / "data" / "매장별누적.json"
 
 INBOUND_TABLE = "tbl8NencTcDnVDWy6"  # 영원
 SKB_TABLE = "tblb5APohbhFixfHB"
@@ -52,11 +55,49 @@ CANCEL_HEADERS = ["취소금액"]
 CHANNEL_HEADERS = ["주문유입채널"]
 AMOUNT_HEADERS = ["주문금액"]
 ORDER_NO_HEADERS = ["주문번호"]
+ADDRESS_HEADERS = ["설치주소", "주소"]
 
 # 주문상태에 이 말이 들어가면 취소 건 — 결제로 세지 않는다.
 # 단 "취소(설치후)"는 설치까지 끝난 뒤 취소된 것이라 결제건으로 인정한다(2026-09-30 확정) —
 # 그래서 "설치전"만 취소 마커로 두고 "설치후"는 여기 넣지 않는다.
 CANCELLED_MARKERS = ("취소(설치전)",)
+
+# 주소 앞부분 → 8도(광역단위) 정규화.
+# 엑셀 표기가 "경기"/"경기도", "서울"/"서울시"/"서울특별시"처럼 제각각이고,
+# 드물게 "전남광주통합특별시"처럼 행정구역이 아닌 오표기나 도로명만 적힌 행도 있어
+# 긴 표기부터 먼저 매칭한다(예: "전남광주"가 "전남"에 걸리지 않도록).
+REGION_PREFIXES = [
+    ("세종", "세종"),
+    ("강원", "강원"),
+    ("경기", "경기"),
+    ("충청북", "충북"), ("충북", "충북"),
+    ("충청남", "충남"), ("충남", "충남"),
+    ("전북", "전북"), ("전라북", "전북"),
+    ("전남", "전남"), ("전라남", "전남"),
+    ("경북", "경북"), ("경상북", "경북"),
+    ("경남", "경남"), ("경상남", "경남"),
+    ("제주", "제주"),
+    ("서울", "서울"),
+    ("부산", "부산"),
+    ("대구", "대구"),
+    ("인천", "인천"),
+    ("광주", "광주"),
+    ("대전", "대전"),
+    ("울산", "울산"),
+]
+
+
+def region_of(address):
+    """설치주소 → 8도(광역단위) 이름. 못 알아보면 None('기타/미상'으로 묶는다)"""
+    if not address:
+        return None
+    a = unicodedata.normalize("NFKC", str(address)).strip()
+    if not a:
+        return None
+    for prefix, region in REGION_PREFIXES:
+        if a.startswith(prefix):
+            return region
+    return None
 
 
 def norm_header(s):
@@ -161,6 +202,7 @@ def read_excel(path):
                 "channel": find_col(row, CHANNEL_HEADERS),
                 "amount": find_col(row, AMOUNT_HEADERS),
                 "order_no": find_col(row, ORDER_NO_HEADERS),
+                "address": find_col(row, ADDRESS_HEADERS),
             }
             break
 
@@ -192,6 +234,7 @@ def read_excel(path):
         store = cell(row, "store")
         channel = cell(row, "channel")
         order_no = cell(row, "order_no")
+        address = cell(row, "address")
         items.append(
             {
                 "주문번호": str(order_no).strip() if order_no else None,
@@ -203,6 +246,7 @@ def read_excel(path):
                 "취소금액": cell(row, "cancel"),
                 "채널": str(channel).strip() if channel else "",
                 "금액": cell(row, "amount"),
+                "설치주소": str(address).strip() if address else None,
             }
         )
 
@@ -295,6 +339,111 @@ def load_ledger():
     if not LEDGER_PATH.exists():
         return {"주문": {}, "갱신이력": []}
     return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+
+
+def norm_address(a):
+    """매장 식별용 주소 정규화 — 공백만 압축한다. 공란이면 None"""
+    if not a:
+        return None
+    a = unicodedata.normalize("NFKC", str(a)).strip()
+    a = re.sub(r"\s+", " ", a)
+    return a or None
+
+
+def store_key(it):
+    """
+    매장 식별 키 — 주소가 같으면 1건, 주소가 공란이면 매장명으로 대체 구분(사용자 확정 기준).
+
+    키 앞에 "addr:"/"store:" 접두어를 붙여 두 네임스페이스가 우연히 같은 문자열이어도
+    섞이지 않게 한다.
+    """
+    addr = norm_address(it.get("설치주소"))
+    if addr:
+        return f"addr:{addr}"
+    store = (it.get("매장명") or "").strip()
+    if store:
+        return f"store:{store}"
+    return None
+
+
+def load_store_ledger():
+    """매장(주소) 단위 누적 결제 원장. 없으면 빈 원장"""
+    if not STORE_LEDGER_PATH.exists():
+        return {"매장": {}, "갱신이력": []}
+    return json.loads(STORE_LEDGER_PATH.read_text(encoding="utf-8"))
+
+
+def update_store_ledger(store_ledger, orders, 엑셀파일):
+    """
+    매장별 누적 원장 갱신.
+
+    orders는 이미 주문번호로 접은(dedupe_orders) 기준일 전체 주문(유효+취소)이다.
+    취소 건은 누적에서 뺀다 — 결제로 인정되지 않으므로 매장 결제건수에도 넣지 않는다.
+    같은 매장(주소)에 여러 주문번호가 있으면 결제건수를 더하고, 첫결제일·최근결제일을 갱신한다.
+    주문번호가 이미 반영된 적 있으면 중복 가산하지 않는다(같은 엑셀을 다시 돌려도 안전).
+    """
+    매장 = store_ledger.setdefault("매장", {})
+    added_orders = 0
+    for it in orders:
+        if is_cancelled(it):
+            continue
+        key = store_key(it)
+        if key is None:
+            continue
+        no = it["주문번호"]
+        rec = 매장.setdefault(
+            key,
+            {
+                "매장명": it["매장명"],
+                "설치주소": norm_address(it.get("설치주소")),
+                "지역": region_of(it.get("설치주소")),
+                "결제건수": 0,
+                "주문번호목록": [],
+                "첫결제일": it["결제일"],
+                "최근결제일": it["결제일"],
+            },
+        )
+        if no and no in rec["주문번호목록"]:
+            continue
+        if no:
+            rec["주문번호목록"].append(no)
+        rec["결제건수"] += 1
+        added_orders += 1
+        if it["결제일"]:
+            if not rec["첫결제일"] or it["결제일"] < rec["첫결제일"]:
+                rec["첫결제일"] = it["결제일"]
+            if not rec["최근결제일"] or it["결제일"] > rec["최근결제일"]:
+                rec["최근결제일"] = it["결제일"]
+        # 매장명·지역이 비어 있다가 이번에 채워지면 보강한다(주소가 늦게 채워져 오는 경우 대응)
+        if not rec["매장명"] and it["매장명"]:
+            rec["매장명"] = it["매장명"]
+        if not rec["지역"]:
+            rec["지역"] = region_of(it.get("설치주소"))
+    store_ledger["갱신이력"] = (store_ledger.get("갱신이력", []) + [
+        {
+            "시각": datetime.now(KST).isoformat(),
+            "엑셀파일": 엑셀파일,
+            "반영건수": added_orders,
+        }
+    ])[-30:]
+    return added_orders
+
+
+def store_region_summary(store_ledger):
+    """매장 원장 → 지역별(8도) 매장 수·누적 결제건수 요약"""
+    매장 = store_ledger.get("매장", {})
+    by_region = {}
+    for rec in 매장.values():
+        region = rec.get("지역") or "기타/미상"
+        s = by_region.setdefault(region, {"매장수": 0, "결제건수": 0})
+        s["매장수"] += 1
+        s["결제건수"] += rec.get("결제건수", 0)
+    지역목록 = sorted(by_region.items(), key=lambda kv: kv[1]["결제건수"], reverse=True)
+    return {
+        "매장수_전체": len(매장),
+        "결제건수_전체": sum(r.get("결제건수", 0) for r in 매장.values()),
+        "지역별": [{"지역": k, **v} for k, v in 지역목록],
+    }
 
 
 def update_ledger(ledger, orders, index, 엑셀파일):
@@ -627,6 +776,23 @@ def main():
         f" → 결제 인정(리드ID 기준) 인바운드 {len(inb_ids)} · SKB {len(skb_ids)} · 정보와기술 {len(rep_ids)}"
         f" / 결제 인정(주문건수 기준) 인바운드 {inb_count} · SKB {skb_count} · 정보와기술 {rep_count}"
     )
+
+    # 매장(주소) 단위 누적 — "누적결제" 탭 전용. 에어테이블 매칭 여부와 무관하게
+    # 엑셀 유효 결제 전체(채널 불문)를 센다. 주소가 같으면 1건, 공란이면 매장명으로 구분.
+    store_ledger = load_store_ledger()
+    store_added = update_store_ledger(store_ledger, day, Path(args.excel).name)
+    if not args.dry_run:
+        STORE_LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+        STORE_LEDGER_PATH.write_text(
+            json.dumps(store_ledger, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    region_summary = store_region_summary(store_ledger)
+    print(
+        f"\n매장 누적: 매장 {region_summary['매장수_전체']}곳 · "
+        f"결제 {region_summary['결제건수_전체']}건 (이번 반영 {store_added}건)"
+    )
+    for r in region_summary["지역별"]:
+        print(f"  {r['지역']:8} 매장 {r['매장수']}곳 · 결제 {r['결제건수']}건")
 
     payload = {
         "기준일": 기준일,

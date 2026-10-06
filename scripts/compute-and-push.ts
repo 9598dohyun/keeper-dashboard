@@ -7,7 +7,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { V2Record, DashboardV2, PaymentReconcile } from '../src/lib/metrics2/types';
+import { V2Record, DashboardV2, PaymentReconcile, StoreSummary } from '../src/lib/metrics2/types';
 import {
   computeInbound,
   computeSkb,
@@ -99,6 +99,37 @@ function loadReconcile(): PaymentReconcile | null {
   const p = path.join(DATA_DIR, '결제대조.json');
   if (!fs.existsSync(p)) return null;
   return JSON.parse(fs.readFileSync(p, 'utf-8')) as PaymentReconcile;
+}
+
+/**
+ * 매장(주소) 단위 누적 결제 원장 → "누적결제" 탭 요약.
+ * scripts/payment-sync/reconcile.py(data/매장별누적.json)가 생성한다. 없으면 null(탭 비표시).
+ */
+function loadStoreSummary(): StoreSummary | null {
+  const p = path.join(DATA_DIR, '매장별누적.json');
+  if (!fs.existsSync(p)) return null;
+  const raw = JSON.parse(fs.readFileSync(p, 'utf-8')) as {
+    매장: Record<string, { 지역?: string; 결제건수: number }>;
+  };
+  const byRegion = new Map<string, { 매장수: number; 결제건수: number }>();
+  let 결제건수_전체 = 0;
+  for (const rec of Object.values(raw.매장 ?? {})) {
+    const region = rec.지역 || '기타/미상';
+    const cur = byRegion.get(region) ?? { 매장수: 0, 결제건수: 0 };
+    cur.매장수 += 1;
+    cur.결제건수 += rec.결제건수 ?? 0;
+    byRegion.set(region, cur);
+    결제건수_전체 += rec.결제건수 ?? 0;
+  }
+  const 지역별 = Array.from(byRegion.entries())
+    .map(([지역, v]) => ({ 지역, ...v }))
+    .sort((a, b) => b.결제건수 - a.결제건수);
+  return {
+    갱신시각: new Date().toISOString(),
+    매장수_전체: Object.keys(raw.매장 ?? {}).length,
+    결제건수_전체,
+    지역별,
+  };
 }
 
 /**
@@ -270,6 +301,15 @@ async function main() {
   const 기존날짜 = (await kvGet<string[]>('v2:dates')) ?? [];
   const 날짜목록 = Array.from(new Set([...기존날짜, 오늘])).sort().reverse();
   await kvSet('v2:dates', 날짜목록);
+
+  // 누적결제 탭 — 매장(주소) 단위 누적. 원장이 없으면(아직 한 번도 반영 안 함) 건너뛴다.
+  const 매장누적 = loadStoreSummary();
+  if (매장누적) {
+    await kvSet('store:summary', 매장누적);
+    console.log(
+      `store:summary 저장 완료 (매장 ${매장누적.매장수_전체}곳 · 누적결제 ${매장누적.결제건수_전체}건)`
+    );
+  }
 
   // 접촉이력 갱신은 KV 저장이 끝난 뒤에 한다.
   // 먼저 저장하면 push가 실패했을 때 이력만 앞서가고, 다음 실행에서 그 접촉이

@@ -136,6 +136,25 @@ export interface PaymentReconcile {
   원장_결제ID_정보와기술?: string[];
 }
 
+/**
+ * 매장(주소) 단위 누적 결제 — "누적결제" 탭 전용.
+ * 에어테이블 매칭 여부와 무관하게 엑셀 유효 결제 전체(채널 불문)를 센다.
+ * 주소가 같으면 매장 1곳으로 묶고, 주소가 공란이면 매장명으로 대체 구분한다.
+ * scripts/payment-sync/reconcile.py(data/매장별누적.json)가 생성한다.
+ */
+export interface StoreRegionRow {
+  지역: string; // 8도(광역단위) 이름, 또는 "기타/미상"
+  매장수: number;
+  결제건수: number;
+}
+
+export interface StoreSummary {
+  갱신시각: string;
+  매장수_전체: number;
+  결제건수_전체: number;
+  지역별: StoreRegionRow[];
+}
+
 /** 날짜 1일치 카운트 */
 export interface DailyCount {
   날짜: string; // YYYY-MM-DD
