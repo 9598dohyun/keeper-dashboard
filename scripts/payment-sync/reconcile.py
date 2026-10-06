@@ -278,6 +278,30 @@ def is_cancelled(it):
         return False
 
 
+def is_cancelled_store(it):
+    """
+    매장(주소) 단위 누적("누적결제" 탭) 전용 취소 판정.
+
+    is_cancelled()와 달리 "취소(설치후)"도 취소로 본다. 키퍼 어드민 "설치" 화면의
+    결제 건수 기준과 맞추기 위함(2026-10-06 확정) — 한달무료체험 종료 후 해지,
+    결제수단 변경 과정에서 설치 후 취소가 발생하는데, 어드민은 이런 건을
+    실적에서 뺀다. 리드 매칭·원장(is_cancelled)은 "취소(설치후)"를 결제로
+    인정하는 기존 기준(2026-09-30 확정)을 그대로 유지한다 — 이 함수는
+    매장 누적 집계에만 쓴다.
+    """
+    if any(m in it["주문상태"] for m in CANCELLED_MARKERS):
+        return True
+    if "취소(설치후)" in it["주문상태"]:
+        return True
+    c = it["취소금액"]
+    if c is None:
+        return False
+    try:
+        return float(str(c).replace(",", "")) != 0
+    except (TypeError, ValueError):
+        return False
+
+
 def dedupe_orders(items):
     """
     주문번호 1건당 1행으로 합친다.
@@ -383,14 +407,16 @@ def update_store_ledger(store_ledger, orders, 엑셀파일):
     매장별 누적 원장 갱신.
 
     orders는 이미 주문번호로 접은(dedupe_orders) 기준일 전체 주문(유효+취소)이다.
-    취소 건은 누적에서 뺀다 — 결제로 인정되지 않으므로 매장 결제건수에도 넣지 않는다.
+    취소 건은 누적에서 뺀다 — is_cancelled_store()로 판정하며, 다른 로직(원장·리드
+    매칭)의 is_cancelled()와 달리 "취소(설치후)"도 취소로 본다(어드민 "설치" 화면
+    기준에 맞춤, 2026-10-06 확정).
     같은 매장(주소)에 여러 주문번호가 있으면 결제건수를 더하고, 첫결제일·최근결제일을 갱신한다.
     주문번호가 이미 반영된 적 있으면 중복 가산하지 않는다(같은 엑셀을 다시 돌려도 안전).
     """
     매장 = store_ledger.setdefault("매장", {})
     added_orders = 0
     for it in orders:
-        if is_cancelled(it):
+        if is_cancelled_store(it):
             continue
         key = store_key(it)
         if key is None:
