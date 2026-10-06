@@ -417,7 +417,7 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
   const 메인탭 = data && (
     <Tabs value={mainTab} onValueChange={(v: string) => setMainTab(v as MainTab)}>
       <TabsList>
-        {(['전체', 'A', 'B', 'C', '누적결제'] as MainTab[]).map((m) => {
+        {(['누적결제', '전체', 'A', 'B', 'C'] as MainTab[]).map((m) => {
           const table: TableKey | null =
             m === '전체' || m === '누적결제' ? null : m === 'C' ? '레드텔레콤_IB' : MAIN_TAB_TABLE[m];
           const 배지 = table ? 탭배지(table) : null;
