@@ -40,11 +40,12 @@ import type {
 type TableKey = '인바운드' | 'skb' | '정보와기술' | '레드텔레콤_IB';
 /** A/B탭은 항상 값이 있는 테이블만 가리킨다(레드텔레콤_IB 제외) */
 type ABTableKey = '인바운드' | '정보와기술';
-type MainTab = '전체' | 'A' | 'B' | 'C' | '누적결제';
+type MainTab = '전체' | 'A' | 'B' | 'C';
 type RedtelSubTab = 'IB' | 'OB';
-type TopTab = 'week' | 'month' | 'date';
+/** 'store'(누적결제)는 날짜/기간과 무관하게 항상 전체 누적만 보여준다 — 날짜·기간 드롭다운이 없다. */
+type TopTab = 'store' | 'week' | 'month' | 'date';
 
-const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C' | '누적결제'>, ABTableKey> = {
+const MAIN_TAB_TABLE: Record<Exclude<MainTab, '전체' | 'C'>, ABTableKey> = {
   A: '인바운드',
   B: '정보와기술',
 };
@@ -350,8 +351,9 @@ export default function DashboardV2() {
   }, [fetchData, selectedDate]);
 
   // 주차별/월별 화면 진입·전환 시: 고를 수 있는 주/월 목록을 가져오고 선택은 최신 기간으로 리셋한다.
+  // 누적결제(store)는 날짜/기간과 무관해 이 로직 대상이 아니다.
   useEffect(() => {
-    if (topTab === 'date') return;
+    if (topTab !== 'week' && topTab !== 'month') return;
     setSelectedPeriod('');
     fetch(`/api/metrics-v2?type=period-list&kind=${topTab}`)
       .then((res) => (res.ok ? res.json() : []))
@@ -361,7 +363,7 @@ export default function DashboardV2() {
 
   // 이번주/이번달 화면에서는 탭 배지도 "오늘"이 아니라 그 기간 값을 보여줘야 한다.
   useEffect(() => {
-    if (topTab === 'date') return;
+    if (topTab !== 'week' && topTab !== 'month') return;
     setPeriodBadges(null);
     const tables: TableKey[] = ['인바운드', '정보와기술', '레드텔레콤_IB'];
     const kind: PeriodKind = topTab;
@@ -400,11 +402,10 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
     A: 'A · 인바운드',
     B: 'B · 정보와기술',
     C: 'C · 레드텔레콤',
-    누적결제: '누적결제',
   };
 
   function 탭배지(k: TableKey): { 결제: number; 전환율_pct: number | null } | null {
-    if (!data) return null;
+    if (!data || topTab === 'store') return null;
     if (topTab === 'date') {
       const cur = data[k];
       return cur ? { 결제: cur.전환.결제, 전환율_pct: cur.전환.전환율_pct } : null;
@@ -417,9 +418,9 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
   const 메인탭 = data && (
     <Tabs value={mainTab} onValueChange={(v: string) => setMainTab(v as MainTab)}>
       <TabsList>
-        {(['누적결제', '전체', 'A', 'B', 'C'] as MainTab[]).map((m) => {
+        {(['전체', 'A', 'B', 'C'] as MainTab[]).map((m) => {
           const table: TableKey | null =
-            m === '전체' || m === '누적결제' ? null : m === 'C' ? '레드텔레콤_IB' : MAIN_TAB_TABLE[m];
+            m === '전체' ? null : m === 'C' ? '레드텔레콤_IB' : MAIN_TAB_TABLE[m];
           const 배지 = table ? 탭배지(table) : null;
           return (
             <TabsTrigger key={m} value={m}>
@@ -471,13 +472,14 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tabs value={topTab} onValueChange={(v: string) => setTopTab(v as TopTab)}>
           <TabsList>
+            <TabsTrigger value="store">누적결제</TabsTrigger>
             <TabsTrigger value="date">날짜별</TabsTrigger>
             <TabsTrigger value="week">주차별</TabsTrigger>
             <TabsTrigger value="month">월별</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {topTab !== 'date' && periodOptions.length > 0 && (
+        {(topTab === 'week' || topTab === 'month') && periodOptions.length > 0 && (
           <Select
             items={기간옵션}
             value={selectedPeriod || '__latest__'}
@@ -524,6 +526,25 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
     </header>
   );
 
+  const 푸터 = (
+    <p className="pb-4 text-center text-[10px] text-muted-foreground">
+      한화비전 키퍼 · SKB+인바운드 통합관리
+    </p>
+  );
+
+  // 누적결제 — 매장(주소) 단위 전체 누적. 응대/전환 데이터(data)와 무관하게 자체 API를 쓰므로
+  // data 로딩 상태를 기다리지 않고 바로 보여준다. 상단 토글(날짜/주차/월별)과 동급 — 그 아래
+  // "전체/A/B/C" 탭 줄 자체가 없다(날짜·기간 개념이 없는 탭이라 분리).
+  if (topTab === 'store') {
+    return (
+      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
+        {헤더}
+        <StoreSummaryView />
+        {푸터}
+      </div>
+    );
+  }
+
   if (loading || error || !data) {
     return (
       <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
@@ -539,24 +560,6 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
             <AlertDescription>데이터를 불러오지 못했습니다. {error}</AlertDescription>
           </Alert>
         )}
-      </div>
-    );
-  }
-
-  const 푸터 = (
-    <p className="pb-4 text-center text-[10px] text-muted-foreground">
-      한화비전 키퍼 · SKB+인바운드 통합관리
-    </p>
-  );
-
-  // 누적결제 탭 — 매장(주소) 단위 전체 누적. 날짜/주차/월별 토글과 무관하게 항상 전체 기준.
-  if (mainTab === '누적결제') {
-    return (
-      <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
-        {헤더}
-        {메인탭}
-        <StoreSummaryView />
-        {푸터}
       </div>
     );
   }
