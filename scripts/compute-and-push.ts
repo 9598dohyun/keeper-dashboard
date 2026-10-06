@@ -202,6 +202,7 @@ async function main() {
   const 인바운드ID = 대조 ? new Set(대조.결제ID_인바운드) : null;
   const skbID = 대조 ? new Set(대조.결제ID_SKB) : null;
   const 정보와기술ID = 대조 ? new Set(대조.결제ID_정보와기술 ?? []) : null;
+  const 레드텔레콤IB_ID = 대조 ? new Set(대조.결제ID_레드텔레콤IB ?? []) : null;
   // 채널_일자별(코호트 전환) 전용 — 원장 전체 누적(취소 제외).
   // 위 결제ID(그날 하루치)를 그대로 쓰면 과거에 유입돼 다른 날 결제된 건이 빠져
   // 채널별 결제 합이 실제보다 작게 나온다(2026-10-01 확인: 정보와기술 대표전화 09-28+09-29
@@ -253,7 +254,7 @@ async function main() {
     정보와기술담당자별결제,
     정보와기술채널결제ID
   );
-  const 레드텔레콤_IB = computeRedtelIB(redtelIBRecords, 집계시작, 오늘);
+  const 레드텔레콤_IB = computeRedtelIB(redtelIBRecords, 집계시작, 오늘, 레드텔레콤IB_ID);
   const 레드텔레콤_OB = computeRedtelOB(redtelOBRecords);
 
   const updatedAt = new Date().toISOString();

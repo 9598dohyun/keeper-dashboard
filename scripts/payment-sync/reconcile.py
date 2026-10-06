@@ -43,7 +43,9 @@ STORE_LEDGER_PATH = BASE_DIR / "data" / "매장별누적.json"
 INBOUND_TABLE = "tbl8NencTcDnVDWy6"  # 영원
 SKB_TABLE = "tblb5APohbhFixfHB"
 REP_PHONE_TABLE = "tblfWVIcGWZat5z3g"  # 정보와기술
-# 레드텔레콤 I/B·O/B는 엑셀 대조 대상이 아니다(에어테이블 필드만으로 결제 판정) — 여기서 다루지 않는다.
+REDTEL_IB_TABLE = "tblxlXKRGuumb5Wuz"  # 레드텔레콤 I/B(키퍼리드) — 2026-10-06부터 엑셀 대조 대상
+# 레드텔레콤 O/B는 메모수정시각이 없어 "응대" 개념이 성립하지 않고(전체기간 누적 결제건수만
+# 보여주는 별도 구조) 여전히 엑셀 대조 대상이 아니다 — 여기서 다루지 않는다.
 
 # 엑셀 컬럼 이름 후보 (매달 조금씩 바뀔 수 있어 후보를 둔다)
 PHONE_HEADERS = ["휴대폰번호", "연락처", "휴대폰", "전화번호", "고객연락처"]
@@ -305,9 +307,11 @@ def dedupe_orders(items):
 def is_paid_result(최종결과):
     """
     최종결과가 결제 완료인지. 테이블마다 문구가 달라 접두어로 본다
-    (인바운드 '결제 완료 (영원)' / SKB '결제 완료' / 정보와기술 '결제 완료').
+    (인바운드 '결제 완료 (영원)' / SKB '결제 완료' / 정보와기술 '결제 완료' /
+    레드텔레콤IB '결제완료' — 공백 없음, 그래서 공백 유무 모두 허용한다).
     """
-    return str(최종결과 or "").startswith("결제 완료")
+    s = str(최종결과 or "")
+    return s.startswith("결제 완료") or s.startswith("결제완료")
 
 
 def pick_lead(hit):
@@ -323,7 +327,8 @@ def pick_lead(hit):
       2) 그중 유입시간이 가장 늦은 것 (= 마지막 유입 건)
       3) 결제 완료가 없으면 전체에서 유입시간이 가장 늦은 것
 
-    테이블이 갈리는 경우(인바운드·SKB·정보와기술 중 같은 번호)는 **SKB의 결제 완료로 귀속**한다.
+    테이블이 갈리는 경우(인바운드·SKB·정보와기술·레드텔레콤IB 중 같은 번호)는
+    **SKB의 결제 완료로 귀속**하고, SKB가 없으면 2)·3) 기준(유입시간 최신)으로 고른다.
     """
     결제완료 = [r for r in hit if is_paid_result(r["최종결과"])]
     후보 = 결제완료 or hit
@@ -469,6 +474,7 @@ def update_ledger(ledger, orders, index, 엑셀파일):
             "인바운드ID": sorted({r["id"] for r in 대표 if r["테이블"] == "인바운드"}),
             "skbID": sorted({r["id"] for r in 대표 if r["테이블"] == "SKB"}),
             "정보와기술ID": sorted({r["id"] for r in 대표 if r["테이블"] == "정보와기술"}),
+            "레드텔레콤IB_ID": sorted({r["id"] for r in 대표 if r["테이블"] == "레드텔레콤IB"}),
             "매칭": bool(hit),
         }
         if no in 주문:
@@ -491,14 +497,15 @@ def update_ledger(ledger, orders, index, 엑셀파일):
 
 def ledger_payment_ids(ledger):
     """원장 → 결제로 인정되는 레코드 ID 집합 (취소 제외)"""
-    inb, skb, rep = set(), set(), set()
+    inb, skb, rep, redtel_ib = set(), set(), set(), set()
     for rec in ledger.get("주문", {}).values():
         if rec.get("취소"):
             continue
         inb.update(rec.get("인바운드ID", []))
         skb.update(rec.get("skbID", []))
         rep.update(rec.get("정보와기술ID", []))
-    return inb, skb, rep
+        redtel_ib.update(rec.get("레드텔레콤IB_ID", []))
+    return inb, skb, rep, redtel_ib
 
 
 def ledger_payment_counts(ledger):
@@ -508,7 +515,7 @@ def ledger_payment_counts(ledger):
     ledger_payment_ids는 레코드 ID 집합이라, 같은 리드가 여러 주문(같은 날 재구매·증설 등)의
     대표로 뽑히면 집합 크기가 실제 주문 건수보다 작아진다. 표시용 건수는 이 함수로 센다.
     """
-    inb = skb = rep = 0
+    inb = skb = rep = redtel_ib = 0
     for rec in ledger.get("주문", {}).values():
         if rec.get("취소"):
             continue
@@ -518,7 +525,9 @@ def ledger_payment_counts(ledger):
             skb += 1
         if rec.get("정보와기술ID"):
             rep += 1
-    return inb, skb, rep
+        if rec.get("레드텔레콤IB_ID"):
+            redtel_ib += 1
+    return inb, skb, rep, redtel_ib
 
 
 def airtable_fetch(base, token, table, fields, progress=None):
@@ -683,13 +692,30 @@ def main():
         ["연락처", "이름", "[콜]최종 결과", "유입날짜", "[콜]담당자"],
         "정보와기술",
     )
-    print(f"  인바운드 {len(inbound)}건 / SKB {len(skb)}건 / 정보와기술 {len(rep_phone)}건")
+    redtel_ib = airtable_fetch(
+        base,
+        token,
+        REDTEL_IB_TABLE,
+        ["연락처", "고객명", "최종결과", "유입시간", "담당자"],
+        "레드텔레콤IB",
+    )
+    # 레드텔레콤IB는 필드명이 인바운드와 같은 패턴("최종결과"·"담당자", [콜] 접두어 없음) —
+    # 표준 필드명으로 되돌려 index 구성 루프를 그대로 재사용한다.
+    for r in redtel_ib:
+        f = r.get("fields", {})
+        f["[콜]최종 결과"] = f.get("최종결과")
+        f["[콜]담당자"] = f.get("담당자")
+    print(
+        f"  인바운드 {len(inbound)}건 / SKB {len(skb)}건 / 정보와기술 {len(rep_phone)}건"
+        f" / 레드텔레콤IB {len(redtel_ib)}건"
+    )
 
     index = {}
     for label, recs, name_field, inflow_field in (
         ("인바운드", inbound, "고객명", "유입시간"),
         ("SKB", skb, "이름", "유입시간"),
         ("정보와기술", rep_phone, "이름", "유입날짜"),
+        ("레드텔레콤IB", redtel_ib, "고객명", "유입시간"),
     ):
         for r in recs:
             f = r.get("fields", {})
@@ -764,8 +790,8 @@ def main():
     # 누적 원장 갱신 — 진단(유입 코호트)이 과거 결제까지 엑셀 기준으로 보게 한다
     ledger = load_ledger()
     added, updated = update_ledger(ledger, day, index, Path(args.excel).name)
-    inb_ids, skb_ids, rep_ids = ledger_payment_ids(ledger)
-    inb_count, skb_count, rep_count = ledger_payment_counts(ledger)
+    inb_ids, skb_ids, rep_ids, redtel_ib_ids = ledger_payment_ids(ledger)
+    inb_count, skb_count, rep_count, redtel_ib_count = ledger_payment_counts(ledger)
     if not args.dry_run:
         LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
         LEDGER_PATH.write_text(
@@ -774,7 +800,9 @@ def main():
     print(
         f"\n원장: 주문 {len(ledger['주문'])}건 (신규 {added} / 갱신 {updated})"
         f" → 결제 인정(리드ID 기준) 인바운드 {len(inb_ids)} · SKB {len(skb_ids)} · 정보와기술 {len(rep_ids)}"
+        f" · 레드텔레콤IB {len(redtel_ib_ids)}"
         f" / 결제 인정(주문건수 기준) 인바운드 {inb_count} · SKB {skb_count} · 정보와기술 {rep_count}"
+        f" · 레드텔레콤IB {redtel_ib_count}"
     )
 
     # 매장(주소) 단위 누적 — "누적결제" 탭 전용. 에어테이블 매칭 여부와 무관하게
@@ -823,9 +851,13 @@ def main():
         "결제ID_정보와기술": sorted(
             {r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "정보와기술"}
         ),
+        "결제ID_레드텔레콤IB": sorted(
+            {r["id"] for m in 매칭 for r in m["리드"] if r["테이블"] == "레드텔레콤IB"}
+        ),
         "결제건수_인바운드": by_table.get("인바운드", 0),
         "결제건수_SKB": by_table.get("SKB", 0),
         "결제건수_정보와기술": by_table.get("정보와기술", 0),
+        "결제건수_레드텔레콤IB": by_table.get("레드텔레콤IB", 0),
         # 담당자별 결제 건수 — 주문 단위(매칭 리스트, 중복 리드 병합 없음)로 집계한다.
         # 결제ID_*(레코드ID 집합)로 담당자를 배분하면 같은 리드가 여러 주문의 대표로 뽑힐 때
         # 그중 한 건만 잡혀 담당자별 합이 결제건수_*보다 작아진다.
@@ -849,9 +881,11 @@ def main():
         "원장_결제ID_인바운드": sorted(inb_ids),
         "원장_결제ID_SKB": sorted(skb_ids),
         "원장_결제ID_정보와기술": sorted(rep_ids),
+        "원장_결제ID_레드텔레콤IB": sorted(redtel_ib_ids),
         "원장_결제건수_인바운드": inb_count,
         "원장_결제건수_SKB": skb_count,
         "원장_결제건수_정보와기술": rep_count,
+        "원장_결제건수_레드텔레콤IB": redtel_ib_count,
     }
 
     if args.dry_run:

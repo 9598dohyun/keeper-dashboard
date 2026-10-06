@@ -60,9 +60,11 @@ function 결제판정(r: V2Record, 결제ID: Set<string> | null): boolean {
 /**
  * 레드텔레콤 I/B 전용 결제 판정. 필드명이 "최종결과"(공백 없음, 옵션도
  * "결제완료"/"부재중 실패"/"실패" 3종뿐 — 중복문의·B2B 없음)라 결제판정()과 다르다.
- * 엑셀 대조 대상이 아니라 결제ID 경로는 쓰지 않는다.
+ * 2026-10-06부터 엑셀 대조 대상에 포함 — 결제ID가 있으면 그 집합으로, 없으면
+ * (엑셀 결제대조.json이 아직 없는 과거 호출 호환용) 에어테이블 최종결과로 폴백한다.
  */
-function 결제판정_레드텔레콤IB(r: V2Record): boolean {
+function 결제판정_레드텔레콤IB(r: V2Record, 결제ID: Set<string> | null): boolean {
+  if (결제ID) return 결제ID.has(r.id);
   return isPaidRedtelIB(r.fields.최종결과);
 }
 
@@ -302,13 +304,21 @@ export const computeRepPhone = computeInbound;
  *
  * 필드명("최종결과")과 값 체계(결제완료/부재중 실패/실패 3종, 중복문의·B2B 없음)가
  * 인바운드([콜]최종 결과)와 달라 결제판정()을 그대로 못 쓴다. 담당자 필드도 없어
- * 담당자별은 항상 빈 배열이다. 결제 엑셀 대조 대상이 아니라 결제ID는 받지 않는다.
+ * 담당자별은 항상 빈 배열이다.
+ *
+ * 2026-10-06부터 엑셀 대조 대상에 포함 — 결제ID가 있으면 그 집합으로 "결제" 판정,
+ * 없으면(과거 호출 호환용) 에어테이블 최종결과로 폴백한다. 분해(결제/실패) 구조는
+ * 바꾸지 않는다 — 결제가 아니면 전부 "실패"로 센다(중복문의·B2B 개념 없음은 그대로).
  */
-function computeConversionRedtelIB(records: V2Record[], today: string): ConversionMetrics {
+function computeConversionRedtelIB(
+  records: V2Record[],
+  today: string,
+  결제ID: Set<string> | null = null
+): ConversionMetrics {
   const 응대건 = records.filter((r) => 응대일(r) === today);
   const 분해 = { 결제: 0, 실패: 0, 중복문의: 0, B2B: 0, 미확정: 0 };
   for (const r of 응대건) {
-    if (결제판정_레드텔레콤IB(r)) 분해.결제++;
+    if (결제판정_레드텔레콤IB(r, 결제ID)) 분해.결제++;
     else 분해.실패++; // '실패' + '부재중 실패' — 중복문의·B2B 개념 없음
   }
   const 응대 = 응대건.length;
@@ -324,7 +334,8 @@ function computeConversionRedtelIB(records: V2Record[], today: string): Conversi
 export function computeRedtelIB(
   records: V2Record[],
   집계시작: string,
-  today: string
+  today: string,
+  결제ID: Set<string> | null = null
 ): InboundMetrics {
   const 유입 = inflowSince(records, 집계시작);
   const counts = new Map<string, number>();
@@ -336,7 +347,7 @@ export function computeRedtelIB(
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_CHANNELS_COUNT);
   return {
-    전환: computeConversionRedtelIB(records, today),
+    전환: computeConversionRedtelIB(records, today, 결제ID),
     담당자별: [], // 담당자 필드 없음
     유입건수: 유입.length,
     채널_Top,

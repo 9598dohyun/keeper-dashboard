@@ -90,7 +90,14 @@ function Stat({
  * 둘은 세는 대상이 달라(오늘 결제한 건이 오늘 응대한 건이 아닐 수 있음)
  * 나눈 값을 전환율로 쓰지 않고 건수를 나란히 둔다.
  */
-function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
+function ConversionHero({
+  전환,
+  결제기준힌트,
+}: {
+  전환: ConversionMetrics;
+  /** "오늘 결제" 힌트를 강제 지정. 생략하면 전환율_pct 유무로 자동 판정(인바운드/SKB/정보와기술용) */
+  결제기준힌트?: string;
+}) {
   const 분해: { label: string; value: number; variant: 'secondary' | 'destructive' | 'outline' }[] =
     [
       { label: '결제', value: 전환.분해.결제, variant: 'secondary' },
@@ -116,7 +123,9 @@ function ConversionHero({ 전환 }: { 전환: ConversionMetrics }) {
           label="오늘 결제"
           value={전환.결제}
           accent
-          hint={전환.전환율_pct === null ? '결제 데이터 엑셀 기준' : '에어테이블 최종결과 기준'}
+          hint={
+            결제기준힌트 ?? (전환.전환율_pct === null ? '결제 데이터 엑셀 기준' : '에어테이블 최종결과 기준')
+          }
         />
         {전환.전환율_pct !== null && (
           <Stat
@@ -644,7 +653,7 @@ const MAIN_TAB_LABEL: Record<MainTab, string> = {
         {cur ? (
           <>
             <Section title="I/B · 키퍼리드 · 오늘" desc={`${data.오늘} 응대 기준`}>
-              <ConversionHero 전환={cur.전환} />
+              <ConversionHero 전환={cur.전환} 결제기준힌트="결제 데이터 엑셀 기준" />
             </Section>
 
             <Section
