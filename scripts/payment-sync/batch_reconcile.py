@@ -153,8 +153,14 @@ def main():
     print("에어테이블 조회 중 (1회)...")
     inbound = rc.airtable_fetch(
         base, token, rc.INBOUND_TABLE,
-        ["연락처", "고객명", "[콜]최종 결과", "유입시간", "[콜]담당자"], "인바운드",
+        ["연락처", "고객명", "최종결과", "유입시간", "담당자"], "인바운드",
     )
+    # 2026-09-30 '인바운드'→'영원' 개명으로 원본 필드명이 바뀌었다 — 표준 필드명으로 되돌린다
+    # (reconcile.py main()과 동일한 패치)
+    for r in inbound:
+        f = r.get("fields", {})
+        f["[콜]최종 결과"] = f.get("최종결과")
+        f["[콜]담당자"] = f.get("담당자")
     skb = rc.airtable_fetch(
         base, token, rc.SKB_TABLE,
         ["연락처", "이름", "[콜]최종 결과", "유입시간", "[콜]담당자"], "SKB",
