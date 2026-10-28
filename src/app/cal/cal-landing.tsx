@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import './cal.css';
 import VideoCompare from './video-compare';
@@ -96,9 +95,6 @@ export default function CalLanding() {
             <span className="brand-logo-text">KEEPER</span>
             <span className="brand-sub">매장용 CCTV</span>
           </div>
-          <Link className="nav-cta" href="/cal/lead">
-            견적 신청하기
-          </Link>
         </div>
       </nav>
 
@@ -450,48 +446,9 @@ export default function CalLanding() {
         </div>
       </section>
 
-      <section className="cta-section">
-        <div className="cta-inner">
-          <div className="cta-eyebrow">Next Step</div>
-          <h2 className="cta-title">
-            비교가 끝나셨다면,
-            <br />
-            <span className="accent">담당자 상담</span>으로 견적을 확정하세요.
-          </h2>
-          <p className="cta-sub">
-            이름과 연락처만 남겨주시면, 키퍼 담당자가 직접 연락드려 매장에 맞는 견적을 안내해드립니다.
-          </p>
-          <Link href="/cal/lead" className="cta-btn">
-            <span>상담 신청하기</span>
-            <span className="arrow">→</span>
-          </Link>
-          <div className="cta-steps">
-            <div className="step">
-              <strong>① 신청</strong> · 이름·연락처 입력
-            </div>
-            <div className="step">
-              <strong>② 상담</strong> · 담당자 직접 연락
-            </div>
-            <div className="step">
-              <strong>③ 견적 확정</strong> · 대수·결제 선택
-            </div>
-            <div className="step">
-              <strong>④ 설치</strong> · 1~2주 내 완료
-            </div>
-          </div>
-        </div>
-      </section>
-
       <footer className="cal-footer">
         <div className="footer-line">KEEPER · CCTV 매장용 검토 자료</div>
-        <div className="footer-line">
-          <Link href="/cal/lead">상담 신청하기</Link>
-        </div>
       </footer>
-
-      <div className="mobile-cta">
-        <Link href="/cal/lead">상담 신청하기 →</Link>
-      </div>
     </main>
   );
 }
